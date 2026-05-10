@@ -1,0 +1,199 @@
+@import "tailwindcss";
+
+/* ============================================================
+   ABISMO HABITADO — Design System Tokens
+   ============================================================ */
+
+@theme {
+  /* Color — Void Stratum */
+  --color-void: #09090f;
+  --color-surface-1: #111118;
+  --color-surface-2: #18181f;
+  --color-surface-3: #21212a;
+
+  /* Color — Text */
+  --color-ink: #f0ece3;
+  --color-ink-display: #f8f5ef;
+  --color-ink-muted: #7a7872;
+  --color-ink-faint: #3f3d3a;
+
+  /* Color — Identity (Vermelho Garantido) */
+  --color-vermelho: #c42b2b;
+  --color-vermelho-hi: #d43535;
+  --color-vermelho-low: #9f2222;
+
+  /* Color — Systemic (Depth Blue) */
+  --color-depth: #1a5fad;
+  --color-depth-hi: #2272c8;
+  --color-depth-low: #134a8a;
+
+  /* Color — Borders */
+  --color-line-subtle: #1a1a22;
+  --color-line: #252530;
+  --color-line-strong: #383848;
+
+  /* Color — Status */
+  --color-warning: #b87a1a;
+  --color-success: #2d8659;
+
+  /* Typography */
+  --font-display: var(--font-fraunces);
+  --font-body: var(--font-dm-sans);
+  --font-mono: var(--font-jetbrains-mono);
+
+  /* Radii */
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+
+  /* Easings */
+  --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-exit: cubic-bezier(0.7, 0, 0.84, 0);
+}
+
+:root {
+  --texture-strata: repeating-linear-gradient(
+    180deg,
+    transparent 0,
+    transparent 59px,
+    rgba(255, 255, 255, 0.012) 60px
+  );
+
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.03);
+  --shadow-floating: 0 12px 36px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+  --shadow-glow-vermelho: 0 0 24px rgba(196, 43, 43, 0.18);
+  --shadow-glow-depth: 0 0 24px rgba(26, 95, 173, 0.18);
+}
+
+/* ============================================================
+   Base
+   ============================================================ */
+
+@layer base {
+  html {
+    color-scheme: dark;
+    background-color: var(--color-void);
+  }
+
+  body {
+    background-color: var(--color-void);
+    background-image: var(--texture-strata);
+    color: var(--color-ink);
+    font-family: var(--font-body), system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background-color: rgba(196, 43, 43, 0.35);
+    color: var(--color-ink-display);
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display), Georgia, serif;
+    font-weight: 300;
+    color: var(--color-ink-display);
+    letter-spacing: -0.02em;
+  }
+
+  h1 {
+    font-size: clamp(3.5rem, 7vw, 7.5rem);
+    line-height: 0.92;
+    letter-spacing: -0.045em;
+  }
+
+  h2 {
+    font-size: clamp(2.25rem, 4vw, 3.5rem);
+    line-height: 0.98;
+    letter-spacing: -0.035em;
+  }
+
+  h3 {
+    font-size: clamp(1.5rem, 2vw, 2rem);
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-vermelho);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-void);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-line-strong);
+    border-radius: 8px;
+    border: 2px solid var(--color-void);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-ink-faint);
+  }
+}
+
+/* ============================================================
+   Components
+   ============================================================ */
+
+@layer components {
+  .num,
+  [data-numeric] {
+    font-family: var(--font-mono), "JetBrains Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+  }
+
+  .label {
+    font-family: var(--font-mono), monospace;
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--color-ink-muted);
+    font-weight: 500;
+  }
+
+  .card {
+    background-color: var(--color-surface-2);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-card);
+  }
+
+  .card-hover {
+    transition: background-color 180ms var(--ease-enter),
+      border-color 180ms var(--ease-enter);
+  }
+  .card-hover:hover {
+    background-color: var(--color-surface-3);
+    border-color: var(--color-line-strong);
+  }
+
+  .strata {
+    background-image: var(--texture-strata);
+  }
+}
+
+/* ============================================================
+   Motion preferences
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
