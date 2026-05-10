@@ -8,9 +8,8 @@ import { Select } from "@/components/ui/select";
 import {
   createTransactionAction,
   type CreateTxState,
-  MANUAL_KINDS,
-  MANUAL_KIND_LABELS,
 } from "../actions";
+import { MANUAL_KINDS, MANUAL_KIND_LABELS } from "../constants";
 
 const initial: CreateTxState = {};
 

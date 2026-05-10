@@ -26,16 +26,6 @@ const RESOLUTION_NEEDS_RETURN = new Set<BetStatus>([
   "partially_void",
 ]);
 
-export const RESOLUTION_LABELS: Record<(typeof RESOLUTION_STATUSES)[number], string> = {
-  won: "Ganha",
-  lost: "Perdida",
-  void: "Anulada (refund)",
-  cashed_out: "Cash-out",
-  half_won: "Meia ganha",
-  half_lost: "Meia perdida",
-  partially_void: "Parcialmente anulada",
-};
-
 const numFromBR = z
   .string()
   .min(1, "informe o valor")
@@ -202,5 +192,3 @@ export async function resolveBetAction(formData: FormData): Promise<void> {
   revalidatePath("/houses");
   revalidatePath("/");
 }
-
-export { RESOLUTION_STATUSES, RESOLUTION_NEEDS_RETURN };

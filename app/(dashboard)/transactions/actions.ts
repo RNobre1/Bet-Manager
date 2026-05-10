@@ -5,29 +5,9 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
+import { KIND_DIRECTION, MANUAL_KINDS } from "./constants";
 
 type TxKind = Database["public"]["Enums"]["transaction_kind"];
-type TxDirection = Database["public"]["Enums"]["transaction_direction"];
-
-const MANUAL_KINDS = [
-  "deposit",
-  "withdrawal",
-  "bonus_credit",
-  "bonus_rollover",
-  "fee",
-  "adjustment_credit",
-  "adjustment_debit",
-] as const;
-
-const KIND_DIRECTION: Record<(typeof MANUAL_KINDS)[number], TxDirection> = {
-  deposit: "in",
-  withdrawal: "out",
-  bonus_credit: "in",
-  bonus_rollover: "in",
-  fee: "out",
-  adjustment_credit: "in",
-  adjustment_debit: "out",
-};
 
 const createSchema = z.object({
   house_id: z.string().uuid("Selecione uma casa"),
@@ -106,15 +86,3 @@ export async function createTransactionAction(
   revalidatePath("/");
   redirect("/transactions");
 }
-
-export const MANUAL_KIND_LABELS: Record<(typeof MANUAL_KINDS)[number], string> = {
-  deposit: "Depósito",
-  withdrawal: "Saque",
-  bonus_credit: "Bônus (crédito)",
-  bonus_rollover: "Liberação de rollover",
-  fee: "Taxa",
-  adjustment_credit: "Ajuste manual (crédito)",
-  adjustment_debit: "Ajuste manual (débito)",
-};
-
-export { MANUAL_KINDS };
