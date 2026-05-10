@@ -74,7 +74,46 @@ tests/
 
 Detalhes completos no plano de implementação.
 
-## Deploy
+## Deploy (Cloudflare Workers via OpenNext)
 
-Branch `main` → produção em `abissal.rnobre.dev` via Cloudflare Pages.
-Branch `claude/*` → preview deploy automático.
+Hospedado como Cloudflare Worker — não Pages. O adapter `@opennextjs/cloudflare`
+empacota o build do Next.js (incluindo Server Actions e middleware) em um worker
+único e serve `/_next/static` via asset binding.
+
+### Scripts locais
+
+| Comando | Função |
+|---|---|
+| `pnpm cf:build` | Compila Next.js + adapta para worker em `.open-next/` |
+| `pnpm cf:preview` | Build + `wrangler dev` em `localhost:8787` (worker real) |
+| `pnpm cf:deploy` | Build + `wrangler deploy` (push para produção) |
+| `pnpm cf:upload` | Sobe nova versão sem promovê-la (canary / rollback) |
+
+### Setup inicial na Cloudflare (uma vez)
+
+1. **Criar API token** em <https://dash.cloudflare.com/profile/api-tokens>
+   com o template *“Edit Cloudflare Workers”*. Guardar no GitHub como o
+   secret `CLOUDFLARE_API_TOKEN`. Anotar o `Account ID` (sidebar do dashboard)
+   como `CLOUDFLARE_ACCOUNT_ID`.
+2. **Cadastrar secrets do Supabase + Sentry** no GitHub Actions:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+   - `NEXT_PUBLIC_SENTRY_DSN` (opcional)
+3. **Cadastrar os mesmos valores no worker** (em produção) com:
+   ```bash
+   pnpm dlx wrangler secret put NEXT_PUBLIC_SUPABASE_URL
+   pnpm dlx wrangler secret put NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+   ```
+4. **Domínio custom**:
+   - No dashboard CF → Workers & Pages → `abissal` → *Triggers* →
+     *Add Custom Domain* → `abissal.rnobre.dev`.
+   - Cloudflare cria o CNAME automaticamente se `rnobre.dev` já estiver
+     na sua conta. Se o DNS estiver fora, criar um `CNAME abissal → abissal.<conta>.workers.dev`.
+
+### Pipeline
+
+- `main` → `deploy.yml` no GitHub Actions roda `pnpm cf:build` e
+  `wrangler deploy`.
+- Branches de PR → apenas `ci.yml` (lint + typecheck + tests + build).
+  Previews com URL única exigem `wrangler versions upload` no fluxo —
+  vem na próxima iteração.

@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "abissal",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-05-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "binding": "ASSETS",
+    "directory": ".open-next/assets"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    // Public values — overridable per-environment in the Cloudflare dashboard.
+    "NEXT_PUBLIC_APP_NAME": "abissal"
+  }
+  // Secrets to set via `wrangler secret put` (NEVER commit them):
+  //   NEXT_PUBLIC_SUPABASE_URL
+  //   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+  //   SENTRY_DSN          (optional)
+  //   NEXT_PUBLIC_SENTRY_DSN (optional)
+}
