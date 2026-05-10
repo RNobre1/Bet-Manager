@@ -2,26 +2,30 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { fmt } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { Sparkline } from "@/components/sparkline";
 
 export default async function OverviewPage() {
   const supabase = await createClient();
 
-  const [housesQuery, summaryQuery, recentTxQuery] = await Promise.all([
-    supabase
-      .from("house_balance_view")
-      .select("*")
-      .is("archived_at", null)
-      .order("balance", { ascending: false }),
-    supabase
-      .from("bet_summary_view")
-      .select("*")
-      .maybeSingle(),
-    supabase
-      .from("transactions")
-      .select("id, kind, direction, amount, occurred_at, house_id, note")
-      .order("occurred_at", { ascending: false })
-      .limit(6),
-  ]);
+  const [housesQuery, summaryQuery, recentTxQuery, dailyPlQuery] =
+    await Promise.all([
+      supabase
+        .from("house_balance_view")
+        .select("*")
+        .is("archived_at", null)
+        .order("balance", { ascending: false }),
+      supabase.from("bet_summary_view").select("*").maybeSingle(),
+      supabase
+        .from("transactions")
+        .select("id, kind, direction, amount, occurred_at, house_id, note")
+        .order("occurred_at", { ascending: false })
+        .limit(6),
+      supabase
+        .from("daily_pl_view")
+        .select("snapshot_date, cumulative_pl")
+        .order("snapshot_date", { ascending: true })
+        .limit(180),
+    ]);
 
   const houses = housesQuery.data ?? [];
   const summary = summaryQuery.data;
@@ -61,6 +65,20 @@ export default async function OverviewPage() {
   const lostCount = Number(summary?.lost_count ?? 0);
   const winRate =
     wonCount + lostCount > 0 ? wonCount / (wonCount + lostCount) : 0;
+
+  const dailyPl = (dailyPlQuery.data ?? []).map((d) => ({
+    date: d.snapshot_date as string,
+    pl: Number(d.cumulative_pl ?? 0),
+  }));
+
+  // Max drawdown from cumulative P&L: largest peak-to-trough drop in BRL.
+  let peak = -Infinity;
+  let maxDrawdown = 0;
+  for (const point of dailyPl) {
+    if (point.pl > peak) peak = point.pl;
+    const dd = peak - point.pl;
+    if (dd > maxDrawdown) maxDrawdown = dd;
+  }
 
   const isEmpty = houses.length === 0;
 
@@ -133,6 +151,40 @@ export default async function OverviewPage() {
               ainda sem apostas registradas — métricas de yield e win rate
               aparecerão depois da primeira aposta resolvida.
             </p>
+          )}
+
+          {dailyPl.length >= 2 && (
+            <section className="mb-16 card p-6">
+              <header className="mb-4 flex items-baseline justify-between">
+                <span className="label">P/L acumulado · {dailyPl.length}d</span>
+                <span className="num text-xs text-[var(--color-ink-muted)]">
+                  drawdown máx:{" "}
+                  <span style={{ color: "var(--color-vermelho-hi)" }}>
+                    −{fmt.bare(maxDrawdown)}
+                  </span>
+                </span>
+              </header>
+              <Sparkline
+                data={dailyPl.map((d) => d.pl)}
+                stroke={
+                  cumulativePl >= 0
+                    ? "var(--color-depth-hi)"
+                    : "var(--color-vermelho-hi)"
+                }
+                fill={
+                  cumulativePl >= 0
+                    ? "color-mix(in srgb, var(--color-depth) 18%, transparent)"
+                    : "color-mix(in srgb, var(--color-vermelho) 14%, transparent)"
+                }
+                height={96}
+              />
+              <div className="mt-3 flex items-baseline justify-between text-xs text-[var(--color-ink-muted)]">
+                <span className="num">{fmt.date(dailyPl[0].date)}</span>
+                <span className="num">
+                  {fmt.date(dailyPl[dailyPl.length - 1].date)}
+                </span>
+              </div>
+            </section>
           )}
 
           <section className="mb-16">
