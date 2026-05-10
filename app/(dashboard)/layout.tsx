@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { logoutAction } from "@/app/(auth)/login/actions";
+import { CommandPalette } from "@/components/command-palette";
 
 const NAV = [
   { href: "/", label: "overview" },
@@ -73,6 +74,8 @@ export default async function DashboardLayout({
 
       {/* Main column */}
       <div className="flex flex-1 flex-col pb-20 lg:pb-0">{children}</div>
+
+      <CommandPalette />
 
       {/* Mobile bottom nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 grid grid-cols-5 border-t border-[var(--color-line)] bg-[var(--color-surface-1)] lg:hidden">
