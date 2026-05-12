@@ -12,6 +12,7 @@ export default defineConfig({
       "tests/api/**/*.test.{ts,tsx}",
       "lib/**/*.test.{ts,tsx}",
     ],
+    setupFiles: ["./tests/setup-env.ts"],
   },
   resolve: {
     alias: {
