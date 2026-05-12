@@ -34,11 +34,21 @@ type Status =
  *
  * No external dep — vanilla `fetch` + `ReadableStream` reader.
  */
+const LOADING_PHASES = [
+  "Lendo o detalhe do confronto…",
+  "Cruzando estatísticas da liga…",
+  "Analisando os últimos resultados de cada lado…",
+  "Olhando tendências — over, BTTS, escanteios, cartões…",
+  "Avaliando forma recente e momentum…",
+  "Pesando o histórico do confronto direto…",
+  "Tirando conclusões…",
+] as const;
+
 export function AnalyzePanel({ fixture }: AnalyzePanelProps) {
   const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [pending, setPending] = useState("");
   const [status, setStatus] = useState<Status>("idle");
+  const [loaderPhase, setLoaderPhase] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [refreshing, setRefreshing] = useState(false);
@@ -57,13 +67,29 @@ export function AnalyzePanel({ fixture }: AnalyzePanelProps) {
     return () => document.removeEventListener("keydown", onKey);
   }, [router]);
 
+  // Rotate the loader phrase while the upstream LLM is still working.
+  // We don't expose token-by-token output to the user (it's distracting and
+  // the model can change its mind mid-stream); instead, the SSE accumulator
+  // collects everything quietly and the final message is rendered in one go
+  // when `event: done` arrives.
+  useEffect(() => {
+    if (status !== "streaming") return;
+    // Reset is intentional — at the start of every analysis we want phase 0,
+    // not whatever was on screen from the previous run.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoaderPhase(0);
+    const interval = setInterval(() => {
+      setLoaderPhase((p) => (p + 1) % LOADING_PHASES.length);
+    }, 2400);
+    return () => clearInterval(interval);
+  }, [status]);
+
   const streamAnalysis = useCallback(
     async (question?: string) => {
       const controller = new AbortController();
       abortRef.current = controller;
       setStatus("streaming");
       setError(null);
-      setPending("");
 
       let assembled = "";
       try {
@@ -113,16 +139,15 @@ export function AnalyzePanel({ fixture }: AnalyzePanelProps) {
               setStatus("error");
               return;
             }
-            // Default event: delta chunk.
+            // Default event: delta chunk — accumulate quietly; the UI is
+            // showing the loader instead of token-by-token output.
             const deltaCandidate = evt.data?.delta;
             if (typeof deltaCandidate === "string") {
               assembled += deltaCandidate;
-              setPending(assembled);
             }
           }
         }
 
-        setPending("");
         setMessages((prev) => [
           ...prev,
           { role: "assistant", content: assembled },
@@ -236,19 +261,11 @@ export function AnalyzePanel({ fixture }: AnalyzePanelProps) {
   return (
     <section className="flex flex-col gap-6" aria-label="Análise pré-jogo">
       <div className="flex flex-col gap-5" aria-live="polite">
-        {status === "streaming" && messages.length === 0 && !pending ? (
-          <p className="text-sm italic text-[var(--color-ink-muted)]">
-            Iniciando análise…
-          </p>
-        ) : null}
-
         {messages.map((m, i) => (
           <ChatMessageView key={i} message={m} />
         ))}
 
-        {pending ? (
-          <ChatMessageView message={{ role: "assistant", content: pending }} />
-        ) : null}
+        {status === "streaming" ? <AnalysisLoader phase={loaderPhase} /> : null}
       </div>
 
       {status === "error" ? (
@@ -319,6 +336,36 @@ export function AnalyzePanel({ fixture }: AnalyzePanelProps) {
         )}
       </form>
     </section>
+  );
+}
+
+// ─── Loader ─────────────────────────────────────────────────────────────
+
+function AnalysisLoader({ phase }: { phase: number }) {
+  return (
+    <div className="card flex flex-col items-center justify-center gap-6 px-6 py-14 text-center">
+      <div className="flex gap-2" aria-hidden>
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className="block h-2.5 w-2.5 rounded-full bg-[var(--color-vermelho)] motion-safe:animate-bounce"
+            style={{ animationDelay: `${i * 140}ms` }}
+          />
+        ))}
+      </div>
+
+      <p
+        key={phase}
+        className="text-sm italic text-[var(--color-ink-muted)] motion-safe:animate-in motion-safe:fade-in motion-safe:duration-700"
+        aria-live="polite"
+      >
+        {LOADING_PHASES[phase]}
+      </p>
+
+      <span className="label text-[var(--color-ink-faint)]">
+        processando análise
+      </span>
+    </div>
   );
 }
 
