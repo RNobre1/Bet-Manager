@@ -266,6 +266,12 @@ Writes (scraper, refresh-detail, cache fill) go through service_role (bypasses R
 
 - **B5 — 2026-05-12 — Local Postgres docker doesn't have Supabase's `authenticated`/`anon`/`service_role` roles.** Migrations with `create policy ... to authenticated` fail with `role does not exist`. `scripts/scraper/spec/db/db_helper.rb#ensure_supabase_roles!` creates them idempotently before applying migrations.
 
+- **B6 — 2026-05-12 — Supabase Free pooler URL is `aws-1-sa-east-1.pooler.supabase.com` (not aws-0).** The Management API `connection_string` field returns `db.<ref>.supabase.co:6543`, which resolves to IPv6-only on Free tier and is unreachable from GitHub Actions runners (`Network is unreachable` on `2600:1f1e:...`). The `aws-0-*` pooler responds with `Tenant or user not found` — that host is no longer the active gateway for this region. Working URL: `postgres://postgres.<project_ref>:<password-url-encoded>@aws-1-sa-east-1.pooler.supabase.com:6543/postgres`.
+
+- **B7 — 2026-05-12 — `SCRAPER_LEAGUE_SLUGS` whitelist became a no-op after the HTTP-direct listing migration.** `filter_by_league_slugs` in `Orchestrator` matches the `source_url` slug; but `ApiListFetcher` (the HTTP-direct path, now the default) sets `source_url = /fixture/{id}` without the league slug. Result: every fixture is filtered out of detail-fetching → DB has 752 rows but 0 with `detail_json`. Fix: leave `SCRAPER_LEAGUE_SLUGS` unset in production so all fixtures get detail. The filter only matters for the Playwright fallback (`SCRAPER_USE_PLAYWRIGHT_LIST=1`), which still emits slugged `source_url`s.
+
+- **B8 — 2026-05-12 — Vitest needs an env setup file in this repo.** `lib/env.ts` parses with Zod at module import time. Any spec that (transitively) imports a server-only module crashes at parse time before the spec's own mocks run. `tests/setup-env.ts` populates dummy defaults via `process.env.X ??= ...` and is loaded via `vitest.config.ts → setupFiles`. Individual specs that want to test the "missing env var" path still do `vi.stubEnv(...)` + `vi.resetModules()` and re-import the route lazily.
+
 ---
 
 ## Do not
