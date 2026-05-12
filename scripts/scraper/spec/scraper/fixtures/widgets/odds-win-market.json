@@ -1,0 +1,107 @@
+{
+  "id": 19427224,
+  "league": {
+    "id": 8,
+    "name": "Premier League",
+    "slug": "premier-league",
+    "logoUrl": "https://cdn.sportmonks.com/images/soccer/leagues/8/8.png",
+    "country": {
+      "name": "England",
+      "code": "https://cdn.choistats.com/assets/flags/gb-eng.svg",
+      "flagUrl": "https://cdn.sportmonks.com/images/countries/png/short/gb.png",
+      "slug": "england"
+    }
+  },
+  "date": 1778526000000,
+  "homeTeam": {
+    "id": 6,
+    "name": "Tottenham Hotspur",
+    "slug": "tottenham-hotspur",
+    "logo": "https://cdn.sportmonks.com/images/soccer/teams/6/6.png",
+    "isNational": false
+  },
+  "awayTeam": {
+    "id": 71,
+    "name": "Leeds United",
+    "slug": "leeds-united",
+    "logo": "https://cdn.sportmonks.com/images/soccer/teams/7/71.png",
+    "isNational": false
+  },
+  "seasonId": 25583,
+  "stage": {
+    "id": 77476879,
+    "name": "Regular Season",
+    "type": "Group Stage"
+  },
+  "referee": {
+    "id": 19868,
+    "name": "Jarred Gillett",
+    "slug": "jarred-gillett"
+  },
+  "homeTeamPosition": "17th",
+  "awayTeamPosition": "16th",
+  "marketOutcomes": [
+    {
+      "market": {
+        "name": "Result",
+        "displayRule": "THREE_WAY"
+      },
+      "outcomes": {
+        "RESULT_HOME_WIN": {
+          "fixtureId": 19427224,
+          "outcome": "RESULT_HOME_WIN",
+          "outcomeName": "Tottenham Hotspur",
+          "bookmaker": "BET365",
+          "decimalOdds": 1.75,
+          "fractionalOdds": "3/4",
+          "externalFixtureId": "192501389",
+          "externalBetId": "998182463",
+          "bookmakerFixtureUrl": "https://www.bet365.com/dl/sportsbookredirect?affiliate=365_03330390&bet=0&bs=192501389-998182463~21/20",
+          "bookmakerBetUrl": "https://www.bet365.com/dl/sportsbookredirect?affiliate=365_03330390&bet=1&bs=192501389-998182463~3/4"
+        },
+        "RESULT_DRAW": {
+          "fixtureId": 19427224,
+          "outcome": "RESULT_DRAW",
+          "outcomeName": "Draw",
+          "bookmaker": "BET365",
+          "decimalOdds": 3.8,
+          "fractionalOdds": "14/5",
+          "externalFixtureId": "192501389",
+          "externalBetId": "998182473",
+          "bookmakerFixtureUrl": "https://www.bet365.com/dl/sportsbookredirect?affiliate=365_03330390&bet=0&bs=192501389-998182463~21/20",
+          "bookmakerBetUrl": "https://www.bet365.com/dl/sportsbookredirect?affiliate=365_03330390&bet=1&bs=192501389-998182473~14/5"
+        },
+        "RESULT_AWAY_WIN": {
+          "fixtureId": 19427224,
+          "outcome": "RESULT_AWAY_WIN",
+          "outcomeName": "Leeds United",
+          "bookmaker": "BET365",
+          "decimalOdds": 4.333,
+          "fractionalOdds": "10/3",
+          "externalFixtureId": "192501389",
+          "externalBetId": "998182476",
+          "bookmakerFixtureUrl": "https://www.bet365.com/dl/sportsbookredirect?affiliate=365_03330390&bet=0&bs=192501389-998182463~21/20",
+          "bookmakerBetUrl": "https://www.bet365.com/dl/sportsbookredirect?affiliate=365_03330390&bet=1&bs=192501389-998182476~10/3"
+        }
+      }
+    }
+  ],
+  "bookmakerFixtureUrls": [
+    {
+      "fixtureId": 0,
+      "bookmaker": "BET365",
+      "bookmakerFixtureUrl": "https://www.bet365.com/dl/sportsbookredirect?affiliate=365_03330390&bet=0&bs=192501389-998182463~21/20"
+    },
+    {
+      "fixtureId": 0,
+      "bookmaker": "UNIBET",
+      "bookmakerFixtureUrl": "https://b1.trickyrock.com/redirect.aspx?pid=3827504&bid=36507&unibetTarget=/betting/event/1024044204"
+    },
+    {
+      "fixtureId": 0,
+      "bookmaker": "_1XBET",
+      "bookmakerFixtureUrl": "line/football/88637-england-premier-league/327633004-tottenham-hotspur-leeds-united"
+    }
+  ],
+  "slug": "tottenham-hotspur-v-leeds-united"
+}

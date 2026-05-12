@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Empty fixtures</title></head>
+<body>
+  <div class="container">
+    <div class="col-sm-12 col-lg-10 col-lg-offset-1" data-ng-repeat="date in :refreshFixtures:vm.filteredDates | orderBy: 'date'">
+      <div class="panel-heading">Monday 11 May, 2026</div>
+      <table class="display table">
+        <tbody data-ng-repeat="league in :refreshFixtures:date.leagues">
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>

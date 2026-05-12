@@ -1,0 +1,31 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'bundler/setup'
+require 'dotenv/load' if File.exist?(File.expand_path('../.env', __dir__))
+require_relative '../lib/scraper'
+
+if ARGV.include?('--help') || ARGV.include?('-h')
+  puts <<~USAGE
+    Usage: bin/scrape
+
+    Runs the daily fixture scrape end-to-end:
+      fetch /fixtures -> parse list -> fetch each detail page -> persist upserts
+      -> purge rows older than 3 days -> ping healthchecks.io.
+
+    Env vars (see .env.example for full list):
+      DATABASE_URL                     Postgres connection string (required)
+      OPENROUTER_API_KEY               (not used here, only by the API)
+      SCRAPER_TARGET_BASE_URL          default https://www.adamchoi.co.uk
+      PLAYWRIGHT_CLI_EXECUTABLE_PATH   ASCII-only path to Playwright Node CLI
+      HEALTHCHECKS_URL                 optional success ping endpoint
+      HEALTHCHECKS_FAIL_URL            optional failure ping endpoint
+
+    Exit codes:
+      0 success
+      1 failure (an exception bubbled up — see stderr for stack trace)
+  USAGE
+  exit 0
+end
+
+exit AdamStats::Scraper.run

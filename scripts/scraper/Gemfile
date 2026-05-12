@@ -1,0 +1,20 @@
+source 'https://rubygems.org'
+
+ruby '4.0.3'
+
+# Runtime
+gem 'dotenv', '~> 3.1'
+gem 'faraday', '~> 2.13'
+gem 'faraday-retry', '~> 2.3'
+gem 'nokogiri', '~> 1.19'
+gem 'pg', '~> 1.5'
+gem 'playwright-ruby-client', '~> 1.59' # fallback only; HTTP-direct is the default path
+
+group :test do
+  gem 'rspec', '~> 3.13'
+  gem 'webmock', '~> 3.25'
+end
+
+group :development do
+  gem 'pry-byebug', '~> 3.10'
+end

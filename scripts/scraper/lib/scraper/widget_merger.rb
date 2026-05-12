@@ -1,0 +1,299 @@
+require_relative 'match_detail'
+
+module AdamStats
+  module Scraper
+    # Mescla as respostas dos widgets do choistats (recent-results, team-records,
+    # chances, odds) com a MatchDetail base parseada do HTML estatístico.
+    module WidgetMerger
+      RECENT_MATCH_FIELDS = %w[
+        id date result htResult status
+        homeGoalsFt awayGoalsFt homeGoalsHt awayGoalsHt
+        homeCorners awayCorners
+        homeCorners1h awayCorners1h homeCorners2h awayCorners2h
+        homeYellows awayYellows homeReds awayReds
+        homeYellowReds awayYellowReds
+        homeBookingPoints awayBookingPoints
+        homeTotalShots awayTotalShots homeShotsOnTarget awayShotsOnTarget
+        homeFouls awayFouls homeOffsides awayOffsides homeTackles awayTackles
+      ].freeze
+
+      module_function
+
+      TOP_PLAYERS_LIMIT = 11
+
+      PLAYER_STAT_FIELDS = {
+        played: 'played', started: 'started', subs: 'subs',
+        minutes: 'minutes', goals: 'goals', assists: 'assists',
+        yellows: 'yellows', reds: 'reds',
+        total_shots: 'totalShots', shots_on_target: 'shotsOnTarget',
+        fouls_committed: 'foulsCommitted', fouls_drawn: 'foulsDrawn',
+        offsides: 'offsides', tackles: 'tackles',
+        first_goals: 'firstGoals', first_cards: 'firstCards',
+        goals_1h: 'goals1h', goals_2h: 'goals2h',
+        cards_1h: 'cards1h', cards_2h: 'cards2h',
+        injured: 'injured'
+      }.freeze
+
+      AGGREGATE_FIELDS = %i[
+        minutes goals assists yellows reds
+        total_shots shots_on_target fouls_committed fouls_drawn
+        offsides tackles goals_1h goals_2h cards_1h cards_2h
+      ].freeze
+
+      def merge(detail, widgets)
+        widgets ||= {}
+        team_record = build_team_record(widgets[:team_records] || widgets['team_records'])
+        recents = widgets[:recent_results] || widgets['recent_results']
+        chances = widgets[:chances] || widgets['chances']
+        odds = widgets[:odds] || widgets['odds']
+        players = widgets[:players] || widgets['players']
+        referee_fixtures = widgets[:referee_fixtures] || widgets['referee_fixtures']
+
+        detail.with(
+          team_record: team_record,
+          recent_matches: build_recent_matches(recents),
+          h2h: build_h2h(recents),
+          streaks: build_streaks(recents),
+          predictions: build_predictions(chances),
+          odds_summary: build_odds_summary(odds),
+          player_stats: build_player_stats(players),
+          referee_record: build_referee_record(referee_fixtures)
+        )
+      end
+
+      def build_team_record(data)
+        return MatchDetail.empty.team_record unless data.is_a?(Hash)
+
+        {
+          home: {
+            overall: simplify_record(data['homeTeamOverallRecord']),
+            home: simplify_record(data['homeTeamHomeRecord'])
+          },
+          away: {
+            overall: simplify_record(data['awayTeamOverallRecord']),
+            away: simplify_record(data['awayTeamAwayRecord'])
+          }
+        }
+      end
+
+      def simplify_record(rec)
+        return nil unless rec.is_a?(Hash)
+
+        {
+          type: rec['type'],
+          position: rec['position'],
+          played: rec['played'],
+          won: rec['won'],
+          draw: rec['draw'],
+          lost: rec['lost'],
+          goals_for: rec['goalsFor'],
+          goals_against: rec['goalsAg'],
+          goal_diff: rec['goalDiff'],
+          points: rec['points'],
+          points_per_game: rec['pointsPerGame'],
+          form: rec['form']
+        }
+      end
+
+      def build_recent_matches(data)
+        empty = { home: [], away: [] }
+        return empty unless data.is_a?(Hash)
+
+        {
+          home: extract_matches(data['recentHomeResults']),
+          away: extract_matches(data['recentAwayResults'])
+        }
+      end
+
+      def build_h2h(data)
+        return [] unless data.is_a?(Hash)
+
+        extract_matches(data['headToHead'])
+      end
+
+      def extract_matches(matches)
+        return [] unless matches.is_a?(Array)
+
+        matches.map do |m|
+          out = RECENT_MATCH_FIELDS.each_with_object({}) { |f, acc| acc[f] = m[f] }
+          out['date_iso'] = epoch_to_iso(m['date'])
+          out['home_team'] = m.dig('homeTeam', 'name')
+          out['away_team'] = m.dig('awayTeam', 'name')
+          out['league'] = m.dig('league', 'name')
+          out
+        end
+      end
+
+      def epoch_to_iso(epoch_ms)
+        return nil unless epoch_ms.is_a?(Numeric)
+
+        Time.at(epoch_ms / 1000).utc.strftime('%Y-%m-%d')
+      end
+
+      def build_streaks(data)
+        return { home: [], away: [] } unless data.is_a?(Hash) && data['quickStats'].is_a?(Array)
+
+        home = []
+        away = []
+        data['quickStats'].each do |group|
+          group_name = group['groupName']
+          (group['quickStats'] || []).each do |entry|
+            home_stat = entry['homeTeamQuickStat']
+            away_stat = entry['awayTeamQuickStat']
+            home << flatten_streak(home_stat, group_name) if home_stat
+            away << flatten_streak(away_stat, group_name) if away_stat
+          end
+        end
+        { home: home, away: away }
+      end
+
+      def flatten_streak(stat, group_name)
+        return nil unless stat.is_a?(Hash)
+
+        {
+          group: group_name,
+          stat_type: stat['statType'],
+          desc: stat['statDesc'],
+          line: stat['line'],
+          colour: stat['colour'],
+          overall_count: stat['overallCount'],
+          overall_fixtures: stat['overallFixtureCount'],
+          overall_streak: stat['overallStreak'],
+          overall_perc: stat['overallPerc'],
+          home_count: stat['homeCount'],
+          home_fixtures: stat['homeFixtureCount'],
+          home_streak: stat['homeStreak'],
+          home_perc: stat['homePerc'],
+          away_count: stat['awayCount'],
+          away_fixtures: stat['awayFixtureCount'],
+          away_streak: stat['awayStreak'],
+          away_perc: stat['awayPerc']
+        }
+      end
+
+      def build_predictions(data)
+        return [] unless data.is_a?(Array) && data.first.is_a?(Hash)
+
+        chances = data.first['chances'] || []
+        chances.map do |c|
+          {
+            stat_type: c['statType'],
+            chance: c['chance'],
+            chance_team: c['chanceTeam'],
+            home_stats: extract_stat_texts(c['homeStats']),
+            away_stats: extract_stat_texts(c['awayStats']),
+            best_odds: c.dig('fixtureOdds', 'decimalOdds'),
+            best_odds_bookmaker: c.dig('fixtureOdds', 'bookmaker')
+          }
+        end
+      end
+
+      def extract_stat_texts(stats)
+        return [] unless stats.is_a?(Array)
+
+        stats.map { |s| strip_html(s['stat']) }.compact
+      end
+
+      def strip_html(text)
+        return nil if text.nil?
+
+        text.gsub(/<[^>]+>/, '').gsub(/\s+/, ' ').strip
+      end
+
+      def build_referee_record(fixtures)
+        return nil unless fixtures.is_a?(Array) && fixtures.any?
+
+        name = fixtures.first.dig('referee', 'name')
+        completed = fixtures.select { |f| f['status'] && f['status'] != 'NS' }
+        record = {
+          name: name,
+          fixtures_count: fixtures.length,
+          completed: completed.length,
+          avg_total_booking_points: nil,
+          avg_home_booking_points: nil,
+          avg_away_booking_points: nil,
+          total_yellow_reds: nil
+        }
+
+        if completed.any?
+          n = completed.length.to_f
+          home_bp = completed.sum { |f| (f['homeBookingPoints'] || 0).to_i }
+          away_bp = completed.sum { |f| (f['awayBookingPoints'] || 0).to_i }
+          home_yr = completed.sum { |f| (f['homeYellowReds'] || 0).to_i }
+          away_yr = completed.sum { |f| (f['awayYellowReds'] || 0).to_i }
+          record[:avg_home_booking_points] = (home_bp / n).round(2)
+          record[:avg_away_booking_points] = (away_bp / n).round(2)
+          record[:avg_total_booking_points] = ((home_bp + away_bp) / n).round(2)
+          record[:total_yellow_reds] = home_yr + away_yr
+        end
+
+        record
+      end
+
+      def build_player_stats(data)
+        empty_side = -> { { aggregates: empty_aggregates, top_players: [] } }
+        return { home: empty_side.call, away: empty_side.call } unless data.is_a?(Hash)
+
+        {
+          home: build_side_player_stats(data['homePlayers']),
+          away: build_side_player_stats(data['awayPlayers'])
+        }
+      end
+
+      def build_side_player_stats(players)
+        list = players.is_a?(Array) ? players : []
+        {
+          aggregates: aggregate_players(list),
+          top_players: top_players_by_minutes(list)
+        }
+      end
+
+      def aggregate_players(list)
+        agg = empty_aggregates.merge(players_count: list.length)
+        AGGREGATE_FIELDS.each do |key|
+          src = PLAYER_STAT_FIELDS[key]
+          agg[key] = list.sum { |p| (p[src] || 0).to_i }
+        end
+        agg
+      end
+
+      def empty_aggregates
+        EMPTY_PLAYER_AGGREGATES.dup
+      end
+
+      def top_players_by_minutes(list)
+        list
+          .sort_by { |p| -((p['minutes'] || 0).to_i) }
+          .first(TOP_PLAYERS_LIMIT)
+          .map { |p| flatten_player(p) }
+      end
+
+      def flatten_player(raw)
+        out = { name: raw['name'].to_s.strip }
+        PLAYER_STAT_FIELDS.each do |out_key, src_key|
+          v = raw[src_key]
+          out[out_key] = v.nil? ? 0 : v
+        end
+        out
+      end
+
+      def build_odds_summary(data)
+        return {} unless data.is_a?(Array)
+
+        summary = {}
+        data.each do |market|
+          name = market.dig('market', 'name')
+          next unless name && market['outcomes'].is_a?(Hash)
+
+          summary[name] = market['outcomes'].each_with_object({}) do |(outcome_name, outcome), acc|
+            acc[outcome_name] = {
+              decimal_odds: outcome['decimalOdds'],
+              bookmaker: outcome['bookmaker']
+            }
+          end
+        end
+        summary
+      end
+    end
+  end
+end

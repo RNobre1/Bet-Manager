@@ -1,0 +1,4486 @@
+{
+  "homeTeamHomeRecord": {
+    "type": "Home",
+    "position": "20th",
+    "played": 17,
+    "won": 2,
+    "draw": 5,
+    "lost": 10,
+    "goalsFor": 20,
+    "goalsAg": 30,
+    "goalDiff": -10,
+    "points": 11,
+    "pointsPerGame": 0.6,
+    "form": [
+      "L",
+      "L",
+      "L",
+      "L",
+      "D"
+    ]
+  },
+  "homeTeamOverallRecord": {
+    "type": "All",
+    "position": "17th",
+    "played": 35,
+    "won": 9,
+    "draw": 10,
+    "lost": 16,
+    "goalsFor": 45,
+    "goalsAg": 54,
+    "goalDiff": -9,
+    "points": 37,
+    "pointsPerGame": 1.1,
+    "form": [
+      "L",
+      "L",
+      "D",
+      "W",
+      "W"
+    ]
+  },
+  "awayTeamAwayRecord": {
+    "type": "Away",
+    "position": "18th",
+    "played": 17,
+    "won": 2,
+    "draw": 8,
+    "lost": 7,
+    "goalsFor": 19,
+    "goalsAg": 31,
+    "goalDiff": -12,
+    "points": 14,
+    "pointsPerGame": 0.8,
+    "form": [
+      "D",
+      "D",
+      "D",
+      "W",
+      "D"
+    ]
+  },
+  "awayTeamOverallRecord": {
+    "type": "All",
+    "position": "16th",
+    "played": 35,
+    "won": 10,
+    "draw": 13,
+    "lost": 12,
+    "goalsFor": 47,
+    "goalsAg": 52,
+    "goalDiff": -5,
+    "points": 43,
+    "pointsPerGame": 1.2,
+    "form": [
+      "D",
+      "W",
+      "W",
+      "D",
+      "W"
+    ]
+  },
+  "homeTeamResultsWithStandings": [
+    {
+      "position": "1st",
+      "team": {
+        "id": 19,
+        "name": "Arsenal"
+      },
+      "played": 36,
+      "goalDiff": 42,
+      "points": 79,
+      "homeResults": [
+        {
+          "date": 1771777800000,
+          "homeGoals": 1,
+          "awayGoals": 4,
+          "result": "L"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1763915400000,
+          "homeGoals": 4,
+          "awayGoals": 1,
+          "result": "L"
+        }
+      ],
+      "positionType": "UEFA_CHAMPIONS_LEAGUE",
+      "positionTypeName": "UEFA Champions League"
+    },
+    {
+      "position": "2nd",
+      "team": {
+        "id": 9,
+        "name": "Manchester City"
+      },
+      "played": 35,
+      "goalDiff": 40,
+      "points": 74,
+      "homeResults": [
+        {
+          "date": 1769963400000,
+          "homeGoals": 2,
+          "awayGoals": 2,
+          "result": "D"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1755948600000,
+          "homeGoals": 0,
+          "awayGoals": 2,
+          "result": "W"
+        }
+      ],
+      "positionType": "UEFA_CHAMPIONS_LEAGUE",
+      "positionTypeName": "UEFA Champions League"
+    },
+    {
+      "position": "3rd",
+      "team": {
+        "id": 14,
+        "name": "Manchester United"
+      },
+      "played": 36,
+      "goalDiff": 15,
+      "points": 65,
+      "homeResults": [
+        {
+          "date": 1762605000000,
+          "homeGoals": 2,
+          "awayGoals": 2,
+          "result": "D"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1770467400000,
+          "homeGoals": 2,
+          "awayGoals": 0,
+          "result": "L"
+        }
+      ],
+      "positionType": "UEFA_CHAMPIONS_LEAGUE",
+      "positionTypeName": "UEFA Champions League"
+    },
+    {
+      "position": "4th",
+      "team": {
+        "id": 8,
+        "name": "Liverpool"
+      },
+      "played": 36,
+      "goalDiff": 12,
+      "points": 59,
+      "homeResults": [
+        {
+          "date": 1766251800000,
+          "homeGoals": 1,
+          "awayGoals": 2,
+          "result": "L"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1773592200000,
+          "homeGoals": 1,
+          "awayGoals": 1,
+          "result": "D"
+        }
+      ],
+      "positionType": "UEFA_CHAMPIONS_LEAGUE",
+      "positionTypeName": "UEFA Champions League"
+    },
+    {
+      "position": "5th",
+      "team": {
+        "id": 15,
+        "name": "Aston Villa"
+      },
+      "played": 36,
+      "goalDiff": 4,
+      "points": 59,
+      "homeResults": [
+        {
+          "date": 1760878800000,
+          "homeGoals": 1,
+          "awayGoals": 2,
+          "result": "L"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1777831200000,
+          "homeGoals": 1,
+          "awayGoals": 2,
+          "result": "W"
+        }
+      ],
+      "positionType": "UEFA_CHAMPIONS_LEAGUE",
+      "positionTypeName": "UEFA Champions League"
+    },
+    {
+      "position": "6th",
+      "team": {
+        "id": 52,
+        "name": "AFC Bournemouth"
+      },
+      "played": 36,
+      "goalDiff": 4,
+      "points": 55,
+      "homeResults": [
+        {
+          "date": 1756562400000,
+          "homeGoals": 0,
+          "awayGoals": 1,
+          "result": "L"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1767814200000,
+          "homeGoals": 3,
+          "awayGoals": 2,
+          "result": "L"
+        }
+      ],
+      "positionType": "UEFA_EUROPA_LEAGUE",
+      "positionTypeName": "UEFA Europa League"
+    },
+    {
+      "position": "7th",
+      "team": {
+        "id": 78,
+        "name": "Brighton & Hove Albion"
+      },
+      "played": 36,
+      "goalDiff": 10,
+      "points": 53,
+      "homeResults": [
+        {
+          "date": 1776529800000,
+          "homeGoals": 2,
+          "awayGoals": 2,
+          "result": "D"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1758376800000,
+          "homeGoals": 2,
+          "awayGoals": 2,
+          "result": "D"
+        }
+      ],
+      "positionType": null,
+      "positionTypeName": null
+    },
+    {
+      "position": "8th",
+      "team": {
+        "id": 236,
+        "name": "Brentford"
+      },
+      "played": 36,
+      "goalDiff": 3,
+      "points": 51,
+      "homeResults": [
+        {
+          "date": 1765033200000,
+          "homeGoals": 2,
+          "awayGoals": 0,
+          "result": "W"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1767297600000,
+          "homeGoals": 0,
+          "awayGoals": 0,
+          "result": "D"
+        }
+      ],
+      "positionType": null,
+      "positionTypeName": null
+    },
+    {
+      "position": "9th",
+      "team": {
+        "id": 18,
+        "name": "Chelsea"
+      },
+      "played": 36,
+      "goalDiff": 6,
+      "points": 49,
+      "homeResults": [
+        {
+          "date": 1762018200000,
+          "homeGoals": 0,
+          "awayGoals": 1,
+          "result": "L"
+        }
+      ],
+      "awayResults": [],
+      "positionType": null,
+      "positionTypeName": null
+    },
+    {
+      "position": "10th",
+      "team": {
+        "id": 13,
+        "name": "Everton"
+      },
+      "played": 36,
+      "goalDiff": 0,
+      "points": 49,
+      "homeResults": [],
+      "awayResults": [
+        {
+          "date": 1761496200000,
+          "homeGoals": 0,
+          "awayGoals": 3,
+          "result": "W"
+        }
+      ],
+      "positionType": null,
+      "positionTypeName": null
+    },
+    {
+      "position": "11th",
+      "team": {
+        "id": 11,
+        "name": "Fulham"
+      },
+      "played": 36,
+      "goalDiff": -6,
+      "points": 48,
+      "homeResults": [
+        {
+          "date": 1764446400000,
+          "homeGoals": 1,
+          "awayGoals": 2,
+          "result": "L"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1772373600000,
+          "homeGoals": 2,
+          "awayGoals": 1,
+          "result": "L"
+        }
+      ],
+      "positionType": null,
+      "positionTypeName": null
+    },
+    {
+      "position": "12th",
+      "team": {
+        "id": 3,
+        "name": "Sunderland"
+      },
+      "played": 36,
+      "goalDiff": -9,
+      "points": 48,
+      "homeResults": [
+        {
+          "date": 1767538800000,
+          "homeGoals": 1,
+          "awayGoals": 1,
+          "result": "D"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1775998800000,
+          "homeGoals": 1,
+          "awayGoals": 0,
+          "result": "L"
+        }
+      ],
+      "positionType": null,
+      "positionTypeName": null
+    },
+    {
+      "position": "13th",
+      "team": {
+        "id": 20,
+        "name": "Newcastle United"
+      },
+      "played": 36,
+      "goalDiff": -2,
+      "points": 46,
+      "homeResults": [
+        {
+          "date": 1770751800000,
+          "homeGoals": 1,
+          "awayGoals": 2,
+          "result": "L"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1764706500000,
+          "homeGoals": 2,
+          "awayGoals": 2,
+          "result": "D"
+        }
+      ],
+      "positionType": null,
+      "positionTypeName": null
+    },
+    {
+      "position": "14th",
+      "team": {
+        "id": 51,
+        "name": "Crystal Palace"
+      },
+      "played": 35,
+      "goalDiff": -6,
+      "points": 44,
+      "homeResults": [
+        {
+          "date": 1772740800000,
+          "homeGoals": 1,
+          "awayGoals": 3,
+          "result": "L"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1766939400000,
+          "homeGoals": 0,
+          "awayGoals": 1,
+          "result": "W"
+        }
+      ],
+      "positionType": null,
+      "positionTypeName": null
+    },
+    {
+      "position": "15th",
+      "team": {
+        "id": 63,
+        "name": "Nottingham Forest"
+      },
+      "played": 36,
+      "goalDiff": -2,
+      "points": 43,
+      "homeResults": [
+        {
+          "date": 1774188900000,
+          "homeGoals": 0,
+          "awayGoals": 3,
+          "result": "L"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1765720800000,
+          "homeGoals": 3,
+          "awayGoals": 0,
+          "result": "L"
+        }
+      ],
+      "positionType": null,
+      "positionTypeName": null
+    },
+    {
+      "position": "16th",
+      "team": {
+        "id": 71,
+        "name": "Leeds United"
+      },
+      "played": 35,
+      "goalDiff": -5,
+      "points": 43,
+      "homeResults": [],
+      "awayResults": [
+        {
+          "date": 1759577400000,
+          "homeGoals": 1,
+          "awayGoals": 2,
+          "result": "W"
+        }
+      ],
+      "positionType": null,
+      "positionTypeName": null
+    },
+    {
+      "position": "17th",
+      "team": {
+        "id": 6,
+        "name": "Tottenham Hotspur"
+      },
+      "played": 35,
+      "goalDiff": -9,
+      "points": 37,
+      "homeResults": [],
+      "awayResults": [],
+      "positionType": null,
+      "positionTypeName": null
+    },
+    {
+      "position": "18th",
+      "team": {
+        "id": 1,
+        "name": "West Ham United"
+      },
+      "played": 36,
+      "goalDiff": -20,
+      "points": 36,
+      "homeResults": [
+        {
+          "date": 1768662000000,
+          "homeGoals": 1,
+          "awayGoals": 2,
+          "result": "L"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1757781000000,
+          "homeGoals": 0,
+          "awayGoals": 3,
+          "result": "W"
+        }
+      ],
+      "positionType": "RELEGATION",
+      "positionTypeName": "Relegation"
+    },
+    {
+      "position": "19th",
+      "team": {
+        "id": 27,
+        "name": "Burnley"
+      },
+      "played": 36,
+      "goalDiff": -36,
+      "points": 21,
+      "homeResults": [
+        {
+          "date": 1755352800000,
+          "homeGoals": 3,
+          "awayGoals": 0,
+          "result": "W"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1769266800000,
+          "homeGoals": 2,
+          "awayGoals": 2,
+          "result": "D"
+        }
+      ],
+      "positionType": "RELEGATION",
+      "positionTypeName": "Relegation"
+    },
+    {
+      "position": "20th",
+      "team": {
+        "id": 29,
+        "name": "Wolverhampton Wanderers"
+      },
+      "played": 36,
+      "goalDiff": -41,
+      "points": 18,
+      "homeResults": [
+        {
+          "date": 1758999600000,
+          "homeGoals": 1,
+          "awayGoals": 1,
+          "result": "D"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1777125600000,
+          "homeGoals": 0,
+          "awayGoals": 1,
+          "result": "W"
+        }
+      ],
+      "positionType": "RELEGATION",
+      "positionTypeName": "Relegation"
+    }
+  ],
+  "awayTeamResultsWithStandings": [
+    {
+      "position": "1st",
+      "team": {
+        "id": 19,
+        "name": "Arsenal"
+      },
+      "played": 36,
+      "goalDiff": 42,
+      "points": 79,
+      "homeResults": [
+        {
+          "date": 1769871600000,
+          "homeGoals": 0,
+          "awayGoals": 4,
+          "result": "L"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1755966600000,
+          "homeGoals": 5,
+          "awayGoals": 0,
+          "result": "L"
+        }
+      ],
+      "positionType": "UEFA_CHAMPIONS_LEAGUE",
+      "positionTypeName": "UEFA Champions League"
+    },
+    {
+      "position": "2nd",
+      "team": {
+        "id": 9,
+        "name": "Manchester City"
+      },
+      "played": 35,
+      "goalDiff": 40,
+      "points": 74,
+      "homeResults": [
+        {
+          "date": 1772299800000,
+          "homeGoals": 0,
+          "awayGoals": 1,
+          "result": "L"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1764428400000,
+          "homeGoals": 3,
+          "awayGoals": 2,
+          "result": "L"
+        }
+      ],
+      "positionType": "UEFA_CHAMPIONS_LEAGUE",
+      "positionTypeName": "UEFA Champions League"
+    },
+    {
+      "position": "3rd",
+      "team": {
+        "id": 14,
+        "name": "Manchester United"
+      },
+      "played": 36,
+      "goalDiff": 15,
+      "points": 65,
+      "homeResults": [
+        {
+          "date": 1767529800000,
+          "homeGoals": 1,
+          "awayGoals": 1,
+          "result": "D"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1776106800000,
+          "homeGoals": 1,
+          "awayGoals": 2,
+          "result": "W"
+        }
+      ],
+      "positionType": "UEFA_CHAMPIONS_LEAGUE",
+      "positionTypeName": "UEFA Champions League"
+    },
+    {
+      "position": "4th",
+      "team": {
+        "id": 8,
+        "name": "Liverpool"
+      },
+      "played": 36,
+      "goalDiff": 12,
+      "points": 59,
+      "homeResults": [
+        {
+          "date": 1765042200000,
+          "homeGoals": 3,
+          "awayGoals": 3,
+          "result": "D"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1767288600000,
+          "homeGoals": 0,
+          "awayGoals": 0,
+          "result": "D"
+        }
+      ],
+      "positionType": "UEFA_CHAMPIONS_LEAGUE",
+      "positionTypeName": "UEFA Champions League"
+    },
+    {
+      "position": "5th",
+      "team": {
+        "id": 15,
+        "name": "Aston Villa"
+      },
+      "played": 36,
+      "goalDiff": 4,
+      "points": 59,
+      "homeResults": [
+        {
+          "date": 1763906400000,
+          "homeGoals": 1,
+          "awayGoals": 2,
+          "result": "L"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1771686000000,
+          "homeGoals": 1,
+          "awayGoals": 1,
+          "result": "D"
+        }
+      ],
+      "positionType": "UEFA_CHAMPIONS_LEAGUE",
+      "positionTypeName": "UEFA Champions League"
+    },
+    {
+      "position": "6th",
+      "team": {
+        "id": 52,
+        "name": "AFC Bournemouth"
+      },
+      "played": 36,
+      "goalDiff": 4,
+      "points": 55,
+      "homeResults": [
+        {
+          "date": 1758981600000,
+          "homeGoals": 2,
+          "awayGoals": 2,
+          "result": "D"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1776884400000,
+          "homeGoals": 2,
+          "awayGoals": 2,
+          "result": "D"
+        }
+      ],
+      "positionType": "UEFA_EUROPA_LEAGUE",
+      "positionTypeName": "UEFA Europa League"
+    },
+    {
+      "position": "7th",
+      "team": {
+        "id": 78,
+        "name": "Brighton & Hove Albion"
+      },
+      "played": 36,
+      "goalDiff": 10,
+      "points": 53,
+      "homeResults": [],
+      "awayResults": [
+        {
+          "date": 1762009200000,
+          "homeGoals": 3,
+          "awayGoals": 0,
+          "result": "L"
+        }
+      ],
+      "positionType": null,
+      "positionTypeName": null
+    },
+    {
+      "position": "8th",
+      "team": {
+        "id": 236,
+        "name": "Brentford"
+      },
+      "played": 36,
+      "goalDiff": 3,
+      "points": 51,
+      "homeResults": [
+        {
+          "date": 1774123200000,
+          "homeGoals": 0,
+          "awayGoals": 0,
+          "result": "D"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1765729800000,
+          "homeGoals": 1,
+          "awayGoals": 1,
+          "result": "D"
+        }
+      ],
+      "positionType": null,
+      "positionTypeName": null
+    },
+    {
+      "position": "9th",
+      "team": {
+        "id": 18,
+        "name": "Chelsea"
+      },
+      "played": 36,
+      "goalDiff": 6,
+      "points": 49,
+      "homeResults": [
+        {
+          "date": 1764792900000,
+          "homeGoals": 3,
+          "awayGoals": 1,
+          "result": "W"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1770751800000,
+          "homeGoals": 2,
+          "awayGoals": 2,
+          "result": "D"
+        }
+      ],
+      "positionType": null,
+      "positionTypeName": null
+    },
+    {
+      "position": "10th",
+      "team": {
+        "id": 13,
+        "name": "Everton"
+      },
+      "played": 36,
+      "goalDiff": 0,
+      "points": 49,
+      "homeResults": [
+        {
+          "date": 1755543600000,
+          "homeGoals": 1,
+          "awayGoals": 0,
+          "result": "W"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1769457600000,
+          "homeGoals": 1,
+          "awayGoals": 1,
+          "result": "D"
+        }
+      ],
+      "positionType": null,
+      "positionTypeName": null
+    },
+    {
+      "position": "11th",
+      "team": {
+        "id": 11,
+        "name": "Fulham"
+      },
+      "played": 36,
+      "goalDiff": -6,
+      "points": 48,
+      "homeResults": [
+        {
+          "date": 1768662000000,
+          "homeGoals": 1,
+          "awayGoals": 0,
+          "result": "W"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1757772000000,
+          "homeGoals": 1,
+          "awayGoals": 0,
+          "result": "L"
+        }
+      ],
+      "positionType": null,
+      "positionTypeName": null
+    },
+    {
+      "position": "12th",
+      "team": {
+        "id": 3,
+        "name": "Sunderland"
+      },
+      "played": 36,
+      "goalDiff": -9,
+      "points": 48,
+      "homeResults": [
+        {
+          "date": 1772566200000,
+          "homeGoals": 0,
+          "awayGoals": 1,
+          "result": "L"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1766930400000,
+          "homeGoals": 1,
+          "awayGoals": 1,
+          "result": "D"
+        }
+      ],
+      "positionType": null,
+      "positionTypeName": null
+    },
+    {
+      "position": "13th",
+      "team": {
+        "id": 20,
+        "name": "Newcastle United"
+      },
+      "played": 36,
+      "goalDiff": -2,
+      "points": 46,
+      "homeResults": [
+        {
+          "date": 1756571400000,
+          "homeGoals": 0,
+          "awayGoals": 0,
+          "result": "D"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1767816900000,
+          "homeGoals": 4,
+          "awayGoals": 3,
+          "result": "L"
+        }
+      ],
+      "positionType": null,
+      "positionTypeName": null
+    },
+    {
+      "position": "14th",
+      "team": {
+        "id": 51,
+        "name": "Crystal Palace"
+      },
+      "played": 35,
+      "goalDiff": -6,
+      "points": 44,
+      "homeResults": [
+        {
+          "date": 1766260800000,
+          "homeGoals": 4,
+          "awayGoals": 1,
+          "result": "W"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1773583200000,
+          "homeGoals": 0,
+          "awayGoals": 0,
+          "result": "D"
+        }
+      ],
+      "positionType": null,
+      "positionTypeName": null
+    },
+    {
+      "position": "15th",
+      "team": {
+        "id": 63,
+        "name": "Nottingham Forest"
+      },
+      "played": 36,
+      "goalDiff": -2,
+      "points": 43,
+      "homeResults": [
+        {
+          "date": 1770408000000,
+          "homeGoals": 3,
+          "awayGoals": 1,
+          "result": "W"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1762696800000,
+          "homeGoals": 3,
+          "awayGoals": 1,
+          "result": "L"
+        }
+      ],
+      "positionType": null,
+      "positionTypeName": null
+    },
+    {
+      "position": "16th",
+      "team": {
+        "id": 71,
+        "name": "Leeds United"
+      },
+      "played": 35,
+      "goalDiff": -5,
+      "points": 43,
+      "homeResults": [],
+      "awayResults": [],
+      "positionType": null,
+      "positionTypeName": null
+    },
+    {
+      "position": "17th",
+      "team": {
+        "id": 6,
+        "name": "Tottenham Hotspur"
+      },
+      "played": 35,
+      "goalDiff": -9,
+      "points": 37,
+      "homeResults": [
+        {
+          "date": 1759577400000,
+          "homeGoals": 1,
+          "awayGoals": 2,
+          "result": "L"
+        }
+      ],
+      "awayResults": [],
+      "positionType": null,
+      "positionTypeName": null
+    },
+    {
+      "position": "18th",
+      "team": {
+        "id": 1,
+        "name": "West Ham United"
+      },
+      "played": 36,
+      "goalDiff": -20,
+      "points": 36,
+      "homeResults": [
+        {
+          "date": 1761332400000,
+          "homeGoals": 2,
+          "awayGoals": 1,
+          "result": "W"
+        }
+      ],
+      "awayResults": [],
+      "positionType": "RELEGATION",
+      "positionTypeName": "Relegation"
+    },
+    {
+      "position": "19th",
+      "team": {
+        "id": 27,
+        "name": "Burnley"
+      },
+      "played": 36,
+      "goalDiff": -36,
+      "points": 21,
+      "homeResults": [
+        {
+          "date": 1777662000000,
+          "homeGoals": 3,
+          "awayGoals": 1,
+          "result": "W"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1760796000000,
+          "homeGoals": 2,
+          "awayGoals": 0,
+          "result": "L"
+        }
+      ],
+      "positionType": "RELEGATION",
+      "positionTypeName": "Relegation"
+    },
+    {
+      "position": "20th",
+      "team": {
+        "id": 29,
+        "name": "Wolverhampton Wanderers"
+      },
+      "played": 36,
+      "goalDiff": -41,
+      "points": 18,
+      "homeResults": [
+        {
+          "date": 1776520800000,
+          "homeGoals": 3,
+          "awayGoals": 0,
+          "result": "W"
+        }
+      ],
+      "awayResults": [
+        {
+          "date": 1758376800000,
+          "homeGoals": 1,
+          "awayGoals": 3,
+          "result": "W"
+        }
+      ],
+      "positionType": "RELEGATION",
+      "positionTypeName": "Relegation"
+    }
+  ],
+  "homeTeamResultsWithStandingsStage": [
+    {
+      "name": "Regular Season",
+      "teamStandings": [
+        {
+          "position": "1st",
+          "team": {
+            "id": 19,
+            "name": "Arsenal"
+          },
+          "played": 36,
+          "goalDiff": 42,
+          "points": 79,
+          "homeResults": [
+            {
+              "date": 1771777800000,
+              "homeGoals": 1,
+              "awayGoals": 4,
+              "result": "L",
+              "homeGoalsHt": 1,
+              "awayGoalsHt": 1,
+              "homeGoalsFt": 1,
+              "awayGoalsFt": 4,
+              "homeCorners": 2,
+              "awayCorners": 5,
+              "homeCorners1h": 1,
+              "awayCorners1h": 4,
+              "homeCorners2h": 1,
+              "awayCorners2h": 1,
+              "homeYellows": 2,
+              "awayYellows": 1,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 6,
+              "awayTotalShots": 20,
+              "homeShotsOnTarget": 5,
+              "awayShotsOnTarget": 7,
+              "homeOffsides": 0,
+              "awayOffsides": 0,
+              "homeFouls": 17,
+              "awayFouls": 11,
+              "homeBookingPoints": 20,
+              "awayBookingPoints": 10,
+              "homeGoalKicks": 10,
+              "awayGoalKicks": 4,
+              "homeThrowIns": 30,
+              "awayThrowIns": 16,
+              "homeTackles": 24,
+              "awayTackles": 31
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1763915400000,
+              "homeGoals": 4,
+              "awayGoals": 1,
+              "result": "L",
+              "homeGoalsHt": 2,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 4,
+              "awayGoalsFt": 1,
+              "homeCorners": 4,
+              "awayCorners": 1,
+              "homeCorners1h": 1,
+              "awayCorners1h": 0,
+              "homeCorners2h": 3,
+              "awayCorners2h": 1,
+              "homeYellows": 1,
+              "awayYellows": 3,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 17,
+              "awayTotalShots": 3,
+              "homeShotsOnTarget": 8,
+              "awayShotsOnTarget": 2,
+              "homeOffsides": 3,
+              "awayOffsides": 1,
+              "homeFouls": 11,
+              "awayFouls": 15,
+              "homeBookingPoints": 10,
+              "awayBookingPoints": 30,
+              "homeGoalKicks": 6,
+              "awayGoalKicks": 8,
+              "homeThrowIns": 18,
+              "awayThrowIns": 22,
+              "homeTackles": 23,
+              "awayTackles": 21
+            }
+          ],
+          "positionType": "UEFA_CHAMPIONS_LEAGUE",
+          "positionTypeName": "UEFA Champions League"
+        },
+        {
+          "position": "2nd",
+          "team": {
+            "id": 9,
+            "name": "Manchester City"
+          },
+          "played": 35,
+          "goalDiff": 40,
+          "points": 74,
+          "homeResults": [
+            {
+              "date": 1769963400000,
+              "homeGoals": 2,
+              "awayGoals": 2,
+              "result": "D",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 2,
+              "homeGoalsFt": 2,
+              "awayGoalsFt": 2,
+              "homeCorners": 3,
+              "awayCorners": 4,
+              "homeCorners1h": 0,
+              "awayCorners1h": 0,
+              "homeCorners2h": 3,
+              "awayCorners2h": 4,
+              "homeYellows": 3,
+              "awayYellows": 3,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 12,
+              "awayTotalShots": 15,
+              "homeShotsOnTarget": 6,
+              "awayShotsOnTarget": 3,
+              "homeOffsides": 1,
+              "awayOffsides": 2,
+              "homeFouls": 15,
+              "awayFouls": 12,
+              "homeBookingPoints": 30,
+              "awayBookingPoints": 30,
+              "homeGoalKicks": 12,
+              "awayGoalKicks": 3,
+              "homeThrowIns": 19,
+              "awayThrowIns": 14,
+              "homeTackles": 24,
+              "awayTackles": 23
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1755948600000,
+              "homeGoals": 0,
+              "awayGoals": 2,
+              "result": "W",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 2,
+              "homeGoalsFt": 0,
+              "awayGoalsFt": 2,
+              "homeCorners": 7,
+              "awayCorners": 2,
+              "homeCorners1h": 2,
+              "awayCorners1h": 1,
+              "homeCorners2h": 5,
+              "awayCorners2h": 1,
+              "homeYellows": 1,
+              "awayYellows": 4,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 10,
+              "awayTotalShots": 12,
+              "homeShotsOnTarget": 4,
+              "awayShotsOnTarget": 5,
+              "homeOffsides": 0,
+              "awayOffsides": 1,
+              "homeFouls": 7,
+              "awayFouls": 12,
+              "homeBookingPoints": 10,
+              "awayBookingPoints": 40,
+              "homeGoalKicks": 10,
+              "awayGoalKicks": 11,
+              "homeThrowIns": 23,
+              "awayThrowIns": 21,
+              "homeTackles": 20,
+              "awayTackles": 24
+            }
+          ],
+          "positionType": "UEFA_CHAMPIONS_LEAGUE",
+          "positionTypeName": "UEFA Champions League"
+        },
+        {
+          "position": "3rd",
+          "team": {
+            "id": 14,
+            "name": "Manchester United"
+          },
+          "played": 36,
+          "goalDiff": 15,
+          "points": 65,
+          "homeResults": [
+            {
+              "date": 1762605000000,
+              "homeGoals": 2,
+              "awayGoals": 2,
+              "result": "D",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 1,
+              "homeGoalsFt": 2,
+              "awayGoalsFt": 2,
+              "homeCorners": 5,
+              "awayCorners": 3,
+              "homeCorners1h": 3,
+              "awayCorners1h": 2,
+              "homeCorners2h": 2,
+              "awayCorners2h": 1,
+              "homeYellows": 5,
+              "awayYellows": 1,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 10,
+              "awayTotalShots": 5,
+              "homeShotsOnTarget": 4,
+              "awayShotsOnTarget": 2,
+              "homeOffsides": 2,
+              "awayOffsides": 3,
+              "homeFouls": 10,
+              "awayFouls": 8,
+              "homeBookingPoints": 50,
+              "awayBookingPoints": 10,
+              "homeGoalKicks": 3,
+              "awayGoalKicks": 10,
+              "homeThrowIns": 18,
+              "awayThrowIns": 26,
+              "homeTackles": 26,
+              "awayTackles": 21
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1770467400000,
+              "homeGoals": 2,
+              "awayGoals": 0,
+              "result": "L",
+              "homeGoalsHt": 1,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 2,
+              "awayGoalsFt": 0,
+              "homeCorners": 7,
+              "awayCorners": 0,
+              "homeCorners1h": 4,
+              "awayCorners1h": 0,
+              "homeCorners2h": 3,
+              "awayCorners2h": 0,
+              "homeYellows": 1,
+              "awayYellows": 2,
+              "homeReds": 0,
+              "awayReds": 1,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 23,
+              "awayTotalShots": 7,
+              "homeShotsOnTarget": 10,
+              "awayShotsOnTarget": 1,
+              "homeOffsides": 3,
+              "awayOffsides": 1,
+              "homeFouls": 12,
+              "awayFouls": 11,
+              "homeBookingPoints": 10,
+              "awayBookingPoints": 45,
+              "homeGoalKicks": 4,
+              "awayGoalKicks": 8,
+              "homeThrowIns": 18,
+              "awayThrowIns": 8,
+              "homeTackles": 18,
+              "awayTackles": 16
+            }
+          ],
+          "positionType": "UEFA_CHAMPIONS_LEAGUE",
+          "positionTypeName": "UEFA Champions League"
+        },
+        {
+          "position": "4th",
+          "team": {
+            "id": 8,
+            "name": "Liverpool"
+          },
+          "played": 36,
+          "goalDiff": 12,
+          "points": 59,
+          "homeResults": [
+            {
+              "date": 1766251800000,
+              "homeGoals": 1,
+              "awayGoals": 2,
+              "result": "L",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 1,
+              "awayGoalsFt": 2,
+              "homeCorners": 2,
+              "awayCorners": 6,
+              "homeCorners1h": 0,
+              "awayCorners1h": 4,
+              "homeCorners2h": 2,
+              "awayCorners2h": 2,
+              "homeYellows": 5,
+              "awayYellows": 3,
+              "homeReds": 2,
+              "awayReds": 0,
+              "homeYellowReds": 1,
+              "awayYellowReds": 0,
+              "homeTotalShots": 15,
+              "awayTotalShots": 8,
+              "homeShotsOnTarget": 4,
+              "awayShotsOnTarget": 4,
+              "homeOffsides": 1,
+              "awayOffsides": 6,
+              "homeFouls": 9,
+              "awayFouls": 7,
+              "homeBookingPoints": 100,
+              "awayBookingPoints": 30,
+              "homeGoalKicks": 3,
+              "awayGoalKicks": 5,
+              "homeThrowIns": 14,
+              "awayThrowIns": 27,
+              "homeTackles": 11,
+              "awayTackles": 4
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1773592200000,
+              "homeGoals": 1,
+              "awayGoals": 1,
+              "result": "D",
+              "homeGoalsHt": 1,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 1,
+              "awayGoalsFt": 1,
+              "homeCorners": 3,
+              "awayCorners": 4,
+              "homeCorners1h": 1,
+              "awayCorners1h": 2,
+              "homeCorners2h": 2,
+              "awayCorners2h": 2,
+              "homeYellows": 0,
+              "awayYellows": 0,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 17,
+              "awayTotalShots": 13,
+              "homeShotsOnTarget": 4,
+              "awayShotsOnTarget": 7,
+              "homeOffsides": 0,
+              "awayOffsides": 1,
+              "homeFouls": 8,
+              "awayFouls": 13,
+              "homeBookingPoints": 0,
+              "awayBookingPoints": 0,
+              "homeGoalKicks": 5,
+              "awayGoalKicks": 15,
+              "homeThrowIns": 23,
+              "awayThrowIns": 25,
+              "homeTackles": 12,
+              "awayTackles": 20
+            }
+          ],
+          "positionType": "UEFA_CHAMPIONS_LEAGUE",
+          "positionTypeName": "UEFA Champions League"
+        },
+        {
+          "position": "5th",
+          "team": {
+            "id": 15,
+            "name": "Aston Villa"
+          },
+          "played": 36,
+          "goalDiff": 4,
+          "points": 59,
+          "homeResults": [
+            {
+              "date": 1760878800000,
+              "homeGoals": 1,
+              "awayGoals": 2,
+              "result": "L",
+              "homeGoalsHt": 1,
+              "awayGoalsHt": 1,
+              "homeGoalsFt": 1,
+              "awayGoalsFt": 2,
+              "homeCorners": 6,
+              "awayCorners": 6,
+              "homeCorners1h": 4,
+              "awayCorners1h": 2,
+              "homeCorners2h": 2,
+              "awayCorners2h": 4,
+              "homeYellows": 2,
+              "awayYellows": 0,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 10,
+              "awayTotalShots": 8,
+              "homeShotsOnTarget": 3,
+              "awayShotsOnTarget": 2,
+              "homeOffsides": 6,
+              "awayOffsides": 1,
+              "homeFouls": 11,
+              "awayFouls": 7,
+              "homeBookingPoints": 20,
+              "awayBookingPoints": 0,
+              "homeGoalKicks": 6,
+              "awayGoalKicks": 7,
+              "homeThrowIns": 23,
+              "awayThrowIns": 22,
+              "homeTackles": 25,
+              "awayTackles": 24
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1777831200000,
+              "homeGoals": 1,
+              "awayGoals": 2,
+              "result": "W",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 2,
+              "homeGoalsFt": 1,
+              "awayGoalsFt": 2,
+              "homeCorners": 5,
+              "awayCorners": 5,
+              "homeCorners1h": 0,
+              "awayCorners1h": 3,
+              "homeCorners2h": 5,
+              "awayCorners2h": 2,
+              "homeYellows": 2,
+              "awayYellows": 5,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 5,
+              "awayTotalShots": 10,
+              "homeShotsOnTarget": 1,
+              "awayShotsOnTarget": 5,
+              "homeOffsides": 2,
+              "awayOffsides": 4,
+              "homeFouls": 12,
+              "awayFouls": 12,
+              "homeBookingPoints": 20,
+              "awayBookingPoints": 50,
+              "homeGoalKicks": 6,
+              "awayGoalKicks": 7,
+              "homeThrowIns": 21,
+              "awayThrowIns": 17,
+              "homeTackles": 19,
+              "awayTackles": 23
+            }
+          ],
+          "positionType": "UEFA_CHAMPIONS_LEAGUE",
+          "positionTypeName": "UEFA Champions League"
+        },
+        {
+          "position": "6th",
+          "team": {
+            "id": 52,
+            "name": "AFC Bournemouth"
+          },
+          "played": 36,
+          "goalDiff": 4,
+          "points": 55,
+          "homeResults": [
+            {
+              "date": 1756562400000,
+              "homeGoals": 0,
+              "awayGoals": 1,
+              "result": "L",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 1,
+              "homeGoalsFt": 0,
+              "awayGoalsFt": 1,
+              "homeCorners": 0,
+              "awayCorners": 8,
+              "homeCorners1h": 0,
+              "awayCorners1h": 3,
+              "homeCorners2h": 0,
+              "awayCorners2h": 5,
+              "homeYellows": 2,
+              "awayYellows": 4,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 5,
+              "awayTotalShots": 20,
+              "homeShotsOnTarget": 1,
+              "awayShotsOnTarget": 6,
+              "homeOffsides": 2,
+              "awayOffsides": 3,
+              "homeFouls": 17,
+              "awayFouls": 13,
+              "homeBookingPoints": 20,
+              "awayBookingPoints": 40,
+              "homeGoalKicks": 10,
+              "awayGoalKicks": 9,
+              "homeThrowIns": 25,
+              "awayThrowIns": 15,
+              "homeTackles": 16,
+              "awayTackles": 28
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1767814200000,
+              "homeGoals": 3,
+              "awayGoals": 2,
+              "result": "L",
+              "homeGoalsHt": 2,
+              "awayGoalsHt": 1,
+              "homeGoalsFt": 3,
+              "awayGoalsFt": 2,
+              "homeCorners": 3,
+              "awayCorners": 7,
+              "homeCorners1h": 3,
+              "awayCorners1h": 3,
+              "homeCorners2h": 0,
+              "awayCorners2h": 4,
+              "homeYellows": 3,
+              "awayYellows": 3,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 11,
+              "awayTotalShots": 16,
+              "homeShotsOnTarget": 3,
+              "awayShotsOnTarget": 4,
+              "homeOffsides": 4,
+              "awayOffsides": 0,
+              "homeFouls": 19,
+              "awayFouls": 10,
+              "homeBookingPoints": 30,
+              "awayBookingPoints": 30,
+              "homeGoalKicks": 7,
+              "awayGoalKicks": 7,
+              "homeThrowIns": 19,
+              "awayThrowIns": 25,
+              "homeTackles": 17,
+              "awayTackles": 24
+            }
+          ],
+          "positionType": "UEFA_EUROPA_LEAGUE",
+          "positionTypeName": "UEFA Europa League"
+        },
+        {
+          "position": "7th",
+          "team": {
+            "id": 78,
+            "name": "Brighton & Hove Albion"
+          },
+          "played": 36,
+          "goalDiff": 10,
+          "points": 53,
+          "homeResults": [
+            {
+              "date": 1776529800000,
+              "homeGoals": 2,
+              "awayGoals": 2,
+              "result": "D",
+              "homeGoalsHt": 1,
+              "awayGoalsHt": 1,
+              "homeGoalsFt": 2,
+              "awayGoalsFt": 2,
+              "homeCorners": 7,
+              "awayCorners": 5,
+              "homeCorners1h": 5,
+              "awayCorners1h": 3,
+              "homeCorners2h": 2,
+              "awayCorners2h": 2,
+              "homeYellows": 3,
+              "awayYellows": 1,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 13,
+              "awayTotalShots": 10,
+              "homeShotsOnTarget": 6,
+              "awayShotsOnTarget": 3,
+              "homeOffsides": 2,
+              "awayOffsides": 0,
+              "homeFouls": 14,
+              "awayFouls": 14,
+              "homeBookingPoints": 30,
+              "awayBookingPoints": 10,
+              "homeGoalKicks": 7,
+              "awayGoalKicks": 6,
+              "homeThrowIns": 15,
+              "awayThrowIns": 20,
+              "homeTackles": 14,
+              "awayTackles": 14
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1758376800000,
+              "homeGoals": 2,
+              "awayGoals": 2,
+              "result": "D",
+              "homeGoalsHt": 2,
+              "awayGoalsHt": 1,
+              "homeGoalsFt": 2,
+              "awayGoalsFt": 2,
+              "homeCorners": 2,
+              "awayCorners": 10,
+              "homeCorners1h": 1,
+              "awayCorners1h": 4,
+              "homeCorners2h": 1,
+              "awayCorners2h": 6,
+              "homeYellows": 1,
+              "awayYellows": 2,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 12,
+              "awayTotalShots": 11,
+              "homeShotsOnTarget": 4,
+              "awayShotsOnTarget": 3,
+              "homeOffsides": 0,
+              "awayOffsides": 1,
+              "homeFouls": 10,
+              "awayFouls": 13,
+              "homeBookingPoints": 10,
+              "awayBookingPoints": 20,
+              "homeGoalKicks": 14,
+              "awayGoalKicks": 9,
+              "homeThrowIns": 11,
+              "awayThrowIns": 17,
+              "homeTackles": 25,
+              "awayTackles": 26
+            }
+          ],
+          "positionType": null,
+          "positionTypeName": null
+        },
+        {
+          "position": "8th",
+          "team": {
+            "id": 236,
+            "name": "Brentford"
+          },
+          "played": 36,
+          "goalDiff": 3,
+          "points": 51,
+          "homeResults": [
+            {
+              "date": 1765033200000,
+              "homeGoals": 2,
+              "awayGoals": 0,
+              "result": "W",
+              "homeGoalsHt": 2,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 2,
+              "awayGoalsFt": 0,
+              "homeCorners": 7,
+              "awayCorners": 6,
+              "homeCorners1h": 6,
+              "awayCorners1h": 3,
+              "homeCorners2h": 1,
+              "awayCorners2h": 3,
+              "homeYellows": 3,
+              "awayYellows": 4,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 15,
+              "awayTotalShots": 4,
+              "homeShotsOnTarget": 7,
+              "awayShotsOnTarget": 1,
+              "homeOffsides": 2,
+              "awayOffsides": 1,
+              "homeFouls": 8,
+              "awayFouls": 9,
+              "homeBookingPoints": 30,
+              "awayBookingPoints": 40,
+              "homeGoalKicks": 7,
+              "awayGoalKicks": 10,
+              "homeThrowIns": 18,
+              "awayThrowIns": 15,
+              "homeTackles": 17,
+              "awayTackles": 24
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1767297600000,
+              "homeGoals": 0,
+              "awayGoals": 0,
+              "result": "D",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 0,
+              "awayGoalsFt": 0,
+              "homeCorners": 3,
+              "awayCorners": 1,
+              "homeCorners1h": 1,
+              "awayCorners1h": 0,
+              "homeCorners2h": 2,
+              "awayCorners2h": 1,
+              "homeYellows": 1,
+              "awayYellows": 2,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 7,
+              "awayTotalShots": 9,
+              "homeShotsOnTarget": 2,
+              "awayShotsOnTarget": 3,
+              "homeOffsides": 4,
+              "awayOffsides": 0,
+              "homeFouls": 8,
+              "awayFouls": 10,
+              "homeBookingPoints": 10,
+              "awayBookingPoints": 20,
+              "homeGoalKicks": 5,
+              "awayGoalKicks": 7,
+              "homeThrowIns": 18,
+              "awayThrowIns": 16,
+              "homeTackles": 18,
+              "awayTackles": 18
+            }
+          ],
+          "positionType": null,
+          "positionTypeName": null
+        },
+        {
+          "position": "9th",
+          "team": {
+            "id": 18,
+            "name": "Chelsea"
+          },
+          "played": 36,
+          "goalDiff": 6,
+          "points": 49,
+          "homeResults": [
+            {
+              "date": 1762018200000,
+              "homeGoals": 0,
+              "awayGoals": 1,
+              "result": "L",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 1,
+              "homeGoalsFt": 0,
+              "awayGoalsFt": 1,
+              "homeCorners": 6,
+              "awayCorners": 5,
+              "homeCorners1h": 3,
+              "awayCorners1h": 4,
+              "homeCorners2h": 3,
+              "awayCorners2h": 1,
+              "homeYellows": 4,
+              "awayYellows": 2,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 3,
+              "awayTotalShots": 15,
+              "homeShotsOnTarget": 1,
+              "awayShotsOnTarget": 9,
+              "homeOffsides": 1,
+              "awayOffsides": 1,
+              "homeFouls": 14,
+              "awayFouls": 12,
+              "homeBookingPoints": 40,
+              "awayBookingPoints": 20,
+              "homeGoalKicks": 9,
+              "awayGoalKicks": 4,
+              "homeThrowIns": 25,
+              "awayThrowIns": 22,
+              "homeTackles": 30,
+              "awayTackles": 20
+            }
+          ],
+          "awayResults": [],
+          "positionType": null,
+          "positionTypeName": null
+        },
+        {
+          "position": "10th",
+          "team": {
+            "id": 13,
+            "name": "Everton"
+          },
+          "played": 36,
+          "goalDiff": 0,
+          "points": 49,
+          "homeResults": [],
+          "awayResults": [
+            {
+              "date": 1761496200000,
+              "homeGoals": 0,
+              "awayGoals": 3,
+              "result": "W",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 2,
+              "homeGoalsFt": 0,
+              "awayGoalsFt": 3,
+              "homeCorners": 9,
+              "awayCorners": 8,
+              "homeCorners1h": 4,
+              "awayCorners1h": 6,
+              "homeCorners2h": 5,
+              "awayCorners2h": 2,
+              "homeYellows": 2,
+              "awayYellows": 0,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 12,
+              "awayTotalShots": 7,
+              "homeShotsOnTarget": 2,
+              "awayShotsOnTarget": 4,
+              "homeOffsides": 2,
+              "awayOffsides": 2,
+              "homeFouls": 9,
+              "awayFouls": 8,
+              "homeBookingPoints": 20,
+              "awayBookingPoints": 0,
+              "homeGoalKicks": 3,
+              "awayGoalKicks": 9,
+              "homeThrowIns": 17,
+              "awayThrowIns": 15,
+              "homeTackles": 19,
+              "awayTackles": 20
+            }
+          ],
+          "positionType": null,
+          "positionTypeName": null
+        },
+        {
+          "position": "11th",
+          "team": {
+            "id": 11,
+            "name": "Fulham"
+          },
+          "played": 36,
+          "goalDiff": -6,
+          "points": 48,
+          "homeResults": [
+            {
+              "date": 1764446400000,
+              "homeGoals": 1,
+              "awayGoals": 2,
+              "result": "L",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 2,
+              "homeGoalsFt": 1,
+              "awayGoalsFt": 2,
+              "homeCorners": 8,
+              "awayCorners": 2,
+              "homeCorners1h": 3,
+              "awayCorners1h": 2,
+              "homeCorners2h": 5,
+              "awayCorners2h": 0,
+              "homeYellows": 3,
+              "awayYellows": 2,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 14,
+              "awayTotalShots": 7,
+              "homeShotsOnTarget": 2,
+              "awayShotsOnTarget": 3,
+              "homeOffsides": 3,
+              "awayOffsides": 4,
+              "homeFouls": 11,
+              "awayFouls": 7,
+              "homeBookingPoints": 30,
+              "awayBookingPoints": 20,
+              "homeGoalKicks": 2,
+              "awayGoalKicks": 10,
+              "homeThrowIns": 26,
+              "awayThrowIns": 23,
+              "homeTackles": 14,
+              "awayTackles": 29
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1772373600000,
+              "homeGoals": 2,
+              "awayGoals": 1,
+              "result": "L",
+              "homeGoalsHt": 2,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 2,
+              "awayGoalsFt": 1,
+              "homeCorners": 5,
+              "awayCorners": 8,
+              "homeCorners1h": 3,
+              "awayCorners1h": 4,
+              "homeCorners2h": 2,
+              "awayCorners2h": 4,
+              "homeYellows": 3,
+              "awayYellows": 3,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 18,
+              "awayTotalShots": 13,
+              "homeShotsOnTarget": 4,
+              "awayShotsOnTarget": 1,
+              "homeOffsides": 1,
+              "awayOffsides": 1,
+              "homeFouls": 11,
+              "awayFouls": 14,
+              "homeBookingPoints": 30,
+              "awayBookingPoints": 30,
+              "homeGoalKicks": 12,
+              "awayGoalKicks": 9,
+              "homeThrowIns": 16,
+              "awayThrowIns": 22,
+              "homeTackles": 12,
+              "awayTackles": 16
+            }
+          ],
+          "positionType": null,
+          "positionTypeName": null
+        },
+        {
+          "position": "12th",
+          "team": {
+            "id": 3,
+            "name": "Sunderland"
+          },
+          "played": 36,
+          "goalDiff": -9,
+          "points": 48,
+          "homeResults": [
+            {
+              "date": 1767538800000,
+              "homeGoals": 1,
+              "awayGoals": 1,
+              "result": "D",
+              "homeGoalsHt": 1,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 1,
+              "awayGoalsFt": 1,
+              "homeCorners": 3,
+              "awayCorners": 5,
+              "homeCorners1h": 2,
+              "awayCorners1h": 1,
+              "homeCorners2h": 1,
+              "awayCorners2h": 4,
+              "homeYellows": 2,
+              "awayYellows": 3,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 13,
+              "awayTotalShots": 10,
+              "homeShotsOnTarget": 5,
+              "awayShotsOnTarget": 3,
+              "homeOffsides": 4,
+              "awayOffsides": 2,
+              "homeFouls": 9,
+              "awayFouls": 6,
+              "homeBookingPoints": 20,
+              "awayBookingPoints": 30,
+              "homeGoalKicks": 7,
+              "awayGoalKicks": 10,
+              "homeThrowIns": 22,
+              "awayThrowIns": 20,
+              "homeTackles": 15,
+              "awayTackles": 17
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1775998800000,
+              "homeGoals": 1,
+              "awayGoals": 0,
+              "result": "L",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 1,
+              "awayGoalsFt": 0,
+              "homeCorners": 2,
+              "awayCorners": 6,
+              "homeCorners1h": 2,
+              "awayCorners1h": 3,
+              "homeCorners2h": 0,
+              "awayCorners2h": 3,
+              "homeYellows": 3,
+              "awayYellows": 3,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 13,
+              "awayTotalShots": 11,
+              "homeShotsOnTarget": 2,
+              "awayShotsOnTarget": 7,
+              "homeOffsides": 0,
+              "awayOffsides": 0,
+              "homeFouls": 14,
+              "awayFouls": 15,
+              "homeBookingPoints": 30,
+              "awayBookingPoints": 30,
+              "homeGoalKicks": 9,
+              "awayGoalKicks": 13,
+              "homeThrowIns": 12,
+              "awayThrowIns": 16,
+              "homeTackles": 22,
+              "awayTackles": 10
+            }
+          ],
+          "positionType": null,
+          "positionTypeName": null
+        },
+        {
+          "position": "13th",
+          "team": {
+            "id": 20,
+            "name": "Newcastle United"
+          },
+          "played": 36,
+          "goalDiff": -2,
+          "points": 46,
+          "homeResults": [
+            {
+              "date": 1770751800000,
+              "homeGoals": 1,
+              "awayGoals": 2,
+              "result": "L",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 1,
+              "homeGoalsFt": 1,
+              "awayGoalsFt": 2,
+              "homeCorners": 2,
+              "awayCorners": 12,
+              "homeCorners1h": 0,
+              "awayCorners1h": 9,
+              "homeCorners2h": 2,
+              "awayCorners2h": 3,
+              "homeYellows": 3,
+              "awayYellows": 2,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 16,
+              "awayTotalShots": 21,
+              "homeShotsOnTarget": 2,
+              "awayShotsOnTarget": 5,
+              "homeOffsides": 0,
+              "awayOffsides": 2,
+              "homeFouls": 15,
+              "awayFouls": 11,
+              "homeBookingPoints": 30,
+              "awayBookingPoints": 20,
+              "homeGoalKicks": 13,
+              "awayGoalKicks": 7,
+              "homeThrowIns": 15,
+              "awayThrowIns": 14,
+              "homeTackles": 16,
+              "awayTackles": 23
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1764706500000,
+              "homeGoals": 2,
+              "awayGoals": 2,
+              "result": "D",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 2,
+              "awayGoalsFt": 2,
+              "homeCorners": 11,
+              "awayCorners": 8,
+              "homeCorners1h": 4,
+              "awayCorners1h": 2,
+              "homeCorners2h": 7,
+              "awayCorners2h": 6,
+              "homeYellows": 0,
+              "awayYellows": 3,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 19,
+              "awayTotalShots": 8,
+              "homeShotsOnTarget": 7,
+              "awayShotsOnTarget": 2,
+              "homeOffsides": 3,
+              "awayOffsides": 1,
+              "homeFouls": 5,
+              "awayFouls": 12,
+              "homeBookingPoints": 0,
+              "awayBookingPoints": 30,
+              "homeGoalKicks": 5,
+              "awayGoalKicks": 11,
+              "homeThrowIns": 14,
+              "awayThrowIns": 16,
+              "homeTackles": 18,
+              "awayTackles": 17
+            }
+          ],
+          "positionType": null,
+          "positionTypeName": null
+        },
+        {
+          "position": "14th",
+          "team": {
+            "id": 51,
+            "name": "Crystal Palace"
+          },
+          "played": 35,
+          "goalDiff": -6,
+          "points": 44,
+          "homeResults": [
+            {
+              "date": 1772740800000,
+              "homeGoals": 1,
+              "awayGoals": 3,
+              "result": "L",
+              "homeGoalsHt": 1,
+              "awayGoalsHt": 3,
+              "homeGoalsFt": 1,
+              "awayGoalsFt": 3,
+              "homeCorners": 6,
+              "awayCorners": 3,
+              "homeCorners1h": 2,
+              "awayCorners1h": 1,
+              "homeCorners2h": 4,
+              "awayCorners2h": 2,
+              "homeYellows": 3,
+              "awayYellows": 2,
+              "homeReds": 1,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 12,
+              "awayTotalShots": 9,
+              "homeShotsOnTarget": 4,
+              "awayShotsOnTarget": 4,
+              "homeOffsides": 1,
+              "awayOffsides": 1,
+              "homeFouls": 14,
+              "awayFouls": 14,
+              "homeBookingPoints": 55,
+              "awayBookingPoints": 20,
+              "homeGoalKicks": 3,
+              "awayGoalKicks": 7,
+              "homeThrowIns": 22,
+              "awayThrowIns": 13,
+              "homeTackles": 17,
+              "awayTackles": 24
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1766939400000,
+              "homeGoals": 0,
+              "awayGoals": 1,
+              "result": "W",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 1,
+              "homeGoalsFt": 0,
+              "awayGoalsFt": 1,
+              "homeCorners": 3,
+              "awayCorners": 2,
+              "homeCorners1h": 0,
+              "awayCorners1h": 1,
+              "homeCorners2h": 3,
+              "awayCorners2h": 1,
+              "homeYellows": 3,
+              "awayYellows": 2,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 15,
+              "awayTotalShots": 8,
+              "homeShotsOnTarget": 2,
+              "awayShotsOnTarget": 4,
+              "homeOffsides": 1,
+              "awayOffsides": 3,
+              "homeFouls": 7,
+              "awayFouls": 5,
+              "homeBookingPoints": 30,
+              "awayBookingPoints": 20,
+              "homeGoalKicks": 5,
+              "awayGoalKicks": 14,
+              "homeThrowIns": 21,
+              "awayThrowIns": 20,
+              "homeTackles": 16,
+              "awayTackles": 20
+            }
+          ],
+          "positionType": null,
+          "positionTypeName": null
+        },
+        {
+          "position": "15th",
+          "team": {
+            "id": 63,
+            "name": "Nottingham Forest"
+          },
+          "played": 36,
+          "goalDiff": -2,
+          "points": 43,
+          "homeResults": [
+            {
+              "date": 1774188900000,
+              "homeGoals": 0,
+              "awayGoals": 3,
+              "result": "L",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 1,
+              "homeGoalsFt": 0,
+              "awayGoalsFt": 3,
+              "homeCorners": 13,
+              "awayCorners": 3,
+              "homeCorners1h": 8,
+              "awayCorners1h": 2,
+              "homeCorners2h": 5,
+              "awayCorners2h": 1,
+              "homeYellows": 1,
+              "awayYellows": 2,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 14,
+              "awayTotalShots": 8,
+              "homeShotsOnTarget": 3,
+              "awayShotsOnTarget": 7,
+              "homeOffsides": 2,
+              "awayOffsides": 0,
+              "homeFouls": 13,
+              "awayFouls": 13,
+              "homeBookingPoints": 10,
+              "awayBookingPoints": 20,
+              "homeGoalKicks": 5,
+              "awayGoalKicks": 11,
+              "homeThrowIns": 16,
+              "awayThrowIns": 12,
+              "homeTackles": 19,
+              "awayTackles": 21
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1765720800000,
+              "homeGoals": 3,
+              "awayGoals": 0,
+              "result": "L",
+              "homeGoalsHt": 1,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 3,
+              "awayGoalsFt": 0,
+              "homeCorners": 3,
+              "awayCorners": 3,
+              "homeCorners1h": 1,
+              "awayCorners1h": 1,
+              "homeCorners2h": 2,
+              "awayCorners2h": 2,
+              "homeYellows": 1,
+              "awayYellows": 3,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 15,
+              "awayTotalShots": 6,
+              "homeShotsOnTarget": 6,
+              "awayShotsOnTarget": 1,
+              "homeOffsides": 4,
+              "awayOffsides": 1,
+              "homeFouls": 9,
+              "awayFouls": 13,
+              "homeBookingPoints": 10,
+              "awayBookingPoints": 30,
+              "homeGoalKicks": 6,
+              "awayGoalKicks": 9,
+              "homeThrowIns": 22,
+              "awayThrowIns": 24,
+              "homeTackles": 17,
+              "awayTackles": 30
+            }
+          ],
+          "positionType": null,
+          "positionTypeName": null
+        },
+        {
+          "position": "16th",
+          "team": {
+            "id": 71,
+            "name": "Leeds United"
+          },
+          "played": 35,
+          "goalDiff": -5,
+          "points": 43,
+          "homeResults": [],
+          "awayResults": [
+            {
+              "date": 1759577400000,
+              "homeGoals": 1,
+              "awayGoals": 2,
+              "result": "W",
+              "homeGoalsHt": 1,
+              "awayGoalsHt": 1,
+              "homeGoalsFt": 1,
+              "awayGoalsFt": 2,
+              "homeCorners": 4,
+              "awayCorners": 1,
+              "homeCorners1h": 2,
+              "awayCorners1h": 0,
+              "homeCorners2h": 2,
+              "awayCorners2h": 1,
+              "homeYellows": 2,
+              "awayYellows": 3,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 16,
+              "awayTotalShots": 9,
+              "homeShotsOnTarget": 4,
+              "awayShotsOnTarget": 3,
+              "homeOffsides": 1,
+              "awayOffsides": 2,
+              "homeFouls": 10,
+              "awayFouls": 12,
+              "homeBookingPoints": 20,
+              "awayBookingPoints": 30,
+              "homeGoalKicks": 9,
+              "awayGoalKicks": 18,
+              "homeThrowIns": 15,
+              "awayThrowIns": 14,
+              "homeTackles": 19,
+              "awayTackles": 15
+            }
+          ],
+          "positionType": null,
+          "positionTypeName": null
+        },
+        {
+          "position": "17th",
+          "team": {
+            "id": 6,
+            "name": "Tottenham Hotspur"
+          },
+          "played": 35,
+          "goalDiff": -9,
+          "points": 37,
+          "homeResults": [],
+          "awayResults": [],
+          "positionType": null,
+          "positionTypeName": null
+        },
+        {
+          "position": "18th",
+          "team": {
+            "id": 1,
+            "name": "West Ham United"
+          },
+          "played": 36,
+          "goalDiff": -20,
+          "points": 36,
+          "homeResults": [
+            {
+              "date": 1768662000000,
+              "homeGoals": 1,
+              "awayGoals": 2,
+              "result": "L",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 1,
+              "homeGoalsFt": 1,
+              "awayGoalsFt": 2,
+              "homeCorners": 11,
+              "awayCorners": 5,
+              "homeCorners1h": 2,
+              "awayCorners1h": 3,
+              "homeCorners2h": 9,
+              "awayCorners2h": 2,
+              "homeYellows": 5,
+              "awayYellows": 3,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 21,
+              "awayTotalShots": 17,
+              "homeShotsOnTarget": 6,
+              "awayShotsOnTarget": 4,
+              "homeOffsides": 1,
+              "awayOffsides": 1,
+              "homeFouls": 12,
+              "awayFouls": 17,
+              "homeBookingPoints": 50,
+              "awayBookingPoints": 30,
+              "homeGoalKicks": 6,
+              "awayGoalKicks": 10,
+              "homeThrowIns": 18,
+              "awayThrowIns": 12,
+              "homeTackles": 19,
+              "awayTackles": 25
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1757781000000,
+              "homeGoals": 0,
+              "awayGoals": 3,
+              "result": "W",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 0,
+              "awayGoalsFt": 3,
+              "homeCorners": 2,
+              "awayCorners": 13,
+              "homeCorners1h": 1,
+              "awayCorners1h": 8,
+              "homeCorners2h": 1,
+              "awayCorners2h": 5,
+              "homeYellows": 0,
+              "awayYellows": 1,
+              "homeReds": 1,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 7,
+              "awayTotalShots": 14,
+              "homeShotsOnTarget": 4,
+              "awayShotsOnTarget": 5,
+              "homeOffsides": 0,
+              "awayOffsides": 4,
+              "homeFouls": 8,
+              "awayFouls": 7,
+              "homeBookingPoints": 25,
+              "awayBookingPoints": 10,
+              "homeGoalKicks": 9,
+              "awayGoalKicks": 6,
+              "homeThrowIns": 19,
+              "awayThrowIns": 21,
+              "homeTackles": 13,
+              "awayTackles": 16
+            }
+          ],
+          "positionType": "RELEGATION",
+          "positionTypeName": "Relegation"
+        },
+        {
+          "position": "19th",
+          "team": {
+            "id": 27,
+            "name": "Burnley"
+          },
+          "played": 36,
+          "goalDiff": -36,
+          "points": 21,
+          "homeResults": [
+            {
+              "date": 1755352800000,
+              "homeGoals": 3,
+              "awayGoals": 0,
+              "result": "W",
+              "homeGoalsHt": 1,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 3,
+              "awayGoalsFt": 0,
+              "homeCorners": 6,
+              "awayCorners": 5,
+              "homeCorners1h": 2,
+              "awayCorners1h": 3,
+              "homeCorners2h": 4,
+              "awayCorners2h": 2,
+              "homeYellows": 0,
+              "awayYellows": 0,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 16,
+              "awayTotalShots": 14,
+              "homeShotsOnTarget": 6,
+              "awayShotsOnTarget": 4,
+              "homeOffsides": 0,
+              "awayOffsides": 4,
+              "homeFouls": 14,
+              "awayFouls": 8,
+              "homeBookingPoints": 0,
+              "awayBookingPoints": 0,
+              "homeGoalKicks": 9,
+              "awayGoalKicks": 13,
+              "homeThrowIns": 17,
+              "awayThrowIns": 15,
+              "homeTackles": 12,
+              "awayTackles": 6
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1769266800000,
+              "homeGoals": 2,
+              "awayGoals": 2,
+              "result": "D",
+              "homeGoalsHt": 1,
+              "awayGoalsHt": 1,
+              "homeGoalsFt": 2,
+              "awayGoalsFt": 2,
+              "homeCorners": 1,
+              "awayCorners": 3,
+              "homeCorners1h": 0,
+              "awayCorners1h": 2,
+              "homeCorners2h": 1,
+              "awayCorners2h": 1,
+              "homeYellows": 1,
+              "awayYellows": 0,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 9,
+              "awayTotalShots": 18,
+              "homeShotsOnTarget": 4,
+              "awayShotsOnTarget": 11,
+              "homeOffsides": 3,
+              "awayOffsides": 1,
+              "homeFouls": 8,
+              "awayFouls": 9,
+              "homeBookingPoints": 10,
+              "awayBookingPoints": 0,
+              "homeGoalKicks": 8,
+              "awayGoalKicks": 2,
+              "homeThrowIns": 18,
+              "awayThrowIns": 18,
+              "homeTackles": 19,
+              "awayTackles": 26
+            }
+          ],
+          "positionType": "RELEGATION",
+          "positionTypeName": "Relegation"
+        },
+        {
+          "position": "20th",
+          "team": {
+            "id": 29,
+            "name": "Wolverhampton Wanderers"
+          },
+          "played": 36,
+          "goalDiff": -41,
+          "points": 18,
+          "homeResults": [
+            {
+              "date": 1758999600000,
+              "homeGoals": 1,
+              "awayGoals": 1,
+              "result": "D",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 1,
+              "awayGoalsFt": 1,
+              "homeCorners": 10,
+              "awayCorners": 9,
+              "homeCorners1h": 8,
+              "awayCorners1h": 5,
+              "homeCorners2h": 2,
+              "awayCorners2h": 4,
+              "homeYellows": 3,
+              "awayYellows": 2,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 10,
+              "awayTotalShots": 9,
+              "homeShotsOnTarget": 3,
+              "awayShotsOnTarget": 3,
+              "homeOffsides": 2,
+              "awayOffsides": 0,
+              "homeFouls": 9,
+              "awayFouls": 11,
+              "homeBookingPoints": 30,
+              "awayBookingPoints": 20,
+              "homeGoalKicks": 6,
+              "awayGoalKicks": 6,
+              "homeThrowIns": 24,
+              "awayThrowIns": 25,
+              "homeTackles": 17,
+              "awayTackles": 31
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1777125600000,
+              "homeGoals": 0,
+              "awayGoals": 1,
+              "result": "W",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 0,
+              "awayGoalsFt": 1,
+              "homeCorners": 5,
+              "awayCorners": 5,
+              "homeCorners1h": 3,
+              "awayCorners1h": 3,
+              "homeCorners2h": 2,
+              "awayCorners2h": 2,
+              "homeYellows": 3,
+              "awayYellows": 4,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 11,
+              "awayTotalShots": 11,
+              "homeShotsOnTarget": 2,
+              "awayShotsOnTarget": 2,
+              "homeOffsides": 1,
+              "awayOffsides": 2,
+              "homeFouls": 8,
+              "awayFouls": 14,
+              "homeBookingPoints": 30,
+              "awayBookingPoints": 40,
+              "homeGoalKicks": 11,
+              "awayGoalKicks": 8,
+              "homeThrowIns": 28,
+              "awayThrowIns": 16,
+              "homeTackles": 32,
+              "awayTackles": 29
+            }
+          ],
+          "positionType": "RELEGATION",
+          "positionTypeName": "Relegation"
+        }
+      ]
+    }
+  ],
+  "awayTeamResultsWithStandingsStage": [
+    {
+      "name": "Regular Season",
+      "teamStandings": [
+        {
+          "position": "1st",
+          "team": {
+            "id": 19,
+            "name": "Arsenal"
+          },
+          "played": 36,
+          "goalDiff": 42,
+          "points": 79,
+          "homeResults": [
+            {
+              "date": 1769871600000,
+              "homeGoals": 0,
+              "awayGoals": 4,
+              "result": "L",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 2,
+              "homeGoalsFt": 0,
+              "awayGoalsFt": 4,
+              "homeCorners": 4,
+              "awayCorners": 12,
+              "homeCorners1h": 1,
+              "awayCorners1h": 7,
+              "homeCorners2h": 3,
+              "awayCorners2h": 5,
+              "homeYellows": 1,
+              "awayYellows": 1,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 3,
+              "awayTotalShots": 15,
+              "homeShotsOnTarget": 1,
+              "awayShotsOnTarget": 9,
+              "homeOffsides": 0,
+              "awayOffsides": 1,
+              "homeFouls": 10,
+              "awayFouls": 7,
+              "homeBookingPoints": 10,
+              "awayBookingPoints": 10,
+              "homeGoalKicks": 6,
+              "awayGoalKicks": 1,
+              "homeThrowIns": 23,
+              "awayThrowIns": 23,
+              "homeTackles": 16,
+              "awayTackles": 14
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1755966600000,
+              "homeGoals": 5,
+              "awayGoals": 0,
+              "result": "L",
+              "homeGoalsHt": 2,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 5,
+              "awayGoalsFt": 0,
+              "homeCorners": 2,
+              "awayCorners": 2,
+              "homeCorners1h": 1,
+              "awayCorners1h": 2,
+              "homeCorners2h": 1,
+              "awayCorners2h": 0,
+              "homeYellows": 0,
+              "awayYellows": 2,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 18,
+              "awayTotalShots": 3,
+              "homeShotsOnTarget": 5,
+              "awayShotsOnTarget": 1,
+              "homeOffsides": 0,
+              "awayOffsides": 0,
+              "homeFouls": 8,
+              "awayFouls": 11,
+              "homeBookingPoints": 0,
+              "awayBookingPoints": 20,
+              "homeGoalKicks": 2,
+              "awayGoalKicks": 12,
+              "homeThrowIns": 28,
+              "awayThrowIns": 14,
+              "homeTackles": 12,
+              "awayTackles": 18
+            }
+          ],
+          "positionType": "UEFA_CHAMPIONS_LEAGUE",
+          "positionTypeName": "UEFA Champions League"
+        },
+        {
+          "position": "2nd",
+          "team": {
+            "id": 9,
+            "name": "Manchester City"
+          },
+          "played": 35,
+          "goalDiff": 40,
+          "points": 74,
+          "homeResults": [
+            {
+              "date": 1772299800000,
+              "homeGoals": 0,
+              "awayGoals": 1,
+              "result": "L",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 1,
+              "homeGoalsFt": 0,
+              "awayGoalsFt": 1,
+              "homeCorners": 5,
+              "awayCorners": 3,
+              "homeCorners1h": 2,
+              "awayCorners1h": 2,
+              "homeCorners2h": 3,
+              "awayCorners2h": 1,
+              "homeYellows": 0,
+              "awayYellows": 3,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 14,
+              "awayTotalShots": 14,
+              "homeShotsOnTarget": 2,
+              "awayShotsOnTarget": 5,
+              "homeOffsides": 1,
+              "awayOffsides": 4,
+              "homeFouls": 10,
+              "awayFouls": 8,
+              "homeBookingPoints": 0,
+              "awayBookingPoints": 30,
+              "homeGoalKicks": 4,
+              "awayGoalKicks": 12,
+              "homeThrowIns": 21,
+              "awayThrowIns": 13,
+              "homeTackles": 14,
+              "awayTackles": 17
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1764428400000,
+              "homeGoals": 3,
+              "awayGoals": 2,
+              "result": "L",
+              "homeGoalsHt": 2,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 3,
+              "awayGoalsFt": 2,
+              "homeCorners": 8,
+              "awayCorners": 1,
+              "homeCorners1h": 7,
+              "awayCorners1h": 0,
+              "homeCorners2h": 1,
+              "awayCorners2h": 1,
+              "homeYellows": 4,
+              "awayYellows": 1,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 18,
+              "awayTotalShots": 9,
+              "homeShotsOnTarget": 9,
+              "awayShotsOnTarget": 4,
+              "homeOffsides": 2,
+              "awayOffsides": 4,
+              "homeFouls": 17,
+              "awayFouls": 11,
+              "homeBookingPoints": 40,
+              "awayBookingPoints": 10,
+              "homeGoalKicks": 4,
+              "awayGoalKicks": 8,
+              "homeThrowIns": 9,
+              "awayThrowIns": 10,
+              "homeTackles": 6,
+              "awayTackles": 26
+            }
+          ],
+          "positionType": "UEFA_CHAMPIONS_LEAGUE",
+          "positionTypeName": "UEFA Champions League"
+        },
+        {
+          "position": "3rd",
+          "team": {
+            "id": 14,
+            "name": "Manchester United"
+          },
+          "played": 36,
+          "goalDiff": 15,
+          "points": 65,
+          "homeResults": [
+            {
+              "date": 1767529800000,
+              "homeGoals": 1,
+              "awayGoals": 1,
+              "result": "D",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 1,
+              "awayGoalsFt": 1,
+              "homeCorners": 6,
+              "awayCorners": 4,
+              "homeCorners1h": 2,
+              "awayCorners1h": 4,
+              "homeCorners2h": 4,
+              "awayCorners2h": 0,
+              "homeYellows": 0,
+              "awayYellows": 1,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 11,
+              "awayTotalShots": 15,
+              "homeShotsOnTarget": 3,
+              "awayShotsOnTarget": 2,
+              "homeOffsides": 1,
+              "awayOffsides": 3,
+              "homeFouls": 9,
+              "awayFouls": 9,
+              "homeBookingPoints": 0,
+              "awayBookingPoints": 10,
+              "homeGoalKicks": 8,
+              "awayGoalKicks": 11,
+              "homeThrowIns": 20,
+              "awayThrowIns": 16,
+              "homeTackles": 18,
+              "awayTackles": 25
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1776106800000,
+              "homeGoals": 1,
+              "awayGoals": 2,
+              "result": "W",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 2,
+              "homeGoalsFt": 1,
+              "awayGoalsFt": 2,
+              "homeCorners": 11,
+              "awayCorners": 4,
+              "homeCorners1h": 4,
+              "awayCorners1h": 2,
+              "homeCorners2h": 7,
+              "awayCorners2h": 2,
+              "homeYellows": 3,
+              "awayYellows": 2,
+              "homeReds": 1,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 20,
+              "awayTotalShots": 15,
+              "homeShotsOnTarget": 9,
+              "awayShotsOnTarget": 6,
+              "homeOffsides": 1,
+              "awayOffsides": 0,
+              "homeFouls": 12,
+              "awayFouls": 15,
+              "homeBookingPoints": 55,
+              "awayBookingPoints": 20,
+              "homeGoalKicks": 8,
+              "awayGoalKicks": 10,
+              "homeThrowIns": 17,
+              "awayThrowIns": 15,
+              "homeTackles": 18,
+              "awayTackles": 12
+            }
+          ],
+          "positionType": "UEFA_CHAMPIONS_LEAGUE",
+          "positionTypeName": "UEFA Champions League"
+        },
+        {
+          "position": "4th",
+          "team": {
+            "id": 8,
+            "name": "Liverpool"
+          },
+          "played": 36,
+          "goalDiff": 12,
+          "points": 59,
+          "homeResults": [
+            {
+              "date": 1765042200000,
+              "homeGoals": 3,
+              "awayGoals": 3,
+              "result": "D",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 3,
+              "awayGoalsFt": 3,
+              "homeCorners": 5,
+              "awayCorners": 4,
+              "homeCorners1h": 2,
+              "awayCorners1h": 2,
+              "homeCorners2h": 3,
+              "awayCorners2h": 2,
+              "homeYellows": 3,
+              "awayYellows": 3,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 12,
+              "awayTotalShots": 16,
+              "homeShotsOnTarget": 5,
+              "awayShotsOnTarget": 7,
+              "homeOffsides": 2,
+              "awayOffsides": 2,
+              "homeFouls": 14,
+              "awayFouls": 14,
+              "homeBookingPoints": 30,
+              "awayBookingPoints": 30,
+              "homeGoalKicks": 5,
+              "awayGoalKicks": 5,
+              "homeThrowIns": 23,
+              "awayThrowIns": 15,
+              "homeTackles": 9,
+              "awayTackles": 17
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1767288600000,
+              "homeGoals": 0,
+              "awayGoals": 0,
+              "result": "D",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 0,
+              "awayGoalsFt": 0,
+              "homeCorners": 8,
+              "awayCorners": 3,
+              "homeCorners1h": 2,
+              "awayCorners1h": 2,
+              "homeCorners2h": 6,
+              "awayCorners2h": 1,
+              "homeYellows": 0,
+              "awayYellows": 2,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 19,
+              "awayTotalShots": 4,
+              "homeShotsOnTarget": 4,
+              "awayShotsOnTarget": 2,
+              "homeOffsides": 6,
+              "awayOffsides": 1,
+              "homeFouls": 10,
+              "awayFouls": 8,
+              "homeBookingPoints": 0,
+              "awayBookingPoints": 20,
+              "homeGoalKicks": 4,
+              "awayGoalKicks": 9,
+              "homeThrowIns": 21,
+              "awayThrowIns": 18,
+              "homeTackles": 8,
+              "awayTackles": 18
+            }
+          ],
+          "positionType": "UEFA_CHAMPIONS_LEAGUE",
+          "positionTypeName": "UEFA Champions League"
+        },
+        {
+          "position": "5th",
+          "team": {
+            "id": 15,
+            "name": "Aston Villa"
+          },
+          "played": 36,
+          "goalDiff": 4,
+          "points": 59,
+          "homeResults": [
+            {
+              "date": 1763906400000,
+              "homeGoals": 1,
+              "awayGoals": 2,
+              "result": "L",
+              "homeGoalsHt": 1,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 1,
+              "awayGoalsFt": 2,
+              "homeCorners": 3,
+              "awayCorners": 3,
+              "homeCorners1h": 1,
+              "awayCorners1h": 1,
+              "homeCorners2h": 2,
+              "awayCorners2h": 2,
+              "homeYellows": 5,
+              "awayYellows": 1,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 14,
+              "awayTotalShots": 14,
+              "homeShotsOnTarget": 5,
+              "awayShotsOnTarget": 3,
+              "homeOffsides": 4,
+              "awayOffsides": 2,
+              "homeFouls": 18,
+              "awayFouls": 16,
+              "homeBookingPoints": 50,
+              "awayBookingPoints": 10,
+              "homeGoalKicks": 9,
+              "awayGoalKicks": 6,
+              "homeThrowIns": 11,
+              "awayThrowIns": 15,
+              "homeTackles": 26,
+              "awayTackles": 20
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1771686000000,
+              "homeGoals": 1,
+              "awayGoals": 1,
+              "result": "D",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 1,
+              "homeGoalsFt": 1,
+              "awayGoalsFt": 1,
+              "homeCorners": 7,
+              "awayCorners": 2,
+              "homeCorners1h": 4,
+              "awayCorners1h": 2,
+              "homeCorners2h": 3,
+              "awayCorners2h": 0,
+              "homeYellows": 1,
+              "awayYellows": 4,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 16,
+              "awayTotalShots": 14,
+              "homeShotsOnTarget": 4,
+              "awayShotsOnTarget": 4,
+              "homeOffsides": 4,
+              "awayOffsides": 5,
+              "homeFouls": 11,
+              "awayFouls": 16,
+              "homeBookingPoints": 10,
+              "awayBookingPoints": 40,
+              "homeGoalKicks": 6,
+              "awayGoalKicks": 13,
+              "homeThrowIns": 23,
+              "awayThrowIns": 16,
+              "homeTackles": 14,
+              "awayTackles": 22
+            }
+          ],
+          "positionType": "UEFA_CHAMPIONS_LEAGUE",
+          "positionTypeName": "UEFA Champions League"
+        },
+        {
+          "position": "6th",
+          "team": {
+            "id": 52,
+            "name": "AFC Bournemouth"
+          },
+          "played": 36,
+          "goalDiff": 4,
+          "points": 55,
+          "homeResults": [
+            {
+              "date": 1758981600000,
+              "homeGoals": 2,
+              "awayGoals": 2,
+              "result": "D",
+              "homeGoalsHt": 1,
+              "awayGoalsHt": 1,
+              "homeGoalsFt": 2,
+              "awayGoalsFt": 2,
+              "homeCorners": 7,
+              "awayCorners": 4,
+              "homeCorners1h": 2,
+              "awayCorners1h": 2,
+              "homeCorners2h": 5,
+              "awayCorners2h": 2,
+              "homeYellows": 2,
+              "awayYellows": 2,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 19,
+              "awayTotalShots": 12,
+              "homeShotsOnTarget": 8,
+              "awayShotsOnTarget": 5,
+              "homeOffsides": 0,
+              "awayOffsides": 2,
+              "homeFouls": 12,
+              "awayFouls": 13,
+              "homeBookingPoints": 20,
+              "awayBookingPoints": 20,
+              "homeGoalKicks": 11,
+              "awayGoalKicks": 5,
+              "homeThrowIns": 14,
+              "awayThrowIns": 28,
+              "homeTackles": 27,
+              "awayTackles": 23
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1776884400000,
+              "homeGoals": 2,
+              "awayGoals": 2,
+              "result": "D",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 2,
+              "awayGoalsFt": 2,
+              "homeCorners": 12,
+              "awayCorners": 1,
+              "homeCorners1h": 5,
+              "awayCorners1h": 0,
+              "homeCorners2h": 7,
+              "awayCorners2h": 1,
+              "homeYellows": 3,
+              "awayYellows": 0,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 17,
+              "awayTotalShots": 10,
+              "homeShotsOnTarget": 7,
+              "awayShotsOnTarget": 3,
+              "homeOffsides": 1,
+              "awayOffsides": 1,
+              "homeFouls": 6,
+              "awayFouls": 10,
+              "homeBookingPoints": 30,
+              "awayBookingPoints": 0,
+              "homeGoalKicks": 7,
+              "awayGoalKicks": 7,
+              "homeThrowIns": 27,
+              "awayThrowIns": 19,
+              "homeTackles": 10,
+              "awayTackles": 22
+            }
+          ],
+          "positionType": "UEFA_EUROPA_LEAGUE",
+          "positionTypeName": "UEFA Europa League"
+        },
+        {
+          "position": "7th",
+          "team": {
+            "id": 78,
+            "name": "Brighton & Hove Albion"
+          },
+          "played": 36,
+          "goalDiff": 10,
+          "points": 53,
+          "homeResults": [],
+          "awayResults": [
+            {
+              "date": 1762009200000,
+              "homeGoals": 3,
+              "awayGoals": 0,
+              "result": "L",
+              "homeGoalsHt": 1,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 3,
+              "awayGoalsFt": 0,
+              "homeCorners": 4,
+              "awayCorners": 7,
+              "homeCorners1h": 1,
+              "awayCorners1h": 3,
+              "homeCorners2h": 3,
+              "awayCorners2h": 4,
+              "homeYellows": 0,
+              "awayYellows": 1,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 14,
+              "awayTotalShots": 5,
+              "homeShotsOnTarget": 7,
+              "awayShotsOnTarget": 2,
+              "homeOffsides": 3,
+              "awayOffsides": 1,
+              "homeFouls": 10,
+              "awayFouls": 7,
+              "homeBookingPoints": 0,
+              "awayBookingPoints": 10,
+              "homeGoalKicks": 6,
+              "awayGoalKicks": 11,
+              "homeThrowIns": 22,
+              "awayThrowIns": 18,
+              "homeTackles": 24,
+              "awayTackles": 12
+            }
+          ],
+          "positionType": null,
+          "positionTypeName": null
+        },
+        {
+          "position": "8th",
+          "team": {
+            "id": 236,
+            "name": "Brentford"
+          },
+          "played": 36,
+          "goalDiff": 3,
+          "points": 51,
+          "homeResults": [
+            {
+              "date": 1774123200000,
+              "homeGoals": 0,
+              "awayGoals": 0,
+              "result": "D",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 0,
+              "awayGoalsFt": 0,
+              "homeCorners": 6,
+              "awayCorners": 2,
+              "homeCorners1h": 1,
+              "awayCorners1h": 2,
+              "homeCorners2h": 5,
+              "awayCorners2h": 0,
+              "homeYellows": 2,
+              "awayYellows": 0,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 14,
+              "awayTotalShots": 6,
+              "homeShotsOnTarget": 4,
+              "awayShotsOnTarget": 2,
+              "homeOffsides": 1,
+              "awayOffsides": 3,
+              "homeFouls": 6,
+              "awayFouls": 9,
+              "homeBookingPoints": 20,
+              "awayBookingPoints": 0,
+              "homeGoalKicks": 9,
+              "awayGoalKicks": 12,
+              "homeThrowIns": 23,
+              "awayThrowIns": 26,
+              "homeTackles": 15,
+              "awayTackles": 11
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1765729800000,
+              "homeGoals": 1,
+              "awayGoals": 1,
+              "result": "D",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 1,
+              "awayGoalsFt": 1,
+              "homeCorners": 0,
+              "awayCorners": 3,
+              "homeCorners1h": 0,
+              "awayCorners1h": 1,
+              "homeCorners2h": 0,
+              "awayCorners2h": 2,
+              "homeYellows": 0,
+              "awayYellows": 0,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 7,
+              "awayTotalShots": 18,
+              "homeShotsOnTarget": 2,
+              "awayShotsOnTarget": 4,
+              "homeOffsides": 2,
+              "awayOffsides": 0,
+              "homeFouls": 8,
+              "awayFouls": 9,
+              "homeBookingPoints": 0,
+              "awayBookingPoints": 0,
+              "homeGoalKicks": 8,
+              "awayGoalKicks": 7,
+              "homeThrowIns": 25,
+              "awayThrowIns": 21,
+              "homeTackles": 12,
+              "awayTackles": 15
+            }
+          ],
+          "positionType": null,
+          "positionTypeName": null
+        },
+        {
+          "position": "9th",
+          "team": {
+            "id": 18,
+            "name": "Chelsea"
+          },
+          "played": 36,
+          "goalDiff": 6,
+          "points": 49,
+          "homeResults": [
+            {
+              "date": 1764792900000,
+              "homeGoals": 3,
+              "awayGoals": 1,
+              "result": "W",
+              "homeGoalsHt": 2,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 3,
+              "awayGoalsFt": 1,
+              "homeCorners": 4,
+              "awayCorners": 2,
+              "homeCorners1h": 4,
+              "awayCorners1h": 1,
+              "homeCorners2h": 0,
+              "awayCorners2h": 1,
+              "homeYellows": 1,
+              "awayYellows": 1,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 17,
+              "awayTotalShots": 14,
+              "homeShotsOnTarget": 5,
+              "awayShotsOnTarget": 2,
+              "homeOffsides": 3,
+              "awayOffsides": 1,
+              "homeFouls": 10,
+              "awayFouls": 13,
+              "homeBookingPoints": 10,
+              "awayBookingPoints": 10,
+              "homeGoalKicks": 7,
+              "awayGoalKicks": 8,
+              "homeThrowIns": 12,
+              "awayThrowIns": 23,
+              "homeTackles": 21,
+              "awayTackles": 16
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1770751800000,
+              "homeGoals": 2,
+              "awayGoals": 2,
+              "result": "D",
+              "homeGoalsHt": 1,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 2,
+              "awayGoalsFt": 2,
+              "homeCorners": 4,
+              "awayCorners": 1,
+              "homeCorners1h": 0,
+              "awayCorners1h": 0,
+              "homeCorners2h": 4,
+              "awayCorners2h": 1,
+              "homeYellows": 4,
+              "awayYellows": 4,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 19,
+              "awayTotalShots": 4,
+              "homeShotsOnTarget": 4,
+              "awayShotsOnTarget": 2,
+              "homeOffsides": 4,
+              "awayOffsides": 1,
+              "homeFouls": 9,
+              "awayFouls": 13,
+              "homeBookingPoints": 40,
+              "awayBookingPoints": 40,
+              "homeGoalKicks": 2,
+              "awayGoalKicks": 14,
+              "homeThrowIns": 20,
+              "awayThrowIns": 17,
+              "homeTackles": 14,
+              "awayTackles": 11
+            }
+          ],
+          "positionType": null,
+          "positionTypeName": null
+        },
+        {
+          "position": "10th",
+          "team": {
+            "id": 13,
+            "name": "Everton"
+          },
+          "played": 36,
+          "goalDiff": 0,
+          "points": 49,
+          "homeResults": [
+            {
+              "date": 1755543600000,
+              "homeGoals": 1,
+              "awayGoals": 0,
+              "result": "W",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 1,
+              "awayGoalsFt": 0,
+              "homeCorners": 7,
+              "awayCorners": 2,
+              "homeCorners1h": 6,
+              "awayCorners1h": 0,
+              "homeCorners2h": 1,
+              "awayCorners2h": 2,
+              "homeYellows": 0,
+              "awayYellows": 2,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 21,
+              "awayTotalShots": 7,
+              "homeShotsOnTarget": 3,
+              "awayShotsOnTarget": 1,
+              "homeOffsides": 1,
+              "awayOffsides": 2,
+              "homeFouls": 6,
+              "awayFouls": 8,
+              "homeBookingPoints": 0,
+              "awayBookingPoints": 20,
+              "homeGoalKicks": 4,
+              "awayGoalKicks": 13,
+              "homeThrowIns": 23,
+              "awayThrowIns": 21,
+              "homeTackles": 15,
+              "awayTackles": 16
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1769457600000,
+              "homeGoals": 1,
+              "awayGoals": 1,
+              "result": "D",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 1,
+              "homeGoalsFt": 1,
+              "awayGoalsFt": 1,
+              "homeCorners": 4,
+              "awayCorners": 4,
+              "homeCorners1h": 3,
+              "awayCorners1h": 2,
+              "homeCorners2h": 1,
+              "awayCorners2h": 2,
+              "homeYellows": 0,
+              "awayYellows": 3,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 10,
+              "awayTotalShots": 14,
+              "homeShotsOnTarget": 3,
+              "awayShotsOnTarget": 4,
+              "homeOffsides": 1,
+              "awayOffsides": 0,
+              "homeFouls": 9,
+              "awayFouls": 13,
+              "homeBookingPoints": 0,
+              "awayBookingPoints": 30,
+              "homeGoalKicks": 8,
+              "awayGoalKicks": 4,
+              "homeThrowIns": 25,
+              "awayThrowIns": 22,
+              "homeTackles": 20,
+              "awayTackles": 31
+            }
+          ],
+          "positionType": null,
+          "positionTypeName": null
+        },
+        {
+          "position": "11th",
+          "team": {
+            "id": 11,
+            "name": "Fulham"
+          },
+          "played": 36,
+          "goalDiff": -6,
+          "points": 48,
+          "homeResults": [
+            {
+              "date": 1768662000000,
+              "homeGoals": 1,
+              "awayGoals": 0,
+              "result": "W",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 1,
+              "awayGoalsFt": 0,
+              "homeCorners": 7,
+              "awayCorners": 3,
+              "homeCorners1h": 2,
+              "awayCorners1h": 2,
+              "homeCorners2h": 5,
+              "awayCorners2h": 1,
+              "homeYellows": 1,
+              "awayYellows": 5,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 14,
+              "awayTotalShots": 8,
+              "homeShotsOnTarget": 5,
+              "awayShotsOnTarget": 1,
+              "homeOffsides": 8,
+              "awayOffsides": 3,
+              "homeFouls": 6,
+              "awayFouls": 11,
+              "homeBookingPoints": 10,
+              "awayBookingPoints": 50,
+              "homeGoalKicks": 9,
+              "awayGoalKicks": 13,
+              "homeThrowIns": 21,
+              "awayThrowIns": 16,
+              "homeTackles": 10,
+              "awayTackles": 16
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1757772000000,
+              "homeGoals": 1,
+              "awayGoals": 0,
+              "result": "L",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 1,
+              "awayGoalsFt": 0,
+              "homeCorners": 3,
+              "awayCorners": 3,
+              "homeCorners1h": 1,
+              "awayCorners1h": 3,
+              "homeCorners2h": 2,
+              "awayCorners2h": 0,
+              "homeYellows": 1,
+              "awayYellows": 2,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 5,
+              "awayTotalShots": 10,
+              "homeShotsOnTarget": 3,
+              "awayShotsOnTarget": 3,
+              "homeOffsides": 1,
+              "awayOffsides": 3,
+              "homeFouls": 20,
+              "awayFouls": 15,
+              "homeBookingPoints": 10,
+              "awayBookingPoints": 20,
+              "homeGoalKicks": 7,
+              "awayGoalKicks": 6,
+              "homeThrowIns": 25,
+              "awayThrowIns": 15,
+              "homeTackles": 24,
+              "awayTackles": 18
+            }
+          ],
+          "positionType": null,
+          "positionTypeName": null
+        },
+        {
+          "position": "12th",
+          "team": {
+            "id": 3,
+            "name": "Sunderland"
+          },
+          "played": 36,
+          "goalDiff": -9,
+          "points": 48,
+          "homeResults": [
+            {
+              "date": 1772566200000,
+              "homeGoals": 0,
+              "awayGoals": 1,
+              "result": "L",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 0,
+              "awayGoalsFt": 1,
+              "homeCorners": 9,
+              "awayCorners": 2,
+              "homeCorners1h": 5,
+              "awayCorners1h": 1,
+              "homeCorners2h": 4,
+              "awayCorners2h": 1,
+              "homeYellows": 1,
+              "awayYellows": 3,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 18,
+              "awayTotalShots": 3,
+              "homeShotsOnTarget": 4,
+              "awayShotsOnTarget": 1,
+              "homeOffsides": 2,
+              "awayOffsides": 5,
+              "homeFouls": 15,
+              "awayFouls": 19,
+              "homeBookingPoints": 10,
+              "awayBookingPoints": 30,
+              "homeGoalKicks": 1,
+              "awayGoalKicks": 6,
+              "homeThrowIns": 22,
+              "awayThrowIns": 19,
+              "homeTackles": 16,
+              "awayTackles": 16
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1766930400000,
+              "homeGoals": 1,
+              "awayGoals": 1,
+              "result": "D",
+              "homeGoalsHt": 1,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 1,
+              "awayGoalsFt": 1,
+              "homeCorners": 3,
+              "awayCorners": 9,
+              "homeCorners1h": 2,
+              "awayCorners1h": 4,
+              "homeCorners2h": 1,
+              "awayCorners2h": 5,
+              "homeYellows": 1,
+              "awayYellows": 0,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 8,
+              "awayTotalShots": 17,
+              "homeShotsOnTarget": 3,
+              "awayShotsOnTarget": 6,
+              "homeOffsides": 4,
+              "awayOffsides": 3,
+              "homeFouls": 7,
+              "awayFouls": 9,
+              "homeBookingPoints": 10,
+              "awayBookingPoints": 0,
+              "homeGoalKicks": 9,
+              "awayGoalKicks": 5,
+              "homeThrowIns": 19,
+              "awayThrowIns": 13,
+              "homeTackles": 14,
+              "awayTackles": 14
+            }
+          ],
+          "positionType": null,
+          "positionTypeName": null
+        },
+        {
+          "position": "13th",
+          "team": {
+            "id": 20,
+            "name": "Newcastle United"
+          },
+          "played": 36,
+          "goalDiff": -2,
+          "points": 46,
+          "homeResults": [
+            {
+              "date": 1756571400000,
+              "homeGoals": 0,
+              "awayGoals": 0,
+              "result": "D",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 0,
+              "awayGoalsFt": 0,
+              "homeCorners": 5,
+              "awayCorners": 5,
+              "homeCorners1h": 1,
+              "awayCorners1h": 4,
+              "homeCorners2h": 4,
+              "awayCorners2h": 1,
+              "homeYellows": 1,
+              "awayYellows": 1,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 10,
+              "awayTotalShots": 8,
+              "homeShotsOnTarget": 1,
+              "awayShotsOnTarget": 2,
+              "homeOffsides": 1,
+              "awayOffsides": 0,
+              "homeFouls": 10,
+              "awayFouls": 15,
+              "homeBookingPoints": 10,
+              "awayBookingPoints": 10,
+              "homeGoalKicks": 11,
+              "awayGoalKicks": 8,
+              "homeThrowIns": 15,
+              "awayThrowIns": 24,
+              "homeTackles": 18,
+              "awayTackles": 10
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1767816900000,
+              "homeGoals": 4,
+              "awayGoals": 3,
+              "result": "L",
+              "homeGoalsHt": 1,
+              "awayGoalsHt": 2,
+              "homeGoalsFt": 4,
+              "awayGoalsFt": 3,
+              "homeCorners": 8,
+              "awayCorners": 4,
+              "homeCorners1h": 2,
+              "awayCorners1h": 1,
+              "homeCorners2h": 6,
+              "awayCorners2h": 3,
+              "homeYellows": 3,
+              "awayYellows": 2,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 18,
+              "awayTotalShots": 14,
+              "homeShotsOnTarget": 8,
+              "awayShotsOnTarget": 6,
+              "homeOffsides": 1,
+              "awayOffsides": 0,
+              "homeFouls": 11,
+              "awayFouls": 10,
+              "homeBookingPoints": 30,
+              "awayBookingPoints": 20,
+              "homeGoalKicks": 11,
+              "awayGoalKicks": 7,
+              "homeThrowIns": 16,
+              "awayThrowIns": 15,
+              "homeTackles": 14,
+              "awayTackles": 17
+            }
+          ],
+          "positionType": null,
+          "positionTypeName": null
+        },
+        {
+          "position": "14th",
+          "team": {
+            "id": 51,
+            "name": "Crystal Palace"
+          },
+          "played": 35,
+          "goalDiff": -6,
+          "points": 44,
+          "homeResults": [
+            {
+              "date": 1766260800000,
+              "homeGoals": 4,
+              "awayGoals": 1,
+              "result": "W",
+              "homeGoalsHt": 2,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 4,
+              "awayGoalsFt": 1,
+              "homeCorners": 9,
+              "awayCorners": 5,
+              "homeCorners1h": 4,
+              "awayCorners1h": 0,
+              "homeCorners2h": 5,
+              "awayCorners2h": 5,
+              "homeYellows": 1,
+              "awayYellows": 3,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 20,
+              "awayTotalShots": 9,
+              "homeShotsOnTarget": 8,
+              "awayShotsOnTarget": 3,
+              "homeOffsides": 2,
+              "awayOffsides": 3,
+              "homeFouls": 5,
+              "awayFouls": 10,
+              "homeBookingPoints": 10,
+              "awayBookingPoints": 30,
+              "homeGoalKicks": 4,
+              "awayGoalKicks": 8,
+              "homeThrowIns": 34,
+              "awayThrowIns": 8,
+              "homeTackles": 15,
+              "awayTackles": 22
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1773583200000,
+              "homeGoals": 0,
+              "awayGoals": 0,
+              "result": "D",
+              "homeGoalsHt": 0,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 0,
+              "awayGoalsFt": 0,
+              "homeCorners": 8,
+              "awayCorners": 3,
+              "homeCorners1h": 2,
+              "awayCorners1h": 3,
+              "homeCorners2h": 6,
+              "awayCorners2h": 0,
+              "homeYellows": 2,
+              "awayYellows": 3,
+              "homeReds": 0,
+              "awayReds": 1,
+              "homeYellowReds": 0,
+              "awayYellowReds": 1,
+              "homeTotalShots": 12,
+              "awayTotalShots": 10,
+              "homeShotsOnTarget": 0,
+              "awayShotsOnTarget": 3,
+              "homeOffsides": 5,
+              "awayOffsides": 2,
+              "homeFouls": 12,
+              "awayFouls": 11,
+              "homeBookingPoints": 20,
+              "awayBookingPoints": 55,
+              "homeGoalKicks": 11,
+              "awayGoalKicks": 7,
+              "homeThrowIns": 22,
+              "awayThrowIns": 24,
+              "homeTackles": 9,
+              "awayTackles": 15
+            }
+          ],
+          "positionType": null,
+          "positionTypeName": null
+        },
+        {
+          "position": "15th",
+          "team": {
+            "id": 63,
+            "name": "Nottingham Forest"
+          },
+          "played": 36,
+          "goalDiff": -2,
+          "points": 43,
+          "homeResults": [
+            {
+              "date": 1770408000000,
+              "homeGoals": 3,
+              "awayGoals": 1,
+              "result": "W",
+              "homeGoalsHt": 2,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 3,
+              "awayGoalsFt": 1,
+              "homeCorners": 5,
+              "awayCorners": 10,
+              "homeCorners1h": 4,
+              "awayCorners1h": 5,
+              "homeCorners2h": 1,
+              "awayCorners2h": 5,
+              "homeYellows": 1,
+              "awayYellows": 1,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 14,
+              "awayTotalShots": 16,
+              "homeShotsOnTarget": 5,
+              "awayShotsOnTarget": 6,
+              "homeOffsides": 1,
+              "awayOffsides": 4,
+              "homeFouls": 9,
+              "awayFouls": 12,
+              "homeBookingPoints": 10,
+              "awayBookingPoints": 10,
+              "homeGoalKicks": 11,
+              "awayGoalKicks": 7,
+              "homeThrowIns": 12,
+              "awayThrowIns": 22,
+              "homeTackles": 22,
+              "awayTackles": 14
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1762696800000,
+              "homeGoals": 3,
+              "awayGoals": 1,
+              "result": "L",
+              "homeGoalsHt": 1,
+              "awayGoalsHt": 1,
+              "homeGoalsFt": 3,
+              "awayGoalsFt": 1,
+              "homeCorners": 6,
+              "awayCorners": 4,
+              "homeCorners1h": 4,
+              "awayCorners1h": 0,
+              "homeCorners2h": 2,
+              "awayCorners2h": 4,
+              "homeYellows": 2,
+              "awayYellows": 1,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 14,
+              "awayTotalShots": 10,
+              "homeShotsOnTarget": 6,
+              "awayShotsOnTarget": 3,
+              "homeOffsides": 2,
+              "awayOffsides": 1,
+              "homeFouls": 10,
+              "awayFouls": 11,
+              "homeBookingPoints": 20,
+              "awayBookingPoints": 10,
+              "homeGoalKicks": 5,
+              "awayGoalKicks": 9,
+              "homeThrowIns": 20,
+              "awayThrowIns": 17,
+              "homeTackles": 27,
+              "awayTackles": 15
+            }
+          ],
+          "positionType": null,
+          "positionTypeName": null
+        },
+        {
+          "position": "16th",
+          "team": {
+            "id": 71,
+            "name": "Leeds United"
+          },
+          "played": 35,
+          "goalDiff": -5,
+          "points": 43,
+          "homeResults": [],
+          "awayResults": [],
+          "positionType": null,
+          "positionTypeName": null
+        },
+        {
+          "position": "17th",
+          "team": {
+            "id": 6,
+            "name": "Tottenham Hotspur"
+          },
+          "played": 35,
+          "goalDiff": -9,
+          "points": 37,
+          "homeResults": [
+            {
+              "date": 1759577400000,
+              "homeGoals": 1,
+              "awayGoals": 2,
+              "result": "L",
+              "homeGoalsHt": 1,
+              "awayGoalsHt": 1,
+              "homeGoalsFt": 1,
+              "awayGoalsFt": 2,
+              "homeCorners": 4,
+              "awayCorners": 1,
+              "homeCorners1h": 2,
+              "awayCorners1h": 0,
+              "homeCorners2h": 2,
+              "awayCorners2h": 1,
+              "homeYellows": 2,
+              "awayYellows": 3,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 16,
+              "awayTotalShots": 9,
+              "homeShotsOnTarget": 4,
+              "awayShotsOnTarget": 3,
+              "homeOffsides": 1,
+              "awayOffsides": 2,
+              "homeFouls": 10,
+              "awayFouls": 12,
+              "homeBookingPoints": 20,
+              "awayBookingPoints": 30,
+              "homeGoalKicks": 9,
+              "awayGoalKicks": 18,
+              "homeThrowIns": 15,
+              "awayThrowIns": 14,
+              "homeTackles": 19,
+              "awayTackles": 15
+            }
+          ],
+          "awayResults": [],
+          "positionType": null,
+          "positionTypeName": null
+        },
+        {
+          "position": "18th",
+          "team": {
+            "id": 1,
+            "name": "West Ham United"
+          },
+          "played": 36,
+          "goalDiff": -20,
+          "points": 36,
+          "homeResults": [
+            {
+              "date": 1761332400000,
+              "homeGoals": 2,
+              "awayGoals": 1,
+              "result": "W",
+              "homeGoalsHt": 2,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 2,
+              "awayGoalsFt": 1,
+              "homeCorners": 3,
+              "awayCorners": 4,
+              "homeCorners1h": 2,
+              "awayCorners1h": 0,
+              "homeCorners2h": 1,
+              "awayCorners2h": 4,
+              "homeYellows": 3,
+              "awayYellows": 3,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 13,
+              "awayTotalShots": 9,
+              "homeShotsOnTarget": 5,
+              "awayShotsOnTarget": 3,
+              "homeOffsides": 1,
+              "awayOffsides": 1,
+              "homeFouls": 12,
+              "awayFouls": 11,
+              "homeBookingPoints": 30,
+              "awayBookingPoints": 30,
+              "homeGoalKicks": 8,
+              "awayGoalKicks": 5,
+              "homeThrowIns": 18,
+              "awayThrowIns": 30,
+              "homeTackles": 21,
+              "awayTackles": 12
+            }
+          ],
+          "awayResults": [],
+          "positionType": "RELEGATION",
+          "positionTypeName": "Relegation"
+        },
+        {
+          "position": "19th",
+          "team": {
+            "id": 27,
+            "name": "Burnley"
+          },
+          "played": 36,
+          "goalDiff": -36,
+          "points": 21,
+          "homeResults": [
+            {
+              "date": 1777662000000,
+              "homeGoals": 3,
+              "awayGoals": 1,
+              "result": "W",
+              "homeGoalsHt": 1,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 3,
+              "awayGoalsFt": 1,
+              "homeCorners": 5,
+              "awayCorners": 0,
+              "homeCorners1h": 2,
+              "awayCorners1h": 0,
+              "homeCorners2h": 3,
+              "awayCorners2h": 0,
+              "homeYellows": 4,
+              "awayYellows": 3,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 18,
+              "awayTotalShots": 9,
+              "homeShotsOnTarget": 8,
+              "awayShotsOnTarget": 3,
+              "homeOffsides": 0,
+              "awayOffsides": 1,
+              "homeFouls": 12,
+              "awayFouls": 12,
+              "homeBookingPoints": 40,
+              "awayBookingPoints": 30,
+              "homeGoalKicks": 4,
+              "awayGoalKicks": 7,
+              "homeThrowIns": 14,
+              "awayThrowIns": 22,
+              "homeTackles": 10,
+              "awayTackles": 13
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1760796000000,
+              "homeGoals": 2,
+              "awayGoals": 0,
+              "result": "L",
+              "homeGoalsHt": 1,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 2,
+              "awayGoalsFt": 0,
+              "homeCorners": 1,
+              "awayCorners": 5,
+              "homeCorners1h": 1,
+              "awayCorners1h": 3,
+              "homeCorners2h": 0,
+              "awayCorners2h": 2,
+              "homeYellows": 2,
+              "awayYellows": 1,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 4,
+              "awayTotalShots": 19,
+              "homeShotsOnTarget": 3,
+              "awayShotsOnTarget": 4,
+              "homeOffsides": 1,
+              "awayOffsides": 0,
+              "homeFouls": 10,
+              "awayFouls": 7,
+              "homeBookingPoints": 20,
+              "awayBookingPoints": 10,
+              "homeGoalKicks": 11,
+              "awayGoalKicks": 3,
+              "homeThrowIns": 20,
+              "awayThrowIns": 25,
+              "homeTackles": 14,
+              "awayTackles": 13
+            }
+          ],
+          "positionType": "RELEGATION",
+          "positionTypeName": "Relegation"
+        },
+        {
+          "position": "20th",
+          "team": {
+            "id": 29,
+            "name": "Wolverhampton Wanderers"
+          },
+          "played": 36,
+          "goalDiff": -41,
+          "points": 18,
+          "homeResults": [
+            {
+              "date": 1776520800000,
+              "homeGoals": 3,
+              "awayGoals": 0,
+              "result": "W",
+              "homeGoalsHt": 2,
+              "awayGoalsHt": 0,
+              "homeGoalsFt": 3,
+              "awayGoalsFt": 0,
+              "homeCorners": 5,
+              "awayCorners": 6,
+              "homeCorners1h": 3,
+              "awayCorners1h": 4,
+              "homeCorners2h": 2,
+              "awayCorners2h": 2,
+              "homeYellows": 2,
+              "awayYellows": 1,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 17,
+              "awayTotalShots": 7,
+              "homeShotsOnTarget": 6,
+              "awayShotsOnTarget": 2,
+              "homeOffsides": 0,
+              "awayOffsides": 1,
+              "homeFouls": 9,
+              "awayFouls": 17,
+              "homeBookingPoints": 20,
+              "awayBookingPoints": 10,
+              "homeGoalKicks": 3,
+              "awayGoalKicks": 9,
+              "homeThrowIns": 31,
+              "awayThrowIns": 16,
+              "homeTackles": 12,
+              "awayTackles": 23
+            }
+          ],
+          "awayResults": [
+            {
+              "date": 1758376800000,
+              "homeGoals": 1,
+              "awayGoals": 3,
+              "result": "W",
+              "homeGoalsHt": 1,
+              "awayGoalsHt": 3,
+              "homeGoalsFt": 1,
+              "awayGoalsFt": 3,
+              "homeCorners": 4,
+              "awayCorners": 0,
+              "homeCorners1h": 1,
+              "awayCorners1h": 0,
+              "homeCorners2h": 3,
+              "awayCorners2h": 0,
+              "homeYellows": 1,
+              "awayYellows": 1,
+              "homeReds": 0,
+              "awayReds": 0,
+              "homeYellowReds": 0,
+              "awayYellowReds": 0,
+              "homeTotalShots": 16,
+              "awayTotalShots": 6,
+              "homeShotsOnTarget": 6,
+              "awayShotsOnTarget": 4,
+              "homeOffsides": 0,
+              "awayOffsides": 2,
+              "homeFouls": 11,
+              "awayFouls": 9,
+              "homeBookingPoints": 10,
+              "awayBookingPoints": 10,
+              "homeGoalKicks": 5,
+              "awayGoalKicks": 7,
+              "homeThrowIns": 28,
+              "awayThrowIns": 15,
+              "homeTackles": 28,
+              "awayTackles": 20
+            }
+          ],
+          "positionType": "RELEGATION",
+          "positionTypeName": "Relegation"
+        }
+      ]
+    }
+  ],
+  "homeTeamId": 0,
+  "awayTeamId": 0,
+  "fixtureWithoutStats": {
+    "id": 19427224,
+    "league": {
+      "id": 8,
+      "name": "Premier League",
+      "slug": "premier-league",
+      "logoUrl": "https://cdn.sportmonks.com/images/soccer/leagues/8/8.png",
+      "country": {
+        "name": "England",
+        "code": "https://cdn.choistats.com/assets/flags/gb-eng.svg",
+        "flagUrl": "https://cdn.sportmonks.com/images/countries/png/short/gb.png",
+        "slug": "england"
+      }
+    },
+    "date": 1778526000000,
+    "homeTeam": {
+      "id": 6,
+      "name": "Tottenham Hotspur",
+      "slug": "tottenham-hotspur",
+      "logo": "https://cdn.sportmonks.com/images/soccer/teams/6/6.png",
+      "isNational": false
+    },
+    "awayTeam": {
+      "id": 71,
+      "name": "Leeds United",
+      "slug": "leeds-united",
+      "logo": "https://cdn.sportmonks.com/images/soccer/teams/7/71.png",
+      "isNational": false
+    },
+    "seasonId": 25583,
+    "stage": {
+      "id": 77476879,
+      "name": "Regular Season",
+      "type": "Group Stage"
+    },
+    "referee": {
+      "id": 19868,
+      "name": "Jarred Gillett",
+      "slug": "jarred-gillett"
+    },
+    "homeTeamPosition": "17th",
+    "awayTeamPosition": "16th",
+    "slug": "tottenham-hotspur-v-leeds-united"
+  }
+}

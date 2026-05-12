@@ -1,0 +1,118 @@
+[
+  {
+    "timestamp": 1778526000000,
+    "homeTeam": "Tottenham Hotspur",
+    "awayTeam": "Leeds United",
+    "leagueName": "England - Premier League",
+    "leagueId": 8,
+    "countryFlag": "https://cdn.choistats.com/assets/flags/gb-eng.svg",
+    "chances": [
+      {
+        "statType": "Over 25 Total Booking Points",
+        "chance": 83,
+        "fixtureOdds": {
+          "fixtureId": 0,
+          "bookmakerFixtureUrl1xbet": "line/football/88637-england-premier-league/327633004-tottenham-hotspur-leeds-united"
+        },
+        "homeStats": [
+          {
+            "stat": "<strong>30+ Total Booking points</strong> in their last <span class=\"streak\">5</span> <strong></strong>league matches",
+            "isStreak": true
+          },
+          {
+            "stat": "<strong>30+ Total Booking points</strong> in their last <span class=\"streak\">13</span> <strong>home </strong>league matches",
+            "isStreak": true
+          }
+        ],
+        "awayStats": [
+          {
+            "stat": "<strong>30+ Total Booking points</strong> in 4/5 <strong></strong>league matches",
+            "isStreak": false
+          },
+          {
+            "stat": "<strong>30+ Total Booking points</strong> in their last <span class=\"streak\">7</span> <strong>away </strong>league matches",
+            "isStreak": true
+          }
+        ],
+        "premium": false
+      },
+      {
+        "statType": "Double chance Win or Draw",
+        "chanceTeam": "Leeds United",
+        "chance": 83,
+        "fixtureOdds": {
+          "fixtureId": 0,
+          "outcomeName": "Away Win or Draw",
+          "bookmaker": "BET365",
+          "decimalOdds": 2.05,
+          "fractionalOdds": "19/20",
+          "externalFixtureId": "192501389",
+          "externalBetId": "1012738874",
+          "bookmakerFixtureUrl": "https://www.bet365.com/dl/sportsbookredirect?affiliate=365_03330390&bet=0&bs=192501389-998182463~21/20",
+          "bookmakerFixtureUrl1xbet": "line/football/88637-england-premier-league/327633004-tottenham-hotspur-leeds-united",
+          "bookmakerBetUrl": "https://www.bet365.com/dl/sportsbookredirect?affiliate=365_03330390&bet=1&bs=192501389-1012738874~19/20"
+        },
+        "homeStats": [
+          {
+            "stat": "<strong>Winless</strong> in 3/5 <strong></strong>league matches",
+            "isStreak": false
+          },
+          {
+            "stat": "<strong>Winless</strong> in their last <span class=\"streak\">9</span> <strong>home </strong>league matches",
+            "isStreak": true
+          }
+        ],
+        "awayStats": [
+          {
+            "stat": "<strong>Unbeaten</strong> in their last <span class=\"streak\">6</span> <strong></strong>league matches",
+            "isStreak": true
+          },
+          {
+            "stat": "<strong>Unbeaten</strong> in their last <span class=\"streak\">6</span> <strong>away </strong>league matches",
+            "isStreak": true
+          }
+        ],
+        "premium": false
+      },
+      {
+        "statType": "To have Over 3.5 Corners",
+        "chanceTeam": "Tottenham Hotspur",
+        "chance": 83,
+        "fixtureOdds": {
+          "fixtureId": 0,
+          "outcomeName": "Home Team Corners - Over 3.5",
+          "bookmaker": "UNIBET",
+          "decimalOdds": 1.18,
+          "fractionalOdds": "1/6",
+          "externalFixtureId": "1024044204",
+          "externalBetId": "4160886189",
+          "bookmakerFixtureUrl": "https://b1.trickyrock.com/redirect.aspx?pid=3827504&bid=36507&unibetTarget=/betting/event/1024044204",
+          "bookmakerFixtureUrl1xbet": "line/football/88637-england-premier-league/327633004-tottenham-hotspur-leeds-united",
+          "bookmakerBetUrl": "https://b1.trickyrock.com/redirect.aspx?pid=3827504&bid=36507&unibetTarget=/betting%2523event/1024044204?coupon=singles|prematch|4160886189|0|append"
+        },
+        "homeStats": [
+          {
+            "stat": "<strong>Won Over 3.5 corners</strong> in their last <span class=\"streak\">8</span> <strong></strong>league matches",
+            "isStreak": true
+          },
+          {
+            "stat": "<strong>Won Over 3.5 corners</strong> in 3/5 <strong>home </strong>league matches",
+            "isStreak": false
+          }
+        ],
+        "awayStats": [
+          {
+            "stat": "<strong>Conceded Over 3.5 corners</strong> in 3/5 <strong></strong>league matches",
+            "isStreak": false
+          },
+          {
+            "stat": "<strong>Conceded Over 3.5 corners</strong> in their last <span class=\"streak\">8</span> <strong>away </strong>league matches",
+            "isStreak": true
+          }
+        ],
+        "premium": false
+      }
+    ],
+    "fixtureId": 19427224
+  }
+]
