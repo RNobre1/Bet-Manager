@@ -1,0 +1,50 @@
+name: scrape-daily
+
+on:
+  # 07:00 BRT (UTC-3) = 10:00 UTC. Adamchoi fixtures for the day are
+  # already populated by then; running pre-noon BRT keeps the data fresh
+  # before the user typically opens the app.
+  schedule:
+    - cron: "0 10 * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: scrape-daily
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: scripts/scraper
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install mise (ruby 4.0.3 + node 22)
+        uses: jdx/mise-action@v2
+        with:
+          working_directory: scripts/scraper
+
+      - name: cache bundle
+        uses: actions/cache@v4
+        with:
+          path: scripts/scraper/vendor/bundle
+          key: ${{ runner.os }}-gems-${{ hashFiles('scripts/scraper/Gemfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-gems-
+
+      - name: bundle install
+        run: |
+          bundle config set --local path 'vendor/bundle'
+          bundle install --jobs 4 --retry 3
+
+      - name: run scraper
+        env:
+          DATABASE_URL: ${{ secrets.SCRAPER_DATABASE_URL }}
+          ADAMCHOI_API_TOKEN: ${{ secrets.ADAMCHOI_API_TOKEN }}
+          SCRAPER_LEAGUE_SLUGS: ${{ vars.SCRAPER_LEAGUE_SLUGS }}
+          SCRAPER_DETAIL_CONCURRENCY: "4"
+          HEALTHCHECKS_URL: ${{ secrets.HEALTHCHECKS_URL }}
+        run: bundle exec bin/scrape
