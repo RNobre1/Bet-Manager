@@ -47,6 +47,11 @@ const LOADING_PHASES = [
 export function AnalyzePanel({ fixture }: AnalyzePanelProps) {
   const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  // `pending` is the partial assistant content the SSE stream has accumulated
+  // so far. It's wired through to the UI in desktop mode (where there's
+  // screen real estate to watch the model think) and intentionally suppressed
+  // on mobile (where the AnalysisLoader runs instead).
+  const [pending, setPending] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [loaderPhase, setLoaderPhase] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -90,6 +95,7 @@ export function AnalyzePanel({ fixture }: AnalyzePanelProps) {
       abortRef.current = controller;
       setStatus("streaming");
       setError(null);
+      setPending("");
 
       let assembled = "";
       try {
@@ -139,15 +145,18 @@ export function AnalyzePanel({ fixture }: AnalyzePanelProps) {
               setStatus("error");
               return;
             }
-            // Default event: delta chunk — accumulate quietly; the UI is
-            // showing the loader instead of token-by-token output.
+            // Default event: delta chunk. Accumulate into `assembled`
+            // (commits to messages at the end) and mirror to `pending` so
+            // the desktop watcher renders the live stream.
             const deltaCandidate = evt.data?.delta;
             if (typeof deltaCandidate === "string") {
               assembled += deltaCandidate;
+              setPending(assembled);
             }
           }
         }
 
+        setPending("");
         setMessages((prev) => [
           ...prev,
           { role: "assistant", content: assembled },
@@ -265,7 +274,27 @@ export function AnalyzePanel({ fixture }: AnalyzePanelProps) {
           <ChatMessageView key={i} message={m} />
         ))}
 
-        {status === "streaming" ? <AnalysisLoader phase={loaderPhase} /> : null}
+        {status === "streaming" ? (
+          <>
+            {/* Mobile: animated loader card — token stream would be too noisy
+                on a phone screen. */}
+            <div className="lg:hidden">
+              <AnalysisLoader phase={loaderPhase} />
+            </div>
+            {/* Desktop: live stream. Falls back to the loader for the first
+                ~second before the first chunk arrives, so the screen never
+                sits empty. */}
+            <div className="hidden lg:block">
+              {pending ? (
+                <ChatMessageView
+                  message={{ role: "assistant", content: pending }}
+                />
+              ) : (
+                <AnalysisLoader phase={loaderPhase} />
+              )}
+            </div>
+          </>
+        ) : null}
       </div>
 
       {status === "error" ? (
