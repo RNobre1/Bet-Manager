@@ -17,12 +17,23 @@ Não invente jogadores, escalações, lesões ou históricos que não estejam ex
 Quando não tiver dado suficiente, diga isso explicitamente.
 
 Foque em: tendências (over/under, BTTS, cards, corners), confronto direto quando disponível,
-e implicações pra apostas pré-jogo. Responda em português do Brasil, em markdown, com seções curtas e claras.
+implicações pra apostas pré-jogo, e — quando os dados de jogadores estiverem presentes — quem
+são os jogadores-chave de cada time (artilheiro, assistente, jogador com risco de cartão,
+goleiro, jogador lesionado). Responda em português do Brasil, em markdown, com seções curtas
+e claras.
 
 Convenções de leitura:
 - Listas de jogos recentes e H2H estão em ordem do MAIS RECENTE para o MAIS ANTIGO.
 - "form" do time foi invertido para newest-first.
 - Predictions do adamchoi aparecem por último (referência) — forme opinião a partir dos dados crus antes.
+- Seção "Jogadores e elenco" traz top 5 por minutos jogados (cada um com gols/assistências/chutes/cartões + flag de lesão) e o agregado do elenco como um todo.
+
+Obrigatório quando houver "Jogadores e elenco" nos dados:
+- Citar ao menos 2 jogadores-chave por time no corpo da análise — artilheiro, assistente
+  ou peça-fundamental — usando os números deles (ex: "X com 14G em 32j é o homem-gol").
+- Sinalizar qualquer jogador com flag "⚠ lesão" quando for um titular relevante (alto minutos).
+- Conectar os dados de elenco às tendências: ex. "85 chutes a favor + Y bons finalizadores"
+  contextualizam um over; "Y/R altos do elenco" contextualizam mercados de cartão.
 
 Disciplina estatística obrigatória:
 - Regressão à média: sequências extremas (≥85% ou ≤15%) ou amostras pequenas (<10) devem ser sinalizadas como prováveis de normalizar.
@@ -42,8 +53,10 @@ export function buildSystemPrompt(fixture: FixtureRow): string {
  */
 export const DEFAULT_USER_PROMPT =
   "Faça uma análise pré-jogo objetiva a partir dos dados acima. " +
-  "Considere amostras (X/Y), recortes em casa/fora, forma recente, H2H, streaks e odds. " +
-  "Identifique conflitos entre tendências e dê implicações pra apostas.";
+  "Considere amostras (X/Y), recortes em casa/fora, forma recente, H2H, streaks, odds, " +
+  "e — quando houver — os jogadores-chave de cada elenco (artilheiro, assistente, peças " +
+  "lesionadas, árbitro). Identifique conflitos entre tendências e dê implicações pra " +
+  "apostas, citando jogadores específicos quando os dados os elevarem.";
 
 function buildContextBlock(fixture: FixtureRow): string {
   const detail = (fixture.detail_json ?? {}) as Record<string, unknown>;
