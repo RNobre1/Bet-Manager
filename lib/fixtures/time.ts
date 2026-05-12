@@ -71,3 +71,25 @@ export function trimKoTime(value: string | null | undefined): string | null {
   const m = value.match(/^(\d{2}:\d{2})/);
   return m ? m[1] : value;
 }
+
+/**
+ * Formats a UTC ISO string (e.g. "2026-05-12T23:30:00Z") as "HH:MM" in BRT
+ * (America/Sao_Paulo). Uses `Intl.DateTimeFormat` so DST history is correct
+ * without any external dep. Returns `null` for empty/invalid input so the
+ * caller can render a fallback ("TBD") consistently.
+ */
+export function formatUtcAsBrt(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return null;
+  try {
+    return new Intl.DateTimeFormat("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(d);
+  } catch {
+    return null;
+  }
+}

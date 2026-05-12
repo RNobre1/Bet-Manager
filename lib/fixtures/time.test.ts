@@ -5,6 +5,7 @@ import {
   brtDayWindowUtc,
   toIsoUtc,
   trimKoTime,
+  formatUtcAsBrt,
 } from "./time";
 
 describe("todayBrt", () => {
@@ -94,5 +95,24 @@ describe("trimKoTime", () => {
     expect(trimKoTime(null)).toBeNull();
     expect(trimKoTime(undefined)).toBeNull();
     expect(trimKoTime("")).toBeNull();
+  });
+});
+
+describe("formatUtcAsBrt", () => {
+  it("converts a UTC instant to HH:MM in BRT (UTC-3, no DST)", () => {
+    // 23:30 UTC → 20:30 BRT
+    expect(formatUtcAsBrt("2026-05-12T23:30:00Z")).toBe("20:30");
+  });
+
+  it("handles cross-midnight conversion (early-morning UTC = previous day BRT)", () => {
+    // 00:30 UTC on 13th = 21:30 BRT on 12th — formatter still emits HH:MM
+    expect(formatUtcAsBrt("2026-05-13T00:30:00Z")).toBe("21:30");
+  });
+
+  it("returns null for null / empty / invalid input", () => {
+    expect(formatUtcAsBrt(null)).toBeNull();
+    expect(formatUtcAsBrt(undefined)).toBeNull();
+    expect(formatUtcAsBrt("")).toBeNull();
+    expect(formatUtcAsBrt("garbage")).toBeNull();
   });
 });
