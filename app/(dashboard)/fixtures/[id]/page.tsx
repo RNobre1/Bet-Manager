@@ -1,6 +1,5 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatUtcAsBrt, trimKoTime, toIsoUtc } from "@/lib/fixtures/time";
 import { countryToFlag } from "@/lib/fixtures/leagues";
@@ -20,18 +19,9 @@ export default async function AnalyzePage({ params }: AnalyzePageProps) {
   const id = Number(rawId);
   if (!Number.isInteger(id) || id <= 0) notFound();
 
-  // Auth gate — same as the listing page; route is outside the (dashboard)
-  // group so we re-enforce login here.
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    redirect("/login");
-  }
-
   // The `fixtures` table isn't reflected in the generated Database type yet
-  // (the rest of the codebase uses the same untyped escape hatch).
+  // (the rest of the codebase uses the same untyped escape hatch). Auth is
+  // enforced by the (dashboard) layout one level up.
   const admin = createAdminClient();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const untyped = admin as unknown as { from: (t: string) => any };
