@@ -58,6 +58,9 @@ function buildContextBlock(fixture: FixtureRow): string {
   appendSection(lines, formatRecentMatches(detail.recent_matches, fixture));
   appendSection(lines, formatH2h(detail.h2h));
   appendSection(lines, formatStreaks(detail.streaks, fixture));
+  appendSection(lines, formatPlayerStats(detail.player_stats, fixture));
+  appendSection(lines, formatRefereeRecord(detail.referee_record));
+  appendSection(lines, formatOddsSummary(detail.odds_summary));
   appendSection(lines, formatPredictions(detail.predictions));
 
   return lines.join("\n");
@@ -249,6 +252,203 @@ function formatStreakLine(s: Streak): string {
   if (streakCount > 0) bits.push(`atual sequência ${streakCount}`);
   return `${desc}${bits.length ? ` — ${bits.join(" / ")}` : ""}`;
 }
+
+// ─── Player stats ───────────────────────────────────────────────────────
+
+interface PlayerAggregates {
+  players_count?: number;
+  goals?: number;
+  assists?: number;
+  minutes?: number;
+  yellows?: number;
+  reds?: number;
+  total_shots?: number;
+  shots_on_target?: number;
+  fouls_committed?: number;
+  fouls_drawn?: number;
+  tackles?: number;
+  offsides?: number;
+  goals_1h?: number;
+  goals_2h?: number;
+}
+
+interface TopPlayer {
+  name?: string;
+  played?: number;
+  started?: number;
+  subs?: number;
+  minutes?: number;
+  goals?: number;
+  assists?: number;
+  yellows?: number;
+  reds?: number;
+  total_shots?: number;
+  shots_on_target?: number;
+  fouls_committed?: number;
+  fouls_drawn?: number;
+  tackles?: number;
+  offsides?: number;
+  injured?: boolean;
+}
+
+const TOP_PLAYERS_PROMPTED = 5;
+
+function formatPlayerStats(
+  value: unknown,
+  fixture: FixtureRow,
+): string | null {
+  const record = asRecord(value);
+  if (!record) return null;
+  const home = asRecord(record.home);
+  const away = asRecord(record.away);
+  if (!home && !away) return null;
+
+  const out: string[] = ["Jogadores e elenco:"];
+  appendPlayerSide(out, fixture.home_team, home);
+  appendPlayerSide(out, fixture.away_team, away);
+  return out.length > 1 ? out.join("\n") : null;
+}
+
+function appendPlayerSide(
+  out: string[],
+  team: string,
+  side: Record<string, unknown> | null,
+): void {
+  if (!side) return;
+  const agg = asRecord(side.aggregates) as PlayerAggregates | null;
+  const top = asArray(side.top_players).slice(
+    0,
+    TOP_PLAYERS_PROMPTED,
+  ) as TopPlayer[];
+
+  if (!agg && top.length === 0) return;
+  out.push(`  ${team}:`);
+  if (agg) out.push(`    elenco: ${formatPlayerAggregates(agg)}`);
+  if (top.length > 0) {
+    out.push(`    top ${top.length} por minutos:`);
+    for (const p of top) out.push(`      ${formatTopPlayer(p)}`);
+  }
+}
+
+function formatPlayerAggregates(a: PlayerAggregates): string {
+  const bits: string[] = [];
+  if (a.players_count != null) bits.push(`${a.players_count} jogadores`);
+  if (a.goals != null) bits.push(`${a.goals}G`);
+  if (a.assists != null) bits.push(`${a.assists}A`);
+  if (a.total_shots != null) bits.push(`${a.total_shots} chutes`);
+  if (a.shots_on_target != null) bits.push(`${a.shots_on_target} no alvo`);
+  if (a.yellows != null) bits.push(`${a.yellows}Y`);
+  if (a.reds != null) bits.push(`${a.reds}R`);
+  if (a.tackles != null) bits.push(`${a.tackles} desarmes`);
+  if (a.fouls_committed != null) bits.push(`${a.fouls_committed} faltas`);
+  if (a.offsides != null) bits.push(`${a.offsides} imp`);
+  if (a.goals_1h != null && a.goals_2h != null)
+    bits.push(`gols 1T/2T ${a.goals_1h}/${a.goals_2h}`);
+  return bits.join(" · ");
+}
+
+function formatTopPlayer(p: TopPlayer): string {
+  const name = (p.name ?? "?").trim();
+  const played = p.played ?? 0;
+  const minutes = p.minutes ?? 0;
+  const goals = p.goals ?? 0;
+  const assists = p.assists ?? 0;
+  const yellows = p.yellows ?? 0;
+  const reds = p.reds ?? 0;
+  const shots = p.total_shots ?? 0;
+  const shotsOn = p.shots_on_target ?? 0;
+  const injured = p.injured ? " · ⚠ lesão" : "";
+  return (
+    `${name} — ${played}j ${minutes}min · ` +
+    `${goals}G/${assists}A · ${shots} chutes (${shotsOn} no alvo) · ` +
+    `${yellows}Y/${reds}R${injured}`
+  );
+}
+
+// ─── Referee ────────────────────────────────────────────────────────────
+
+interface RefereeRecord {
+  name?: string;
+  fixtures_count?: number;
+  completed?: number;
+  avg_total_booking_points?: number;
+  avg_home_booking_points?: number;
+  avg_away_booking_points?: number;
+  total_yellow_reds?: number;
+}
+
+function formatRefereeRecord(value: unknown): string | null {
+  const rec = asRecord(value) as RefereeRecord | null;
+  if (!rec || !rec.name) return null;
+  const completed = rec.completed ?? rec.fixtures_count ?? 0;
+  // No data → skip (don't burn tokens on a name + zeros).
+  if (completed === 0) return null;
+  const bits: string[] = [`${rec.name} — ${completed} jogos completos`];
+  if (rec.avg_total_booking_points != null) {
+    bits.push(`booking médio total ${rec.avg_total_booking_points}`);
+  }
+  if (rec.avg_home_booking_points != null && rec.avg_away_booking_points != null) {
+    bits.push(
+      `(casa ${rec.avg_home_booking_points} / fora ${rec.avg_away_booking_points})`,
+    );
+  }
+  if (rec.total_yellow_reds != null && rec.total_yellow_reds > 0) {
+    bits.push(`${rec.total_yellow_reds} 2ºamarelos`);
+  }
+  return `Árbitro: ${bits.join(" · ")}`;
+}
+
+// ─── Odds summary ───────────────────────────────────────────────────────
+
+interface OddsOutcome {
+  decimal_odds?: number;
+  bookmaker?: string;
+}
+
+// Markets we explicitly surface; everything else is included only if it has
+// ≤4 outcomes (so player-prop markets like "To assist"/"To score" with
+// dozens of legs are dropped — they balloon the prompt without helping).
+const PREFERRED_MARKETS = new Set([
+  "Result",
+  "BTTS",
+  "Both Teams To Score",
+  "Over/Under 0.5 Goals",
+  "Over/Under 1.5 Goals",
+  "Over/Under 2.5 Goals",
+  "Over/Under 3.5 Goals",
+  "Asian Handicap",
+  "Double Chance",
+  "Draw No Bet",
+  "Corners",
+  "Total Cards",
+  "Half Time Result",
+  "Correct Score",
+]);
+
+function formatOddsSummary(value: unknown): string | null {
+  const record = asRecord(value);
+  if (!record) return null;
+  const out: string[] = [];
+  for (const [market, outcomesRaw] of Object.entries(record)) {
+    const outcomes = asRecord(outcomesRaw);
+    if (!outcomes) continue;
+    const entries = Object.entries(outcomes);
+    const isPreferred = PREFERRED_MARKETS.has(market);
+    if (!isPreferred && entries.length > 4) continue;
+    const parts: string[] = [];
+    for (const [outcomeName, outcomeRaw] of entries) {
+      const o = asRecord(outcomeRaw) as OddsOutcome | null;
+      if (!o || typeof o.decimal_odds !== "number") continue;
+      const book = o.bookmaker ? ` (${o.bookmaker})` : "";
+      parts.push(`${outcomeName} ${o.decimal_odds.toFixed(2)}${book}`);
+    }
+    if (parts.length > 0) out.push(`  ${market}: ${parts.join(" · ")}`);
+  }
+  if (out.length === 0) return null;
+  return ["Odds (melhores por mercado):", ...out].join("\n");
+}
+
+// ─── Predictions ────────────────────────────────────────────────────────
 
 interface Prediction {
   stat_type?: string;
