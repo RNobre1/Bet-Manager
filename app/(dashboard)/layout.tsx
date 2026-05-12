@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { logoutAction } from "@/app/(auth)/login/actions";
 import { CommandPalette } from "@/components/command-palette";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 
 const NAV = [
   { href: "/", label: "overview" },
@@ -78,18 +79,7 @@ export default async function DashboardLayout({
 
       <CommandPalette />
 
-      {/* Mobile bottom nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 grid grid-cols-5 border-t border-[var(--color-line)] bg-[var(--color-surface-1)] lg:hidden">
-        {NAV.slice(0, 5).map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className="flex flex-col items-center justify-center gap-1 py-3 text-[var(--color-ink-muted)] active:bg-[var(--color-surface-2)]"
-          >
-            <span className="label">{item.label}</span>
-          </Link>
-        ))}
-      </nav>
+      <MobileBottomNav />
     </div>
   );
 }
