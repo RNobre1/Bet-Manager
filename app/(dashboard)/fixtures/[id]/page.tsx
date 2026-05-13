@@ -60,12 +60,20 @@ export default async function AnalyzePage({ params }: AnalyzePageProps) {
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-12 lg:px-12 lg:py-16">
-      <Link
-        href="/fixtures"
-        className="label inline-flex items-center gap-2 hover:text-[var(--color-ink)]"
-      >
-        ← voltar
-      </Link>
+      <div className="flex items-center justify-between gap-2">
+        <Link
+          href="/fixtures"
+          className="label inline-flex items-center gap-2 hover:text-[var(--color-ink)]"
+        >
+          ← voltar
+        </Link>
+        <Link
+          href={`/fixtures/${fixture.id}/stats`}
+          className="label inline-flex items-center gap-2 hover:text-[var(--color-ink)]"
+        >
+          abrir stats →
+        </Link>
+      </div>
 
       <header className="mt-6 mb-8 border-b border-[var(--color-line-subtle)] pb-6">
         <div className="flex items-center gap-2">

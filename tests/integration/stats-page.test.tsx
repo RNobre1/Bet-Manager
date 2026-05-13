@@ -189,14 +189,16 @@ function makeDetail(): DetailJson {
       total_yellow_reds: 1,
     },
     odds_summary: {
-      "Match Result": {
-        "1": { bookmaker: "bet365", decimal_odds: 2.05 },
-        X: { bookmaker: "bet365", decimal_odds: 3.4 },
-        "2": { bookmaker: "bet365", decimal_odds: 3.6 },
+      // Real choistats shape: "Result" keys are team names (long form) +
+      // "Draw"; "Match Goals Overs/Unders" keys are "Over 2.5" / "Under 2.5".
+      Result: {
+        Chelsea: { bookmaker: "bet365", decimal_odds: 2.05 },
+        Draw: { bookmaker: "bet365", decimal_odds: 3.4 },
+        Tottenham: { bookmaker: "bet365", decimal_odds: 3.6 },
       },
-      "Total Goals 2.5": {
-        Over: { bookmaker: "bet365", decimal_odds: 1.85 },
-        Under: { bookmaker: "bet365", decimal_odds: 1.95 },
+      "Match Goals Overs/Unders": {
+        "Over 2.5": { bookmaker: "bet365", decimal_odds: 1.85 },
+        "Under 2.5": { bookmaker: "bet365", decimal_odds: 1.95 },
       },
       BTTS: {
         Yes: { bookmaker: "bet365", decimal_odds: 1.7 },
@@ -273,8 +275,11 @@ describe("StatsPage server component", () => {
 
     expect(mockState.lastTable).toBe("fixtures");
     expect(mockState.lastEq).toEqual({ column: "id", value: 42 });
-    expect(screen.getByText("Chelsea")).toBeDefined();
-    expect(screen.getByText("Tottenham")).toBeDefined();
+    // The H1 splits the team names with a <span>vs</span> in between, so
+    // textContent is the right thing to look at instead of getByText.
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(heading.textContent).toContain("Chelsea");
+    expect(heading.textContent).toContain("Tottenham");
     // 19:00 UTC → 16:00 BRT (no DST in São Paulo since 2019).
     expect(screen.getByText(/16:00/)).toBeDefined();
   });
