@@ -10,6 +10,7 @@
  * insights engine (`REF_BP_HIGH`).
  */
 
+import { PanelShell } from "@/components/fixtures/stats/panels/_shell";
 import type { RefereeRecord } from "@/lib/fixtures/stats/detail-json-types";
 
 interface RefereeProps {
@@ -27,14 +28,7 @@ export function Referee({ record }: RefereeProps) {
     : "var(--color-ink-display)";
 
   return (
-    <div className="card flex flex-col gap-3 p-4 lg:p-5">
-      <header className="flex items-baseline justify-between gap-2">
-        <h3 className="font-display text-lg text-[var(--color-ink-display)]">
-          {record.name}
-        </h3>
-        <span className="label text-[var(--color-ink-faint)]">árbitro</span>
-      </header>
-
+    <PanelShell title={record.name} eyebrow="árbitro">
       <div className="flex items-baseline gap-3">
         <span
           data-bp-headline
@@ -68,6 +62,6 @@ export function Referee({ record }: RefereeProps) {
           </span>
         </div>
       </div>
-    </div>
+    </PanelShell>
   );
 }

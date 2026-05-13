@@ -10,6 +10,7 @@
  * (score is rendered as `homeGoals - awayGoals` of THAT past match).
  */
 
+import { PanelShell } from "@/components/fixtures/stats/panels/_shell";
 import type { RawRecentMatch } from "@/lib/fixtures/stats/detail-json-types";
 
 interface H2HProps {
@@ -55,14 +56,11 @@ function aggregate(matches: RawRecentMatch[], homeTeam: string, awayTeam: string
 export function H2H({ matches, homeTeam, awayTeam }: H2HProps) {
   if (!Array.isArray(matches) || matches.length === 0) {
     return (
-      <div className="card p-4 lg:p-5">
-        <h3 className="font-display text-lg text-[var(--color-ink-display)]">
-          H2H
-        </h3>
-        <p className="mt-2 text-[var(--color-ink-muted)]">
+      <PanelShell title="H2H">
+        <p className="text-[var(--color-ink-muted)]">
           nenhum confronto direto recente
         </p>
-      </div>
+      </PanelShell>
     );
   }
 
@@ -70,16 +68,7 @@ export function H2H({ matches, homeTeam, awayTeam }: H2HProps) {
   const agg = aggregate(matches, homeTeam, awayTeam);
 
   return (
-    <div className="card flex flex-col gap-4 p-4 lg:p-5">
-      <header className="flex items-baseline justify-between gap-2">
-        <h3 className="font-display text-lg text-[var(--color-ink-display)]">
-          H2H
-        </h3>
-        <span className="label text-[var(--color-ink-faint)]">
-          {matches.length} jogos
-        </span>
-      </header>
-
+    <PanelShell title="H2H" eyebrow={`${matches.length} jogos`} gap={4}>
       <ol className="flex flex-wrap gap-2">
         {cards.map((m, idx) => (
           <li
@@ -112,6 +101,6 @@ export function H2H({ matches, homeTeam, awayTeam }: H2HProps) {
           <span className="num text-[var(--color-ink-display)]">{agg.btts}</span>
         </div>
       </footer>
-    </div>
+    </PanelShell>
   );
 }

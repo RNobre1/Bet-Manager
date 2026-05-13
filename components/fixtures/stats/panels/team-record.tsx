@@ -13,6 +13,7 @@
  */
 
 import { FormBar, type FormResult } from "@/components/charts/form-bar";
+import { PanelShell } from "@/components/fixtures/stats/panels/_shell";
 import type {
   TeamRecordDerived,
   TeamSplitDerived,
@@ -61,18 +62,17 @@ export function TeamRecord({ teamName, data }: TeamRecordProps) {
 
   const { split, overall } = data;
   const showComparison = !isSameSplit(split, overall);
+  const eyebrow =
+    split.type === "All"
+      ? "geral"
+      : split.type === "Home"
+        ? "casa"
+        : split.type === "Away"
+          ? "fora"
+          : split.type;
 
   return (
-    <div className="card flex flex-col gap-4 p-4 lg:p-5">
-      <header className="flex items-baseline justify-between gap-2">
-        <h3 className="font-display text-lg text-[var(--color-ink-display)]">
-          {teamName}
-        </h3>
-        <span className="label text-[var(--color-ink-faint)]">
-          {split.type === "All" ? "geral" : split.type === "Home" ? "casa" : split.type === "Away" ? "fora" : split.type}
-        </span>
-      </header>
-
+    <PanelShell title={teamName} eyebrow={eyebrow} gap={4}>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <MetricCell label="pontos" value={String(split.points)} />
         <MetricCell label="PPG" value={split.points_per_game.toFixed(2)} />
@@ -103,6 +103,6 @@ export function TeamRecord({ teamName, data }: TeamRecordProps) {
           </div>
         </div>
       ) : null}
-    </div>
+    </PanelShell>
   );
 }

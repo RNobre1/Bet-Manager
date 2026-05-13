@@ -7,6 +7,7 @@
  * disappears upstream).
  */
 
+import { PanelShell } from "@/components/fixtures/stats/panels/_shell";
 import type { Prediction } from "@/lib/fixtures/stats/detail-json-types";
 
 interface PredictionsProps {
@@ -19,14 +20,7 @@ export function Predictions({ data }: PredictionsProps) {
   const sorted = [...data].sort((a, b) => b.chance - a.chance);
 
   return (
-    <div className="card flex flex-col gap-3 p-4 lg:p-5">
-      <header className="flex items-baseline justify-between gap-2">
-        <h3 className="font-display text-lg text-[var(--color-ink-display)]">
-          Predictions
-        </h3>
-        <span className="label text-[var(--color-ink-faint)]">choistats</span>
-      </header>
-
+    <PanelShell title="Predictions" eyebrow="choistats">
       <ul className="flex flex-col gap-3">
         {sorted.map((p, idx) => (
           <li
@@ -81,6 +75,6 @@ export function Predictions({ data }: PredictionsProps) {
           </li>
         ))}
       </ul>
-    </div>
+    </PanelShell>
   );
 }

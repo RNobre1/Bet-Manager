@@ -14,6 +14,7 @@
  * NaN positions.
  */
 
+import { PanelShell } from "@/components/fixtures/stats/panels/_shell";
 import type {
   BoxStats,
   Distributions as Dist,
@@ -128,16 +129,11 @@ function SideColumn({
 
 export function Distributions({ home, away }: DistributionsProps) {
   return (
-    <div className="card flex flex-col gap-4 p-4 lg:p-5">
-      <header className="flex items-baseline justify-between gap-2">
-        <h3 className="font-display text-lg text-[var(--color-ink-display)]">
-          Distribuições
-        </h3>
-        <span className="label text-[var(--color-ink-faint)]">
-          min · Q1 · mediana · Q3 · max
-        </span>
-      </header>
-
+    <PanelShell
+      title="Distribuições"
+      eyebrow="min · Q1 · mediana · Q3 · max"
+      gap={4}
+    >
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <section>
           <h4 className="label mb-2 text-[var(--color-ink-faint)]">casa</h4>
@@ -148,6 +144,6 @@ export function Distributions({ home, away }: DistributionsProps) {
           <SideColumn side="away" data={away} color="var(--color-depth)" />
         </section>
       </div>
-    </div>
+    </PanelShell>
   );
 }

@@ -9,6 +9,7 @@
  * the icon set tiny (no extra dep) and rely on tokens for color.
  */
 
+import { PanelShell } from "@/components/fixtures/stats/panels/_shell";
 import type { Insight } from "@/lib/fixtures/stats/insights";
 
 interface InsightsProps {
@@ -26,16 +27,7 @@ export function Insights({ insights }: InsightsProps) {
   if (!Array.isArray(insights) || insights.length === 0) return null;
 
   return (
-    <div className="card flex flex-col gap-3 p-4 lg:p-5">
-      <header className="flex items-baseline justify-between gap-2">
-        <h3 className="font-display text-lg text-[var(--color-ink-display)]">
-          Insights
-        </h3>
-        <span className="label text-[var(--color-ink-faint)]">
-          {insights.length}
-        </span>
-      </header>
-
+    <PanelShell title="Insights" eyebrow={insights.length}>
       <ul className="flex flex-col gap-2">
         {insights.map((ins, idx) => (
           <li
@@ -65,6 +57,6 @@ export function Insights({ insights }: InsightsProps) {
           </li>
         ))}
       </ul>
-    </div>
+    </PanelShell>
   );
 }

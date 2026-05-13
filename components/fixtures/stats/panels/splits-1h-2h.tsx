@@ -7,6 +7,7 @@
  * collapses gracefully (no division-by-zero — width = "0%").
  */
 
+import { PanelShell } from "@/components/fixtures/stats/panels/_shell";
 import type { Splits1h2h as SplitsData } from "@/lib/fixtures/stats/detail-json-types";
 
 interface SplitsProps {
@@ -35,14 +36,7 @@ export function Splits1h2h({ data }: SplitsProps) {
   const max = rows.reduce((m, r) => (r.value > m ? r.value : m), 0);
 
   return (
-    <div className="card flex flex-col gap-3 p-4 lg:p-5">
-      <header className="flex items-baseline justify-between gap-2">
-        <h3 className="font-display text-lg text-[var(--color-ink-display)]">
-          1T vs 2T
-        </h3>
-        <span className="label text-[var(--color-ink-faint)]">médias</span>
-      </header>
-
+    <PanelShell title="1T vs 2T" eyebrow="médias">
       <ul className="flex flex-col gap-2">
         {rows.map((r, idx) => {
           // Compact percent: 0 → "0%", 100 → "100%", 14.545 → "14.5%".
@@ -78,6 +72,6 @@ export function Splits1h2h({ data }: SplitsProps) {
           );
         })}
       </ul>
-    </div>
+    </PanelShell>
   );
 }
