@@ -395,3 +395,62 @@ describe("StatsPage server component", () => {
     expect(screen.queryByText(/painéis em construção/i)).toBeNull();
   });
 });
+
+// ─── T9: opt-out / optional panel scenarios ─────────────────────────────
+//
+// The slot wrapper (`renderPanelSlot`) always mounts `<div data-panel="…">`,
+// but the panel component itself may return `null` when its data is empty.
+// These tests pin that contract — DOM stays stable (no surprise unmounts),
+// content disappears.
+describe("StatsPage optional panel handling", () => {
+  beforeEach(() => {
+    resetMock();
+  });
+
+  it("omits referee panel content when referee_record is null", async () => {
+    const detail = makeDetail();
+    detail.referee_record = null;
+    setRow(makeRow({ detail_json: detail as unknown }));
+
+    const { container } = await renderPage("42");
+
+    // Slot wrapper must still mount (layout stability).
+    const slot = container.querySelector('[data-panel="I"]');
+    expect(slot).not.toBeNull();
+    // Inner Referee panel returns null when record is null, so the slot
+    // div has no rendered content for the panel headline.
+    expect(slot?.querySelector("[data-bp-headline]")).toBeNull();
+    // Hero KPI Ref BP should also fall through to the em-dash.
+    // 47.5 was the referee headline value in the fully-populated fixture;
+    // when ref_avg_bp is null the tile renders "—".
+    expect(screen.queryByText("47.5")).toBeNull();
+  });
+
+  it("omits predictions panel content when predictions is an empty array", async () => {
+    const detail = makeDetail();
+    detail.predictions = [];
+    setRow(makeRow({ detail_json: detail as unknown }));
+
+    const { container } = await renderPage("42");
+
+    // Slot J may or may not be present (page.tsx omits it from the list
+    // when predictions is empty? — actually we always mount it). Either
+    // way, no <li data-prediction> should render.
+    expect(container.querySelector("[data-prediction]")).toBeNull();
+  });
+
+  it("omits markets-browser content when odds_summary is an empty object", async () => {
+    const detail = makeDetail();
+    detail.odds_summary = {};
+    setRow(makeRow({ detail_json: detail as unknown }));
+
+    const { container } = await renderPage("42");
+
+    // Wave-4 slot H still mounts; the MarketsBrowser internally returns
+    // null when there are zero markets (total === 0).
+    const slot = container.querySelector('[data-panel="H"]');
+    expect(slot).not.toBeNull();
+    // No category buttons / market cards inside.
+    expect(slot?.querySelectorAll("button").length).toBe(0);
+  });
+});
