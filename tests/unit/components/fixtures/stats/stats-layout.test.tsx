@@ -203,7 +203,7 @@ describe("StatsLayout — mobile tabs", () => {
       .find((t) => t.textContent?.toLowerCase() === "streaks");
     expect(streaksTab).toBeDefined();
     act(() => {
-      fireEvent.click(streaksTab!);
+      fireEvent.mouseDown(streaksTab!, { button: 0 });
     });
 
     expect(container.querySelector('[data-panel="F"]')).not.toBeNull();
@@ -221,7 +221,7 @@ describe("StatsLayout — mobile tabs", () => {
       .getAllByRole("tab")
       .find((t) => t.textContent?.toLowerCase() === "jogos");
     act(() => {
-      fireEvent.click(jogosTab!);
+      fireEvent.mouseDown(jogosTab!, { button: 0 });
     });
 
     expect(container.querySelector('[data-panel="C-home"]')).not.toBeNull();
@@ -238,7 +238,7 @@ describe("StatsLayout — mobile tabs", () => {
       .getAllByRole("tab")
       .find((t) => t.textContent?.toLowerCase() === "odds");
     act(() => {
-      fireEvent.click(oddsTab!);
+      fireEvent.mouseDown(oddsTab!, { button: 0 });
     });
 
     expect(container.querySelector('[data-panel="H"]')).not.toBeNull();
@@ -256,7 +256,7 @@ describe("StatsLayout — mobile tabs", () => {
       .getAllByRole("tab")
       .find((t) => t.textContent?.toLowerCase() === "players");
     act(() => {
-      fireEvent.click(playersTab!);
+      fireEvent.mouseDown(playersTab!, { button: 0 });
     });
 
     expect(container.querySelector('[data-panel="G+"]')).not.toBeNull();

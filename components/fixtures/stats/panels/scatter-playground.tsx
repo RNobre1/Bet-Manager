@@ -136,7 +136,7 @@ export function ScatterPlayground({
   const yLabel = OPTIONS.find((o) => o.key === yKey)!.label;
 
   return (
-    <div className="card p-4">
+    <div className="card @container/card p-4">
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <span className="label">scatter playground</span>
         <span

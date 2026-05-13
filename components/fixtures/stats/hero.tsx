@@ -55,7 +55,7 @@ function KpiTile({
 }) {
   return (
     <div
-      className="card relative flex flex-col items-center gap-1 px-4 py-3 lg:px-5 lg:py-4"
+      className="card relative flex flex-col items-center gap-1 px-2 py-2 sm:px-4 sm:py-3 lg:px-5 lg:py-4"
       style={{
         boxShadow: "var(--shadow-glow-vermelho), var(--shadow-card)",
       }}
@@ -64,7 +64,7 @@ function KpiTile({
         {label}
       </span>
       <span
-        className="num text-2xl lg:text-3xl"
+        className="num text-xl sm:text-2xl lg:text-3xl"
         style={{
           color: "var(--color-ink-display)",
           textShadow:
@@ -96,7 +96,7 @@ export function Hero({
 
   return (
     <div
-      className="card strata relative overflow-hidden px-6 py-8 lg:px-10 lg:py-12"
+      className="card strata @container/hero relative overflow-hidden px-4 py-6 sm:px-6 sm:py-8 lg:px-10 lg:py-12"
       style={{ boxShadow: "var(--shadow-glow-vermelho), var(--shadow-card)" }}
     >
       <div className="mb-6 flex flex-wrap items-center gap-2">
@@ -133,7 +133,7 @@ export function Hero({
       </h1>
 
       {kpis ? (
-        <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="mt-6 grid grid-cols-3 gap-2 sm:mt-8 sm:gap-3 @md/hero:grid-cols-3 @2xl/hero:grid-cols-6">
           <KpiTile label="1" value={fmt(kpis.home_odd)} />
           <KpiTile label="X" value={fmt(kpis.draw_odd)} />
           <KpiTile label="2" value={fmt(kpis.away_odd)} />

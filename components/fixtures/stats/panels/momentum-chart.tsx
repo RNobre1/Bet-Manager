@@ -103,7 +103,7 @@ export function MomentumChart({
   }
 
   return (
-    <div className="card overflow-hidden p-3">
+    <div className="card @container/card overflow-hidden p-3">
       <div className="mb-2 flex items-center gap-3">
         <span className="label">momentum</span>
         <span className="num text-xs text-[var(--color-vermelho)]">

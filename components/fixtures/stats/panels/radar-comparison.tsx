@@ -57,8 +57,8 @@ export function RadarComparison({
   }));
 
   return (
-    <div className="card p-4">
-      <div className="mb-2 flex items-center gap-3">
+    <div className="card @container/card p-4">
+      <div className="mb-2 flex flex-wrap items-center gap-3">
         <span className="label">perfil comparativo</span>
         <span className="num text-xs text-[var(--color-vermelho)]">
           ● {homeTeam}

@@ -139,7 +139,7 @@ export function StreaksHeatmap({ data }: StreaksHeatmapProps) {
 
   // ─ Render ───────────────────────────────────────────────────────────
   return (
-    <div className="card flex flex-col gap-3 p-4 lg:p-5">
+    <div className="card @container/card flex flex-col gap-3 p-4 lg:p-5">
       <header className="flex items-baseline justify-between gap-2">
         <h3 className="font-display text-lg text-[var(--color-ink-display)]">
           Streaks
@@ -169,9 +169,9 @@ export function StreaksHeatmap({ data }: StreaksHeatmapProps) {
         </div>
       </header>
 
-      {/* Chips de grupo — horizontal scroll mobile */}
+      {/* Chips de grupo — horizontal scroll com mask gradient nas bordas em containers estreitos */}
       <div
-        className="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden @max-[520px]/card:[mask-image:linear-gradient(to_right,transparent_0,black_16px,black_calc(100%-16px),transparent_100%)]"
         role="group"
         aria-label="filtros por grupo de streak"
       >
@@ -230,8 +230,12 @@ export function StreaksHeatmap({ data }: StreaksHeatmapProps) {
       ) : (
         <>
           <div
+            className="-mx-1 px-1 @max-[520px]/card:overflow-x-auto @max-[520px]/card:[scrollbar-width:thin]"
+            aria-label="heatmap de streaks"
+          >
+          <div
             data-testid="streaks-heatmap-grid"
-            className="grid gap-1"
+            className="grid gap-1 @max-[520px]/card:[grid-template-columns:repeat(8,minmax(56px,1fr))] @max-[520px]/card:min-w-[480px]"
             style={{ gridTemplateColumns: "repeat(auto-fill, minmax(64px, 1fr))" }}
           >
             {filtered.map((s, i) => (
@@ -256,6 +260,7 @@ export function StreaksHeatmap({ data }: StreaksHeatmapProps) {
                 </span>
               </div>
             ))}
+          </div>
           </div>
 
           {/* Lista virtualizada */}
