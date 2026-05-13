@@ -10,6 +10,7 @@ export default defineConfig({
     include: [
       "tests/unit/**/*.test.{ts,tsx}",
       "tests/api/**/*.test.{ts,tsx}",
+      "tests/integration/**/*.test.{ts,tsx}",
       "lib/**/*.test.{ts,tsx}",
     ],
     setupFiles: ["./tests/setup-env.ts"],
