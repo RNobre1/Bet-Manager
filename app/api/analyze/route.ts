@@ -151,10 +151,15 @@ export async function POST(request: Request): Promise<Response> {
 
   // ─── 5. Stream out ────────────────────────────────────────────────────
   if (cached) {
-    return new Response(buildCachedSseStream(cached.content), {
-      status: 200,
-      headers: sseHeaders(),
-    });
+    return new Response(
+      buildCachedSseStream(cached.content, {
+        model,
+        cached: true,
+        system_prompt_chars: systemPrompt.length,
+        latency_ms: 0,
+      }),
+      { status: 200, headers: sseHeaders() },
+    );
   }
 
   // Cache miss → call OpenRouter and proxy upstream stream through.
@@ -187,8 +192,21 @@ function sseHeaders(): HeadersInit {
 
 const encoder = new TextEncoder();
 
+interface SseMeta {
+  model: string;
+  cached?: boolean;
+  system_prompt_chars?: number;
+  latency_ms?: number;
+  usage?: { prompt_tokens: number; completion_tokens: number; total_tokens?: number };
+  finish_reason?: string;
+}
+
 function encodeDelta(delta: string): Uint8Array {
   return encoder.encode(`data: ${JSON.stringify({ delta })}\n\n`);
+}
+
+function encodeMeta(meta: SseMeta): Uint8Array {
+  return encoder.encode(`event: meta\ndata: ${JSON.stringify(meta)}\n\n`);
 }
 
 function encodeDone(): Uint8Array {
@@ -205,10 +223,14 @@ function encodeError(message: string): Uint8Array {
  * Single-chunk SSE stream for cache hits — emits the cached content as one
  * delta then the done event. Client treats it identically to a live stream.
  */
-function buildCachedSseStream(content: string): ReadableStream<Uint8Array> {
+function buildCachedSseStream(
+  content: string,
+  meta: SseMeta,
+): ReadableStream<Uint8Array> {
   return new ReadableStream<Uint8Array>({
     start(controller) {
       controller.enqueue(encodeDelta(content));
+      controller.enqueue(encodeMeta(meta));
       controller.enqueue(encodeDone());
       controller.close();
     },
@@ -224,26 +246,38 @@ interface LiveMessagesArgs {
 async function buildLiveSseStreamFromMessages(
   args: LiveMessagesArgs,
 ): Promise<ReadableStream<Uint8Array>> {
+  const systemPromptChars = args.messages.find((m) => m.role === "system")
+    ?.content.length;
   return new ReadableStream<Uint8Array>({
     async start(controller) {
+      const startedAt = Date.now();
+      let usage: SseMeta["usage"];
       try {
         const upstream = await streamChatCompletion({
           model: args.model,
           apiKey: args.apiKey,
           messages: args.messages,
+          includeUsage: true,
         });
         const reader = upstream.getReader();
         try {
           while (true) {
             const { value, done } = await reader.read();
             if (done) break;
-            if (value && value.delta) {
-              controller.enqueue(encodeDelta(value.delta));
-            }
+            if (value?.delta) controller.enqueue(encodeDelta(value.delta));
+            if (value?.usage) usage = value.usage;
           }
         } finally {
           reader.releaseLock();
         }
+        controller.enqueue(
+          encodeMeta({
+            model: args.model,
+            system_prompt_chars: systemPromptChars,
+            latency_ms: Date.now() - startedAt,
+            usage,
+          }),
+        );
         controller.enqueue(encodeDone());
       } catch (err) {
         const message =
@@ -287,6 +321,8 @@ async function buildLiveSseStream(
   return new ReadableStream<Uint8Array>({
     async start(controller) {
       let assembled = "";
+      const startedAt = Date.now();
+      let usage: SseMeta["usage"];
       try {
         const upstream = await streamChatCompletion({
           model: args.model,
@@ -295,20 +331,30 @@ async function buildLiveSseStream(
             { role: "system", content: args.systemPrompt },
             { role: "user", content: args.userPrompt },
           ],
+          includeUsage: true,
         });
         const reader = upstream.getReader();
         try {
           while (true) {
             const { value, done } = await reader.read();
             if (done) break;
-            if (value && value.delta) {
+            if (value?.delta) {
               assembled += value.delta;
               controller.enqueue(encodeDelta(value.delta));
             }
+            if (value?.usage) usage = value.usage;
           }
         } finally {
           reader.releaseLock();
         }
+        controller.enqueue(
+          encodeMeta({
+            model: args.model,
+            system_prompt_chars: args.systemPrompt.length,
+            latency_ms: Date.now() - startedAt,
+            usage,
+          }),
+        );
         controller.enqueue(encodeDone());
         // Persist after the user has the full response — concurrent calls
         // are tolerated by the unique index on content_hash.

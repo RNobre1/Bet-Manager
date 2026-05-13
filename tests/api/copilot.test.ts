@@ -73,6 +73,13 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
+function withUsage<T extends { choices: unknown[] }>(
+  body: T,
+  usage: { prompt_tokens: number; completion_tokens: number },
+): T {
+  return { ...body, usage } as T;
+}
+
 function toolCallResponse(name: string, args: object, id = "call_1") {
   return jsonResponse({
     choices: [
@@ -246,6 +253,92 @@ describe("POST /api/copilot", () => {
     });
     const res = await POST(req);
     expect(res.status).toBe(502);
+  });
+
+  it("response carries a meta block with model, hops, usage_total, latency_ms", async () => {
+    adminState.rows = [
+      {
+        id: 1,
+        match_date: "2026-05-12",
+        ko_time: "20:00",
+        home_team: "A",
+        away_team: "B",
+        league: "X",
+        country: "brazil",
+        source_url: null,
+        kickoff_utc: "2026-05-12T23:00:00Z",
+        detail_json: null,
+      },
+    ];
+
+    const toolCall = JSON.parse(JSON.stringify(
+      await (toolCallResponse("query_fixtures", { country: "brazil" })).json()
+    ));
+    const finalAnswer = JSON.parse(JSON.stringify(
+      await (finalResponse("1 jogo: A vs B")).json()
+    ));
+
+    vi.spyOn(globalThis, "fetch")
+      .mockImplementationOnce(async () =>
+        jsonResponse(withUsage(toolCall, { prompt_tokens: 1500, completion_tokens: 30 })),
+      )
+      .mockImplementationOnce(async () =>
+        jsonResponse(withUsage(finalAnswer, { prompt_tokens: 1800, completion_tokens: 80 })),
+      );
+
+    const { POST } = await import("@/app/api/copilot/route");
+    const req = new Request("http://x/api/copilot", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "tem jogo no Brasil?" }],
+      }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.content).toMatch(/A vs B/);
+    expect(body.meta).toBeDefined();
+    expect(body.meta.model).toBe("deepseek/deepseek-v3.2");
+    expect(typeof body.meta.latency_ms).toBe("number");
+    expect(body.meta.usage_total).toMatchObject({
+      prompt_tokens: 3300,
+      completion_tokens: 110,
+    });
+    expect(Array.isArray(body.meta.hops)).toBe(true);
+    expect(body.meta.hops).toHaveLength(1);
+    expect(body.meta.hops[0]).toMatchObject({
+      tool: "query_fixtures",
+      args: { country: "brazil" },
+    });
+    expect(body.meta.hops[0].result_summary).toMatch(/1 fixture/i);
+    expect(typeof body.meta.hops[0].took_ms).toBe("number");
+  });
+
+  it("plain answer (no tool call): meta.hops is empty but meta.model is set", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      jsonResponse(
+        withUsage(
+          {
+            choices: [{ message: { role: "assistant", content: "oi!" } }],
+          },
+          { prompt_tokens: 800, completion_tokens: 20 },
+        ),
+      ),
+    );
+    const { POST } = await import("@/app/api/copilot/route");
+    const req = new Request("http://x/api/copilot", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "oi" }],
+      }),
+    });
+    const res = await POST(req);
+    const body = await res.json();
+    expect(body.meta.hops).toEqual([]);
+    expect(body.meta.model).toBe("deepseek/deepseek-v3.2");
+    expect(body.meta.usage_total.prompt_tokens).toBe(800);
   });
 
   it("rejects messages[] not ending with role=user", async () => {

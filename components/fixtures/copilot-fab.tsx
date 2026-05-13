@@ -9,6 +9,22 @@ interface CopilotFabProps {
   date: string;
 }
 
+interface CopilotMeta {
+  model: string;
+  latency_ms: number;
+  hops: Array<{
+    tool: string;
+    args: unknown;
+    result_summary: string;
+    took_ms: number;
+  }>;
+  usage_total: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+}
+
 const SUGGESTIONS: ReadonlyArray<string> = [
   "Quais jogos hoje têm cartão alto?",
   "Tem algum jogo com over alto?",
@@ -30,11 +46,24 @@ const SUGGESTIONS: ReadonlyArray<string> = [
 export function CopilotFab({ date }: CopilotFabProps) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messagesMeta, setMessagesMeta] = useState<Record<number, CopilotMeta>>(
+    {},
+  );
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showLog, setShowLog] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setShowLog(window.localStorage.getItem("abissal:dev-log") === "1");
+    } catch {
+      /* SSR / Safari private mode */
+    }
+  }, []);
 
   // ESC closes the drawer + body scroll lock while open.
   useEffect(() => {
@@ -80,15 +109,25 @@ export function CopilotFab({ date }: CopilotFabProps) {
           messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
         }),
       });
-      const body = (await res.json()) as { content?: string; error?: string };
+      const body = (await res.json()) as {
+        content?: string;
+        error?: string;
+        meta?: CopilotMeta;
+      };
       if (!res.ok) {
         setError(body.error ?? `HTTP ${res.status}`);
         return;
       }
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: body.content ?? "" },
-      ]);
+      setMessages((prev) => {
+        const next: ChatMessage[] = [
+          ...prev,
+          { role: "assistant", content: body.content ?? "" },
+        ];
+        if (body.meta) {
+          setMessagesMeta((m) => ({ ...m, [next.length - 1]: body.meta! }));
+        }
+        return next;
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : "erro desconhecido");
     } finally {
@@ -166,7 +205,14 @@ export function CopilotFab({ date }: CopilotFabProps) {
                   ))}
                 </div>
               ) : (
-                messages.map((m, i) => <ChatMessageView key={i} message={m} />)
+                messages.map((m, i) => (
+                  <div key={i} className="flex flex-col gap-2">
+                    <ChatMessageView message={m} />
+                    {showLog && m.role === "assistant" && messagesMeta[i] ? (
+                      <CopilotLogDetails meta={messagesMeta[i]} />
+                    ) : null}
+                  </div>
+                ))
               )}
 
               {pending ? <CopilotLoader /> : null}
@@ -213,6 +259,59 @@ export function CopilotFab({ date }: CopilotFabProps) {
         </div>
       ) : null}
     </>
+  );
+}
+
+function CopilotLogDetails({ meta }: { meta: CopilotMeta }) {
+  return (
+    <details className="rounded-[var(--radius-sm)] border border-[var(--color-line-subtle)] bg-[var(--color-surface-2)]">
+      <summary className="label cursor-pointer select-none px-3 py-2 text-[var(--color-ink-faint)] hover:text-[var(--color-ink)]">
+        log do turno ({meta.hops.length} tool{meta.hops.length === 1 ? "" : "s"})
+      </summary>
+      <div className="flex flex-col gap-3 px-3 pb-3 font-mono text-[11px] leading-relaxed">
+        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+          <dt className="text-[var(--color-ink-faint)]">modelo</dt>
+          <dd className="text-[var(--color-ink-muted)]">{meta.model}</dd>
+          <dt className="text-[var(--color-ink-faint)]">latência</dt>
+          <dd className="text-[var(--color-ink-muted)]">{meta.latency_ms} ms</dd>
+          <dt className="text-[var(--color-ink-faint)]">tokens in</dt>
+          <dd className="text-[var(--color-ink-muted)]">
+            {meta.usage_total.prompt_tokens}
+          </dd>
+          <dt className="text-[var(--color-ink-faint)]">tokens out</dt>
+          <dd className="text-[var(--color-ink-muted)]">
+            {meta.usage_total.completion_tokens}
+          </dd>
+        </dl>
+        {meta.hops.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            <span className="label text-[var(--color-ink-faint)]">
+              tool calls
+            </span>
+            {meta.hops.map((h, i) => (
+              <div
+                key={i}
+                className="rounded-[var(--radius-sm)] border border-[var(--color-line-subtle)] p-2"
+              >
+                <div className="text-[var(--color-ink)]">
+                  <span className="text-[var(--color-vermelho)]">{h.tool}</span>
+                  <span className="text-[var(--color-ink-faint)]">
+                    {" "}
+                    · {h.took_ms} ms
+                  </span>
+                </div>
+                <pre className="mt-1 overflow-x-auto whitespace-pre-wrap break-words text-[var(--color-ink-muted)]">
+                  args: {JSON.stringify(h.args, null, 2)}
+                </pre>
+                <pre className="mt-1 whitespace-pre-wrap break-words text-[var(--color-ink-muted)]">
+                  → {h.result_summary}
+                </pre>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </details>
   );
 }
 

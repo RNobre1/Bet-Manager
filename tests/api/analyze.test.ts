@@ -171,6 +171,21 @@ function openrouterDeltaChunk(text: string): string {
   return `data: ${JSON.stringify(payload)}\n\n`;
 }
 
+function openrouterUsageChunk(usage: {
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens?: number;
+}): string {
+  // OpenRouter (and OpenAI) emit a final chunk with usage when
+  // stream_options.include_usage is true. The choices array is empty.
+  const payload = {
+    id: "chatcmpl-1",
+    choices: [],
+    usage,
+  };
+  return `data: ${JSON.stringify(payload)}\n\n`;
+}
+
 function openrouterDoneChunk(): string {
   return `data: [DONE]\n\n`;
 }
@@ -373,6 +388,88 @@ describe("POST /api/analyze", () => {
     await runOnce();
     await runOnce();
     expect(captured[0]).toBe(captured[1]);
+  });
+
+  it("requests stream_options.include_usage so usage shows up in the stream", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(
+        fakeOpenrouterResponse([
+          openrouterDeltaChunk("x"),
+          openrouterUsageChunk({
+            prompt_tokens: 100,
+            completion_tokens: 50,
+            total_tokens: 150,
+          }),
+          openrouterDoneChunk(),
+        ]),
+      );
+    const { POST } = await import("@/app/api/analyze/route");
+    const req = new Request("http://x/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fixture_id: 42 }),
+    });
+    const res = await POST(req);
+    await readBody(res);
+    const [, init] = fetchSpy.mock.calls[0];
+    const payload = JSON.parse(String(init?.body));
+    expect(payload.stream_options).toEqual({ include_usage: true });
+  });
+
+  it("emits an SSE meta event with model, usage, system_prompt_chars, latency_ms before done", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      fakeOpenrouterResponse([
+        openrouterDeltaChunk("ok"),
+        openrouterUsageChunk({
+          prompt_tokens: 2500,
+          completion_tokens: 700,
+          total_tokens: 3200,
+        }),
+        openrouterDoneChunk(),
+      ]),
+    );
+    const { POST } = await import("@/app/api/analyze/route");
+    const req = new Request("http://x/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fixture_id: 42 }),
+    });
+    const res = await POST(req);
+    const body = await readBody(res);
+    // meta event must arrive (the order between meta and done matters less
+    // than its mere presence — clients buffer until done).
+    expect(body).toContain("event: meta");
+    const metaLine = body.split("\n").find((l) => l.startsWith("data: ") && l.includes("\"model\""));
+    expect(metaLine).toBeDefined();
+    const meta = JSON.parse(metaLine!.slice(6));
+    expect(meta).toMatchObject({
+      model: "deepseek/deepseek-v3.2",
+      usage: { prompt_tokens: 2500, completion_tokens: 700 },
+    });
+    expect(typeof meta.latency_ms).toBe("number");
+    expect(meta.latency_ms).toBeGreaterThanOrEqual(0);
+    expect(typeof meta.system_prompt_chars).toBe("number");
+    expect(meta.system_prompt_chars).toBeGreaterThan(0);
+  });
+
+  it("cache hit: meta event includes a cached:true flag", async () => {
+    adminState.cacheRow = { content: "cached answer" };
+    const { POST } = await import("@/app/api/analyze/route");
+    const req = new Request("http://x/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fixture_id: 42 }),
+    });
+    const res = await POST(req);
+    const body = await readBody(res);
+    expect(body).toContain("event: meta");
+    const metaLine = body
+      .split("\n")
+      .find((l) => l.startsWith("data: ") && l.includes("\"cached\""));
+    expect(metaLine).toBeDefined();
+    const meta = JSON.parse(metaLine!.slice(6));
+    expect(meta.cached).toBe(true);
   });
 
   it("multi-turn with messages[]: upstream gets system + history verbatim, no DEFAULT_USER_PROMPT wrap", async () => {

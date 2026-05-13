@@ -67,11 +67,40 @@ interface UpstreamMessage {
   }>;
 }
 
+interface UpstreamUsage {
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens?: number;
+}
+
 interface UpstreamChoice {
   message: {
     role: "assistant";
     content: string | null;
     tool_calls?: UpstreamMessage["tool_calls"];
+  };
+}
+
+interface UpstreamResponse {
+  choices: UpstreamChoice[];
+  usage?: UpstreamUsage;
+}
+
+interface Hop {
+  tool: string;
+  args: unknown;
+  result_summary: string;
+  took_ms: number;
+}
+
+interface CopilotMeta {
+  model: string;
+  latency_ms: number;
+  hops: Hop[];
+  usage_total: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
   };
 }
 
@@ -110,14 +139,36 @@ export async function POST(request: Request): Promise<Response> {
     });
   }
 
+  const startedAt = Date.now();
+  const hops: Hop[] = [];
+  const usageTotal = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
+
+  function meta(): CopilotMeta {
+    return {
+      model: env.OPENROUTER_MODEL,
+      latency_ms: Date.now() - startedAt,
+      hops,
+      usage_total: usageTotal,
+    };
+  }
+
+  function accumulateUsage(u: UpstreamUsage | undefined): void {
+    if (!u) return;
+    usageTotal.prompt_tokens += u.prompt_tokens;
+    usageTotal.completion_tokens += u.completion_tokens;
+    usageTotal.total_tokens +=
+      u.total_tokens ?? u.prompt_tokens + u.completion_tokens;
+  }
+
   try {
     for (let hop = 0; hop < MAX_TOOL_HOPS; hop++) {
       const upstream = await callOpenRouter(messages, env.OPENROUTER_API_KEY);
+      accumulateUsage(upstream.usage);
       const choice = upstream.choices[0];
       const msg = choice.message;
 
       if (!msg.tool_calls || msg.tool_calls.length === 0) {
-        return Response.json({ content: msg.content ?? "" });
+        return Response.json({ content: msg.content ?? "", meta: meta() });
       }
 
       messages.push({
@@ -127,7 +178,15 @@ export async function POST(request: Request): Promise<Response> {
       });
 
       for (const call of msg.tool_calls) {
+        const hopStarted = Date.now();
         const result = await executeToolCall(call.function, admin);
+        const parsedArgs = parseToolArgs(call.function.arguments);
+        hops.push({
+          tool: call.function.name,
+          args: parsedArgs,
+          result_summary: summarizeResult(result),
+          took_ms: Date.now() - hopStarted,
+        });
         messages.push({
           role: "tool",
           tool_call_id: call.id,
@@ -141,6 +200,7 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({
       content:
         "Não consegui formular uma resposta final em até 3 consultas. Tente reformular a pergunta com menos filtros.",
+      meta: meta(),
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "unknown error";
@@ -154,7 +214,7 @@ export async function POST(request: Request): Promise<Response> {
 async function callOpenRouter(
   messages: UpstreamMessage[],
   apiKey: string,
-): Promise<{ choices: UpstreamChoice[] }> {
+): Promise<UpstreamResponse> {
   const res = await fetch(OPENROUTER_ENDPOINT, {
     method: "POST",
     headers: {
@@ -174,7 +234,28 @@ async function callOpenRouter(
     const body = await res.text().catch(() => "");
     throw new Error(`OpenRouter ${res.status}: ${body.slice(0, 200)}`);
   }
-  return res.json() as Promise<{ choices: UpstreamChoice[] }>;
+  return res.json() as Promise<UpstreamResponse>;
+}
+
+function parseToolArgs(raw: string): unknown {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return { _raw: raw };
+  }
+}
+
+function summarizeResult(result: unknown): string {
+  if (!result || typeof result !== "object") return String(result);
+  const r = result as Record<string, unknown>;
+  if (typeof r.error === "string") return `error: ${r.error}`;
+  if (Array.isArray(r.fixtures)) {
+    const n = r.fixtures.length;
+    const total = typeof r.total === "number" ? r.total : n;
+    const date = typeof r.date === "string" ? r.date : "?";
+    return `${n} fixture(s) returned (total ${total}, date ${date})`;
+  }
+  return JSON.stringify(result).slice(0, 120);
 }
 
 async function executeToolCall(

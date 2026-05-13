@@ -15,6 +15,21 @@ export interface OpenRouterMessage {
   content: string;
 }
 
+export interface OpenRouterUsage {
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens?: number;
+  cost?: number;
+}
+
+/**
+ * Union shape emitted by the parsed stream — most chunks carry a delta,
+ * the final one (when include_usage is on) carries the usage object.
+ */
+export type ChatChunk =
+  | { delta: string; usage?: undefined }
+  | { delta?: undefined; usage: OpenRouterUsage };
+
 export interface StreamChatCompletionOpts {
   messages: OpenRouterMessage[];
   model: string;
@@ -27,6 +42,12 @@ export interface StreamChatCompletionOpts {
   referer?: string;
   title?: string;
   signal?: AbortSignal;
+  /**
+   * Ask the upstream to include a final `usage` chunk in the stream. Adds
+   * `stream_options: { include_usage: true }` to the request body — OpenAI-
+   * compatible providers (including OpenRouter) honor this.
+   */
+  includeUsage?: boolean;
 }
 
 export class OpenRouterError extends Error {
@@ -45,8 +66,16 @@ const DEFAULT_TITLE = "Abissal";
 
 export async function streamChatCompletion(
   opts: StreamChatCompletionOpts,
-): Promise<ReadableStream<{ delta: string }>> {
+): Promise<ReadableStream<ChatChunk>> {
   const fetcher = opts.fetcher ?? fetch;
+  const body: Record<string, unknown> = {
+    model: opts.model,
+    stream: true,
+    messages: opts.messages,
+  };
+  if (opts.includeUsage) {
+    body.stream_options = { include_usage: true };
+  }
   const res = await fetcher(ENDPOINT, {
     method: "POST",
     headers: {
@@ -55,17 +84,13 @@ export async function streamChatCompletion(
       "HTTP-Referer": opts.referer ?? DEFAULT_REFERER,
       "X-Title": opts.title ?? DEFAULT_TITLE,
     },
-    body: JSON.stringify({
-      model: opts.model,
-      stream: true,
-      messages: opts.messages,
-    }),
+    body: JSON.stringify(body),
     signal: opts.signal,
   });
 
   if (!res.ok || !res.body) {
-    const body = res.body ? await res.text().catch(() => "") : "";
-    throw new OpenRouterError(res.status, body);
+    const resBody = res.body ? await res.text().catch(() => "") : "";
+    throw new OpenRouterError(res.status, resBody);
   }
 
   return parseOpenRouterSseStream(res.body);
@@ -79,11 +104,11 @@ export async function streamChatCompletion(
  */
 export function parseOpenRouterSseStream(
   upstream: ReadableStream<Uint8Array>,
-): ReadableStream<{ delta: string }> {
+): ReadableStream<ChatChunk> {
   const decoder = new TextDecoder();
   let buffer = "";
 
-  return new ReadableStream<{ delta: string }>({
+  return new ReadableStream<ChatChunk>({
     async start(controller) {
       const reader = upstream.getReader();
       try {
@@ -96,21 +121,25 @@ export function parseOpenRouterSseStream(
           while ((sepIdx = buffer.indexOf("\n\n")) !== -1) {
             const rawEvent = buffer.slice(0, sepIdx);
             buffer = buffer.slice(sepIdx + 2);
-            const delta = extractDeltaFromEvent(rawEvent);
-            if (delta !== null) {
-              if (delta === "__DONE__") {
-                controller.close();
-                return;
-              }
-              if (delta.length > 0) controller.enqueue({ delta });
+            const parsed = parseSseEvent(rawEvent);
+            if (parsed === "DONE") {
+              controller.close();
+              return;
+            }
+            if (parsed === null) continue;
+            if (parsed.usage) controller.enqueue({ usage: parsed.usage });
+            if (parsed.delta && parsed.delta.length > 0) {
+              controller.enqueue({ delta: parsed.delta });
             }
           }
         }
-        // Flush whatever lingers (last event sometimes lacks trailing blank line).
         if (buffer.trim().length > 0) {
-          const delta = extractDeltaFromEvent(buffer);
-          if (delta && delta !== "__DONE__" && delta.length > 0) {
-            controller.enqueue({ delta });
+          const parsed = parseSseEvent(buffer);
+          if (parsed && parsed !== "DONE") {
+            if (parsed.usage) controller.enqueue({ usage: parsed.usage });
+            if (parsed.delta && parsed.delta.length > 0) {
+              controller.enqueue({ delta: parsed.delta });
+            }
           }
         }
         controller.close();
@@ -123,9 +152,12 @@ export function parseOpenRouterSseStream(
   });
 }
 
-function extractDeltaFromEvent(rawEvent: string): string | null {
-  // An SSE event can be multi-line; OpenRouter emits a single `data: ...` line
-  // per event in practice, but be safe and concatenate all data lines.
+type ParsedEvent =
+  | "DONE"
+  | { delta?: string; usage?: OpenRouterUsage }
+  | null;
+
+function parseSseEvent(rawEvent: string): ParsedEvent {
   const dataLines: string[] = [];
   for (const line of rawEvent.split("\n")) {
     if (line.startsWith("data:")) {
@@ -134,14 +166,18 @@ function extractDeltaFromEvent(rawEvent: string): string | null {
   }
   if (dataLines.length === 0) return null;
   const data = dataLines.join("\n");
-  if (data === "[DONE]") return "__DONE__";
+  if (data === "[DONE]") return "DONE";
   try {
     const parsed = JSON.parse(data) as {
       choices?: Array<{ delta?: { content?: string } }>;
+      usage?: OpenRouterUsage;
     };
+    const out: { delta?: string; usage?: OpenRouterUsage } = {};
     const content = parsed.choices?.[0]?.delta?.content;
-    return typeof content === "string" ? content : "";
+    if (typeof content === "string") out.delta = content;
+    if (parsed.usage) out.usage = parsed.usage;
+    return out;
   } catch {
-    return "";
+    return { delta: "" };
   }
 }

@@ -37,6 +37,18 @@ type Status =
 const INITIAL_ASK_MARKER =
   "Faça a análise pré-jogo desse confronto a partir dos dados fornecidos.";
 
+interface MetaInfo {
+  model?: string;
+  cached?: boolean;
+  system_prompt_chars?: number;
+  latency_ms?: number;
+  usage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens?: number;
+  };
+}
+
 const LOADING_PHASES = [
   "Lendo o detalhe do confronto…",
   "Cruzando estatísticas da liga…",
@@ -60,6 +72,10 @@ export function AnalyzePanel({ fixture }: AnalyzePanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  // Operational metadata indexed by the assistant message position it
+  // describes — populated by `event: meta` SSE frames. Surfaced inside the
+  // dev log <details> under the matching assistant turn.
+  const [messagesMeta, setMessagesMeta] = useState<Record<number, MetaInfo>>({});
   // Per-user dev toggle persisted to localStorage. When on, the live stream is
   // shown during analysis (instead of the loader), and a collapsible <details>
   // exposing the raw assembled markdown is appended under each assistant turn.
@@ -127,6 +143,7 @@ export function AnalyzePanel({ fixture }: AnalyzePanelProps) {
       setPending("");
 
       let assembled = "";
+      let turnMeta: MetaInfo | null = null;
       try {
         // Follow-up turns ship the full conversation history so the backend
         // doesn't re-prompt the entire analysis from scratch. The initial
@@ -183,6 +200,10 @@ export function AnalyzePanel({ fixture }: AnalyzePanelProps) {
               setStatus("error");
               return;
             }
+            if (evt.event === "meta" && evt.data) {
+              turnMeta = evt.data as MetaInfo;
+              continue;
+            }
             // Default event: delta chunk. Accumulate into `assembled`
             // (commits to messages at the end) and mirror to `pending` so
             // the desktop watcher renders the live stream.
@@ -200,13 +221,17 @@ export function AnalyzePanel({ fixture }: AnalyzePanelProps) {
           // present a normal [user, assistant, user, ...] sequence to the LLM
           // — the hidden marker stays in state but never renders.
           const isInitial = !question && prev.length === 0;
-          if (isInitial) {
-            return [
-              { role: "user", content: INITIAL_ASK_MARKER, hidden: true },
-              { role: "assistant", content: assembled },
-            ];
+          const next = isInitial
+            ? ([
+                { role: "user", content: INITIAL_ASK_MARKER, hidden: true },
+                { role: "assistant", content: assembled },
+              ] as ChatMessage[])
+            : [...prev, { role: "assistant", content: assembled } as ChatMessage];
+          if (turnMeta) {
+            const assistantIdx = next.length - 1;
+            setMessagesMeta((m) => ({ ...m, [assistantIdx]: turnMeta! }));
           }
-          return [...prev, { role: "assistant", content: assembled }];
+          return next;
         });
         setStatus("ready");
       } catch (err) {
@@ -346,7 +371,10 @@ export function AnalyzePanel({ fixture }: AnalyzePanelProps) {
             <div key={i} className="flex flex-col gap-2">
               <ChatMessageView message={m} />
               {showLog && m.role === "assistant" ? (
-                <RawLogDetails content={m.content} />
+                <RawLogDetails
+                  content={m.content}
+                  meta={messagesMeta[i] ?? null}
+                />
               ) : null}
             </div>
           ),
@@ -471,16 +499,59 @@ function AnalysisLoader({ phase }: { phase: number }) {
   );
 }
 
-function RawLogDetails({ content }: { content: string }) {
+function RawLogDetails({
+  content,
+  meta,
+}: {
+  content: string;
+  meta: MetaInfo | null;
+}) {
   return (
     <details className="rounded-[var(--radius-sm)] border border-[var(--color-line-subtle)] bg-[var(--color-surface-2)]">
       <summary className="label cursor-pointer select-none px-3 py-2 text-[var(--color-ink-faint)] hover:text-[var(--color-ink)]">
-        ver fonte raw ({content.length} chars)
+        ver log do turno
       </summary>
-      <pre className="overflow-x-auto whitespace-pre-wrap break-words px-3 pb-3 font-mono text-[11px] leading-relaxed text-[var(--color-ink-muted)]">
-        {content}
-      </pre>
+      <div className="flex flex-col gap-3 px-3 pb-3">
+        {meta ? <MetaPanel meta={meta} /> : null}
+        <div className="flex flex-col gap-1">
+          <span className="label text-[var(--color-ink-faint)]">
+            fonte raw ({content.length} chars)
+          </span>
+          <pre className="overflow-x-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-[var(--color-ink-muted)]">
+            {content}
+          </pre>
+        </div>
+      </div>
     </details>
+  );
+}
+
+function MetaPanel({ meta }: { meta: MetaInfo }) {
+  const rows: Array<[string, string]> = [];
+  if (meta.model) rows.push(["modelo", meta.model]);
+  if (meta.cached) rows.push(["origem", "cache (hit)"]);
+  if (typeof meta.latency_ms === "number") {
+    rows.push(["latência", `${meta.latency_ms} ms`]);
+  }
+  if (typeof meta.system_prompt_chars === "number") {
+    rows.push(["system prompt", `${meta.system_prompt_chars} chars`]);
+  }
+  if (meta.usage) {
+    rows.push(["tokens in", String(meta.usage.prompt_tokens)]);
+    rows.push(["tokens out", String(meta.usage.completion_tokens)]);
+    if (meta.usage.total_tokens != null) {
+      rows.push(["tokens total", String(meta.usage.total_tokens)]);
+    }
+  }
+  return (
+    <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 font-mono text-[11px] leading-relaxed">
+      {rows.map(([k, v]) => (
+        <div key={k} className="contents">
+          <dt className="text-[var(--color-ink-faint)]">{k}</dt>
+          <dd className="text-[var(--color-ink-muted)]">{v}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
