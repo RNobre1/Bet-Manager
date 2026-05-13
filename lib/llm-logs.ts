@@ -30,7 +30,7 @@ export async function recordLlmRequest(
   log: LlmLogInput,
 ): Promise<void> {
   try {
-    await supabase.from("llm_request_logs").insert({
+    const { error } = await supabase.from("llm_request_logs").insert({
       route: log.route,
       fixture_id: log.fixture_id ?? null,
       model: log.model,
@@ -44,7 +44,10 @@ export async function recordLlmRequest(
       hops: log.hops ?? null,
       error: log.error ?? null,
     });
-  } catch {
-    // Swallow — logging is best-effort and never blocks the response path.
+    if (error) {
+      console.error("[llm-logs] insert failed:", error.message ?? error);
+    }
+  } catch (err) {
+    console.error("[llm-logs] insert threw:", err);
   }
 }

@@ -185,7 +185,7 @@ export async function POST(request: Request): Promise<Response> {
 
       if (!msg.tool_calls || msg.tool_calls.length === 0) {
         const finalMeta = meta();
-        void recordLlmRequest(admin, {
+        await recordLlmRequest(admin, {
           route: "copilot",
           model,
           cached: false,
@@ -226,7 +226,7 @@ export async function POST(request: Request): Promise<Response> {
     // Hit MAX_TOOL_HOPS — model kept looping. Surface a safe message rather
     // than burning more budget.
     const cappedMeta = meta();
-    void recordLlmRequest(admin, {
+    await recordLlmRequest(admin, {
       route: "copilot",
       model,
       cached: false,
@@ -245,7 +245,7 @@ export async function POST(request: Request): Promise<Response> {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "unknown error";
-    void recordLlmRequest(admin, {
+    await recordLlmRequest(admin, {
       route: "copilot",
       model,
       cached: false,

@@ -7,6 +7,10 @@ import {
   type LogsFilter,
 } from "@/lib/llm-logs-repository";
 
+// Always fetch fresh — the audit panel must reflect the very last request
+// without waiting for ISR revalidation or page-level dataCache.
+export const dynamic = "force-dynamic";
+
 interface LogsPageProps {
   searchParams: Promise<{ route?: string; limit?: string }>;
 }

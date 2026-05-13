@@ -191,7 +191,7 @@ export async function POST(request: Request): Promise<Response> {
   if (cached) {
     // Fire-and-forget log of the cache hit. Don't await — keeps the
     // user-facing response path untouched.
-    void recordLlmRequest(untypedSb, {
+    await recordLlmRequest(untypedSb, {
       route: "analyze",
       fixture_id: fixture_id,
       model,
@@ -344,7 +344,7 @@ async function buildLiveSseStreamFromMessages(
           }),
         );
         controller.enqueue(encodeDone());
-        void recordLlmRequest(args.logCtx.supabase, {
+        await recordLlmRequest(args.logCtx.supabase, {
           route: "analyze",
           fixture_id: args.logCtx.fixtureId,
           model: args.model,
@@ -364,7 +364,7 @@ async function buildLiveSseStreamFromMessages(
               ? err.message
               : "unknown error";
         controller.enqueue(encodeError(message));
-        void recordLlmRequest(args.logCtx.supabase, {
+        await recordLlmRequest(args.logCtx.supabase, {
           route: "analyze",
           fixture_id: args.logCtx.fixtureId,
           model: args.model,
@@ -472,7 +472,7 @@ async function buildLiveSseStream(
             /* swallow — stream already delivered */
           });
         }
-        void recordLlmRequest(args.supabase, {
+        await recordLlmRequest(args.supabase, {
           route: "analyze",
           fixture_id: args.fixtureId,
           model: args.model,
@@ -492,7 +492,7 @@ async function buildLiveSseStream(
               ? err.message
               : "unknown error";
         controller.enqueue(encodeError(message));
-        void recordLlmRequest(args.supabase, {
+        await recordLlmRequest(args.supabase, {
           route: "analyze",
           fixture_id: args.fixtureId,
           model: args.model,
