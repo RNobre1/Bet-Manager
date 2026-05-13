@@ -375,6 +375,118 @@ describe("POST /api/analyze", () => {
     expect(captured[0]).toBe(captured[1]);
   });
 
+  it("multi-turn with messages[]: upstream gets system + history verbatim, no DEFAULT_USER_PROMPT wrap", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(
+        fakeOpenrouterResponse([
+          openrouterDeltaChunk("resposta follow-up"),
+          openrouterDoneChunk(),
+        ]),
+      );
+    const { POST } = await import("@/app/api/analyze/route");
+    const req = new Request("http://x/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fixture_id: 42,
+        messages: [
+          { role: "user", content: "[análise inicial pedida]" },
+          { role: "assistant", content: "[análise pré-jogo gerada antes]" },
+          { role: "user", content: "e os escanteios?" },
+        ],
+      }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    await readBody(res);
+
+    const [, init] = fetchSpy.mock.calls[0];
+    const payload = JSON.parse(String(init?.body)) as {
+      messages: Array<{ role: string; content: string }>;
+    };
+    // Should be: system + 3 history turns. No extra DEFAULT_USER_PROMPT injection.
+    expect(payload.messages).toHaveLength(4);
+    expect(payload.messages[0].role).toBe("system");
+    expect(payload.messages[1]).toEqual({
+      role: "user",
+      content: "[análise inicial pedida]",
+    });
+    expect(payload.messages[2]).toEqual({
+      role: "assistant",
+      content: "[análise pré-jogo gerada antes]",
+    });
+    expect(payload.messages[3]).toEqual({
+      role: "user",
+      content: "e os escanteios?",
+    });
+    // System prompt is still built from the fixture context, not echoed from client.
+    expect(payload.messages[0].content).toMatch(/Tottenham/);
+    expect(payload.messages[0].content).not.toMatch(
+      /Faça uma análise pré-jogo objetiva/,
+    );
+  });
+
+  it("multi-turn with messages[]: bypasses cache (no insert, no lookup hit needed)", async () => {
+    // Even if a cache row existed for the initial turn, follow-ups must not
+    // serve it — the history is what makes this turn unique.
+    adminState.cacheRow = { content: "stale initial analysis" };
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      fakeOpenrouterResponse([
+        openrouterDeltaChunk("nova resposta"),
+        openrouterDoneChunk(),
+      ]),
+    );
+    const { POST } = await import("@/app/api/analyze/route");
+    const req = new Request("http://x/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fixture_id: 42,
+        messages: [
+          { role: "user", content: "inicial" },
+          { role: "assistant", content: "resposta" },
+          { role: "user", content: "follow-up" },
+        ],
+      }),
+    });
+    const res = await POST(req);
+    const body = await readBody(res);
+    // Should NOT echo the cached stale content.
+    expect(body).not.toContain("stale initial analysis");
+    expect(body).toContain("nova resposta");
+    // No cache insert either.
+    expect(adminState.insertedCacheRows).toHaveLength(0);
+  });
+
+  it("rejects empty messages[] with 400", async () => {
+    const { POST } = await import("@/app/api/analyze/route");
+    const req = new Request("http://x/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fixture_id: 42, messages: [] }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects messages[] not ending with role=user", async () => {
+    const { POST } = await import("@/app/api/analyze/route");
+    const req = new Request("http://x/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fixture_id: 42,
+        messages: [
+          { role: "user", content: "a" },
+          { role: "assistant", content: "b" },
+        ],
+      }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+  });
+
   it("question changes hash (follow-up creates a separate cache entry)", async () => {
     const captured: string[] = [];
 

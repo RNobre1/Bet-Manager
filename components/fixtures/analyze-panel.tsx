@@ -34,6 +34,9 @@ type Status =
  *
  * No external dep — vanilla `fetch` + `ReadableStream` reader.
  */
+const INITIAL_ASK_MARKER =
+  "Faça a análise pré-jogo desse confronto a partir dos dados fornecidos.";
+
 const LOADING_PHASES = [
   "Lendo o detalhe do confronto…",
   "Cruzando estatísticas da liga…",
@@ -57,9 +60,35 @@ export function AnalyzePanel({ fixture }: AnalyzePanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  // Per-user dev toggle persisted to localStorage. When on, the live stream is
+  // shown during analysis (instead of the loader), and a collapsible <details>
+  // exposing the raw assembled markdown is appended under each assistant turn.
+  // Default off so end-users get the polished UX; flip it on for debugging.
+  const [showLog, setShowLog] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const startedRef = useRef(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setShowLog(window.localStorage.getItem("abissal:dev-log") === "1");
+    } catch {
+      // Safari private mode / SSR — keep default (off).
+    }
+  }, []);
+
+  function toggleLog() {
+    setShowLog((v) => {
+      const next = !v;
+      try {
+        window.localStorage.setItem("abissal:dev-log", next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }
 
   // ESC → back to /fixtures.
   useEffect(() => {
@@ -90,7 +119,7 @@ export function AnalyzePanel({ fixture }: AnalyzePanelProps) {
   }, [status]);
 
   const streamAnalysis = useCallback(
-    async (question?: string) => {
+    async (question?: string, history?: ChatMessage[]) => {
       const controller = new AbortController();
       abortRef.current = controller;
       setStatus("streaming");
@@ -99,17 +128,26 @@ export function AnalyzePanel({ fixture }: AnalyzePanelProps) {
 
       let assembled = "";
       try {
+        // Follow-up turns ship the full conversation history so the backend
+        // doesn't re-prompt the entire analysis from scratch. The initial
+        // turn keeps the legacy shape so its cache entry stays addressable.
+        const body =
+          question && history
+            ? {
+                fixture_id: fixture.id,
+                messages: [
+                  ...history.map((m) => ({ role: m.role, content: m.content })),
+                  { role: "user" as const, content: question },
+                ],
+              }
+            : { fixture_id: fixture.id };
         const res = await fetch("/api/analyze", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Accept: "text/event-stream",
           },
-          body: JSON.stringify(
-            question
-              ? { fixture_id: fixture.id, question }
-              : { fixture_id: fixture.id },
-          ),
+          body: JSON.stringify(body),
           signal: controller.signal,
         });
 
@@ -157,10 +195,19 @@ export function AnalyzePanel({ fixture }: AnalyzePanelProps) {
         }
 
         setPending("");
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: assembled },
-        ]);
+        setMessages((prev) => {
+          // Bootstrap the conversation on the initial turn so follow-ups can
+          // present a normal [user, assistant, user, ...] sequence to the LLM
+          // — the hidden marker stays in state but never renders.
+          const isInitial = !question && prev.length === 0;
+          if (isInitial) {
+            return [
+              { role: "user", content: INITIAL_ASK_MARKER, hidden: true },
+              { role: "assistant", content: assembled },
+            ];
+          }
+          return [...prev, { role: "assistant", content: assembled }];
+        });
         setStatus("ready");
       } catch (err) {
         if (controller.signal.aborted) {
@@ -216,8 +263,11 @@ export function AnalyzePanel({ fixture }: AnalyzePanelProps) {
     const q = input.trim();
     if (!q || status === "streaming") return;
     setInput("");
+    // Snapshot history BEFORE the optimistic user turn — streamAnalysis
+    // appends the new question itself when building the request body.
+    const history = messages;
     setMessages((prev) => [...prev, { role: "user", content: q }]);
-    await streamAnalysis(q);
+    await streamAnalysis(q, history);
     inputRef.current?.focus();
   }
 
@@ -269,31 +319,54 @@ export function AnalyzePanel({ fixture }: AnalyzePanelProps) {
 
   return (
     <section className="flex flex-col gap-6" aria-label="Análise pré-jogo">
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={toggleLog}
+          aria-pressed={showLog}
+          className="label inline-flex items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--color-line-subtle)] px-2.5 py-1 text-[var(--color-ink-faint)] hover:border-[var(--color-line)] hover:text-[var(--color-ink)]"
+          title="Mostrar log de stream / fonte raw (debug)"
+        >
+          <span
+            aria-hidden
+            className="inline-block h-1.5 w-1.5 rounded-full"
+            style={{
+              backgroundColor: showLog
+                ? "var(--color-vermelho)"
+                : "var(--color-ink-faint)",
+            }}
+          />
+          log
+        </button>
+      </div>
+
       <div className="flex flex-col gap-5" aria-live="polite">
-        {messages.map((m, i) => (
-          <ChatMessageView key={i} message={m} />
-        ))}
+        {messages.map((m, i) =>
+          m.hidden ? null : (
+            <div key={i} className="flex flex-col gap-2">
+              <ChatMessageView message={m} />
+              {showLog && m.role === "assistant" ? (
+                <RawLogDetails content={m.content} />
+              ) : null}
+            </div>
+          ),
+        )}
 
         {status === "streaming" ? (
-          <>
-            {/* Mobile: animated loader card — token stream would be too noisy
-                on a phone screen. */}
-            <div className="lg:hidden">
+          showLog ? (
+            // Log mode: live token stream visible everywhere (mobile + desktop).
+            // Falls back to the loader for the first ~second before chunks
+            // arrive so the screen never sits empty.
+            pending ? (
+              <ChatMessageView
+                message={{ role: "assistant", content: pending }}
+              />
+            ) : (
               <AnalysisLoader phase={loaderPhase} />
-            </div>
-            {/* Desktop: live stream. Falls back to the loader for the first
-                ~second before the first chunk arrives, so the screen never
-                sits empty. */}
-            <div className="hidden lg:block">
-              {pending ? (
-                <ChatMessageView
-                  message={{ role: "assistant", content: pending }}
-                />
-              ) : (
-                <AnalysisLoader phase={loaderPhase} />
-              )}
-            </div>
-          </>
+            )
+          ) : (
+            <AnalysisLoader phase={loaderPhase} />
+          )
         ) : null}
       </div>
 
@@ -395,6 +468,19 @@ function AnalysisLoader({ phase }: { phase: number }) {
         processando análise
       </span>
     </div>
+  );
+}
+
+function RawLogDetails({ content }: { content: string }) {
+  return (
+    <details className="rounded-[var(--radius-sm)] border border-[var(--color-line-subtle)] bg-[var(--color-surface-2)]">
+      <summary className="label cursor-pointer select-none px-3 py-2 text-[var(--color-ink-faint)] hover:text-[var(--color-ink)]">
+        ver fonte raw ({content.length} chars)
+      </summary>
+      <pre className="overflow-x-auto whitespace-pre-wrap break-words px-3 pb-3 font-mono text-[11px] leading-relaxed text-[var(--color-ink-muted)]">
+        {content}
+      </pre>
+    </details>
   );
 }
 

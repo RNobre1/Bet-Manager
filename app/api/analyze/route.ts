@@ -36,10 +36,27 @@ import type { FixtureRow } from "@/lib/fixtures/types";
  *   - error:  `event: error\ndata: ${JSON.stringify({ message: "..." })}\n\n`
  */
 
-const bodySchema = z.object({
-  fixture_id: z.number().int().positive(),
-  question: z.string().optional(),
+const chatMessageSchema = z.object({
+  role: z.enum(["user", "assistant"]),
+  content: z.string(),
 });
+
+const bodySchema = z
+  .object({
+    fixture_id: z.number().int().positive(),
+    question: z.string().optional(),
+    messages: z.array(chatMessageSchema).optional(),
+  })
+  .refine(
+    (b) =>
+      b.messages === undefined ||
+      (b.messages.length > 0 &&
+        b.messages[b.messages.length - 1].role === "user"),
+    {
+      message: "messages must be non-empty and end with role=user",
+      path: ["messages"],
+    },
+  );
 
 export async function POST(request: Request): Promise<Response> {
   // ─── 1. Validate body ─────────────────────────────────────────────────
@@ -53,7 +70,8 @@ export async function POST(request: Request): Promise<Response> {
       { status: 400 },
     );
   }
-  const { fixture_id, question } = parsed;
+  const { fixture_id, question, messages } = parsed;
+  const isFollowUp = messages !== undefined;
 
   // ─── 2. Env precondition ──────────────────────────────────────────────
   if (!env.OPENROUTER_API_KEY) {
@@ -101,8 +119,28 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  // ─── 4. Compute hash + cache lookup ───────────────────────────────────
+  // ─── 4. Compute hash + cache lookup (only for first-turn / legacy path) ─
   const model = env.OPENROUTER_MODEL;
+  const systemPrompt = buildSystemPrompt(fixtureRow);
+
+  if (isFollowUp) {
+    // Multi-turn: feed the full history straight upstream. Cache is bypassed
+    // — same question after different history yields different answers, so a
+    // hash on the last user turn alone would be a footgun.
+    const upstreamMessages = [
+      { role: "system" as const, content: systemPrompt },
+      ...messages.map((m) => ({ role: m.role, content: m.content })),
+    ];
+    return new Response(
+      await buildLiveSseStreamFromMessages({
+        messages: upstreamMessages,
+        model,
+        apiKey: env.OPENROUTER_API_KEY,
+      }),
+      { status: 200, headers: sseHeaders() },
+    );
+  }
+
   const hash = computeContentHash({
     model,
     fixtureId: fixture_id,
@@ -120,7 +158,6 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   // Cache miss → call OpenRouter and proxy upstream stream through.
-  const systemPrompt = buildSystemPrompt(fixtureRow);
   const userPrompt = question
     ? `${DEFAULT_USER_PROMPT}\n\n---\nPergunta de follow-up: ${question}`
     : DEFAULT_USER_PROMPT;
@@ -174,6 +211,51 @@ function buildCachedSseStream(content: string): ReadableStream<Uint8Array> {
       controller.enqueue(encodeDelta(content));
       controller.enqueue(encodeDone());
       controller.close();
+    },
+  });
+}
+
+interface LiveMessagesArgs {
+  messages: Array<{ role: "system" | "user" | "assistant"; content: string }>;
+  model: string;
+  apiKey: string;
+}
+
+async function buildLiveSseStreamFromMessages(
+  args: LiveMessagesArgs,
+): Promise<ReadableStream<Uint8Array>> {
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      try {
+        const upstream = await streamChatCompletion({
+          model: args.model,
+          apiKey: args.apiKey,
+          messages: args.messages,
+        });
+        const reader = upstream.getReader();
+        try {
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            if (value && value.delta) {
+              controller.enqueue(encodeDelta(value.delta));
+            }
+          }
+        } finally {
+          reader.releaseLock();
+        }
+        controller.enqueue(encodeDone());
+      } catch (err) {
+        const message =
+          err instanceof OpenRouterError
+            ? `upstream OpenRouter error ${err.status}`
+            : err instanceof Error
+              ? err.message
+              : "unknown error";
+        controller.enqueue(encodeError(message));
+      } finally {
+        controller.close();
+      }
     },
   });
 }

@@ -5,6 +5,11 @@ import { MarkdownRenderer } from "./markdown-renderer";
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  // Initial "give me a pre-game analysis" pseudo-turn — kept in state so the
+  // LLM sees a [user, assistant, user, ...] sequence in follow-ups, but
+  // suppressed from the rendered chat so the UX stays a single block of
+  // analysis followed by replies.
+  hidden?: boolean;
 }
 
 interface ChatMessageProps {
@@ -17,6 +22,7 @@ interface ChatMessageProps {
  * replies are rendered via the minimal MarkdownRenderer.
  */
 export function ChatMessageView({ message }: ChatMessageProps) {
+  if (message.hidden) return null;
   const isUser = message.role === "user";
   const empty = !isUser && message.content.trim().length === 0;
 
