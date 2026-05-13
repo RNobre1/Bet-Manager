@@ -102,10 +102,11 @@ describe("computeCorrelations", () => {
       "goals_ft_for",
     );
     const out = computeCorrelations(matches);
-    const sotGoals = out.find(
-      (i) =>
-        i.statA === "sot_for" && i.statB === "goals_ft_for",
-    );
+    // Pair order between statA/statB is implementation-defined — check by set.
+    const sotGoals = out.find((i) => {
+      const pair = new Set([i.statA, i.statB]);
+      return pair.has("sot_for") && pair.has("goals_ft_for");
+    });
     expect(sotGoals).toBeDefined();
     expect(sotGoals!.r).toBeCloseTo(1, 5);
     expect(sotGoals!.kind).toBe("correlation");
@@ -125,9 +126,10 @@ describe("computeCorrelations", () => {
       "goals_ft_against",
     );
     const out = computeCorrelations(matches);
-    const found = out.find(
-      (i) => i.statA === "sot_for" && i.statB === "goals_ft_against",
-    );
+    const found = out.find((i) => {
+      const pair = new Set([i.statA, i.statB]);
+      return pair.has("sot_for") && pair.has("goals_ft_against");
+    });
     expect(found).toBeDefined();
     expect(found!.r).toBeCloseTo(-1, 5);
   });
