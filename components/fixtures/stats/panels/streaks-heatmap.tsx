@@ -24,9 +24,10 @@
 import * as Slider from "@radix-ui/react-slider";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Command } from "cmdk";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Streak, StreakIndex } from "@/lib/fixtures/stats/detail-json-types";
+import { useUrlPatcher } from "@/lib/fixtures/stats/use-url-state";
 
 interface StreaksHeatmapProps {
   data: StreakIndex;
@@ -49,10 +50,11 @@ function heatColor(perc: number): string {
   return `hsl(0, ${s.toFixed(0)}%, ${l.toFixed(0)}%)`;
 }
 
+const URL_DEFAULTS = { min_perc: String(DEFAULT_MIN_PERC) };
+
 export function StreaksHeatmap({ data }: StreaksHeatmapProps) {
-  const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
+  const patchUrl = useUrlPatcher(URL_DEFAULTS);
 
   // ─ Hidratação inicial a partir da URL ───────────────────────────────
   const initialGroups = useMemo(() => {
@@ -76,22 +78,6 @@ export function StreaksHeatmap({ data }: StreaksHeatmapProps) {
   const [minPerc, setMinPerc] = useState<number>(initialMinPerc);
   const [cmdkOpen, setCmdkOpen] = useState(false);
 
-  // ─ Sincroniza state → URL via router.replace (sem scroll) ───────────
-  const syncUrl = useCallback(
-    (next: { groups?: Set<string>; minPerc?: number }) => {
-      const params = new URLSearchParams(searchParams.toString());
-      const g = next.groups ?? selectedGroups;
-      if (g.size === 0) params.delete("streaks");
-      else params.set("streaks", Array.from(g).join(","));
-      const mp = next.minPerc ?? minPerc;
-      if (mp === DEFAULT_MIN_PERC) params.delete("min_perc");
-      else params.set("min_perc", String(mp));
-      const qs = params.toString();
-      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-    },
-    [pathname, router, searchParams, selectedGroups, minPerc],
-  );
-
   // ─ Lista de grupos disponíveis (do índice) ──────────────────────────
   const allGroups = useMemo(() => Object.keys(data.by_group).sort(), [data.by_group]);
 
@@ -113,27 +99,27 @@ export function StreaksHeatmap({ data }: StreaksHeatmapProps) {
         const next = new Set(prev);
         if (next.has(group)) next.delete(group);
         else next.add(group);
-        syncUrl({ groups: next });
+        patchUrl({ streaks: next.size === 0 ? null : Array.from(next).join(",") });
         return next;
       });
     },
-    [syncUrl],
+    [patchUrl],
   );
 
   const handleSlider = useCallback(
     (values: number[]) => {
       const v = values[0] ?? DEFAULT_MIN_PERC;
       setMinPerc(v);
-      syncUrl({ minPerc: v });
+      patchUrl({ min_perc: String(v) });
     },
-    [syncUrl],
+    [patchUrl],
   );
 
   const clearFilters = useCallback(() => {
     setSelectedGroups(new Set());
     setMinPerc(DEFAULT_MIN_PERC);
-    syncUrl({ groups: new Set(), minPerc: DEFAULT_MIN_PERC });
-  }, [syncUrl]);
+    patchUrl({ streaks: null, min_perc: String(DEFAULT_MIN_PERC) });
+  }, [patchUrl]);
 
   // ─ ⌘K abre cmdk ─────────────────────────────────────────────────────
   useEffect(() => {

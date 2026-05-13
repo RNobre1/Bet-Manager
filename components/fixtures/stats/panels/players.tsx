@@ -9,7 +9,7 @@
  * coloridos por lado.
  */
 
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 import {
   CartesianGrid,
@@ -26,6 +26,7 @@ import type {
   PlayerRankingCriterion,
   PlayerRanked,
 } from "@/lib/fixtures/stats/detail-json-types";
+import { useUrlPatcher } from "@/lib/fixtures/stats/use-url-state";
 
 interface PlayersProps {
   homeTeam: string;
@@ -69,6 +70,8 @@ function efficiencyPer90(p: Player): number {
   return ((p.goals + p.assists) * 90) / p.minutes;
 }
 
+const URL_DEFAULTS = { player_rank: "goals" };
+
 export function Players({
   homeTeam,
   awayTeam,
@@ -77,9 +80,8 @@ export function Players({
   width,
   height = 220,
 }: PlayersProps) {
-  const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
+  const patchUrl = useUrlPatcher(URL_DEFAULTS);
 
   const initialCriterion = useMemo<PlayerRankingCriterion>(() => {
     const raw = searchParams.get("player_rank");
@@ -92,13 +94,9 @@ export function Players({
   const setAndSync = useCallback(
     (c: PlayerRankingCriterion) => {
       setCriterion(c);
-      const params = new URLSearchParams(searchParams.toString());
-      if (c === "goals") params.delete("player_rank");
-      else params.set("player_rank", c);
-      const qs = params.toString();
-      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+      patchUrl({ player_rank: c });
     },
-    [pathname, router, searchParams],
+    [patchUrl],
   );
 
   const rankedHome = useMemo(() => derivePlayerRankings(home, criterion).slice(0, 5), [home, criterion]);
