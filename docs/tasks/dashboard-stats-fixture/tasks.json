@@ -1,0 +1,127 @@
+{
+  "feature": "dashboard-stats-fixture",
+  "version": "0.1",
+  "updated": "2026-05-13",
+  "tasks": [
+    {
+      "id": "T1",
+      "slug": "detail-json-types-and-derivers",
+      "title": "TS types + funções puras de derivação",
+      "phase": "foundation",
+      "deps": [],
+      "wave": 1,
+      "estimate": "M",
+      "status": "pending",
+      "confidence": "high",
+      "branch": "feat/dashboard-stats-T1"
+    },
+    {
+      "id": "T2",
+      "slug": "insights-engine",
+      "title": "Insights engine (correlações + trends + patterns + outliers)",
+      "phase": "foundation",
+      "deps": ["T1"],
+      "wave": 2,
+      "estimate": "M",
+      "status": "pending",
+      "confidence": "high",
+      "branch": "feat/dashboard-stats-T2"
+    },
+    {
+      "id": "T3",
+      "slug": "stats-page-skeleton",
+      "title": "page.tsx + StatsLayout + Hero",
+      "phase": "integration",
+      "deps": ["T1"],
+      "wave": 2,
+      "estimate": "S",
+      "status": "pending",
+      "confidence": "high",
+      "branch": "feat/dashboard-stats-T3"
+    },
+    {
+      "id": "T4",
+      "slug": "panels-server-batch",
+      "title": "Painéis Server: A (team_record), D (h2h), E (splits), I (referee), J (predictions), M (distributions), N (insights)",
+      "phase": "implementation",
+      "deps": ["T1", "T2"],
+      "wave": 3,
+      "estimate": "M",
+      "status": "pending",
+      "confidence": "high",
+      "branch": "feat/dashboard-stats-T4"
+    },
+    {
+      "id": "T5",
+      "slug": "panels-client-charts",
+      "title": "Painéis Client (charts): B (momentum lightweight-charts), C+ (recent multi-series), K (radar), L (scatter playground)",
+      "phase": "implementation",
+      "deps": ["T1", "T3"],
+      "wave": 3,
+      "estimate": "M",
+      "status": "pending",
+      "confidence": "medium",
+      "branch": "feat/dashboard-stats-T5"
+    },
+    {
+      "id": "T6",
+      "slug": "panel-streaks-and-players",
+      "title": "Painéis Client interativos: F (streaks heatmap c/ chips+slider+cmdk+virtualizer) + G+ (players ranking + scatter min×eff)",
+      "phase": "implementation",
+      "deps": ["T1", "T3"],
+      "wave": 4,
+      "estimate": "L",
+      "status": "pending",
+      "confidence": "medium",
+      "branch": "feat/dashboard-stats-T6"
+    },
+    {
+      "id": "T7",
+      "slug": "panel-markets-browser",
+      "title": "Painel H · markets browser (drawer Radix, opt)",
+      "phase": "implementation",
+      "deps": ["T1", "T3"],
+      "wave": 4,
+      "estimate": "S",
+      "status": "pending",
+      "confidence": "high",
+      "branch": "feat/dashboard-stats-T7"
+    },
+    {
+      "id": "T8",
+      "slug": "mobile-tabs-responsive",
+      "title": "Mobile tabs Radix + container queries refinement",
+      "phase": "polish",
+      "deps": ["T3", "T4", "T5", "T6", "T7"],
+      "wave": 5,
+      "estimate": "M",
+      "status": "pending",
+      "confidence": "medium",
+      "branch": "feat/dashboard-stats-T8"
+    },
+    {
+      "id": "T9",
+      "slug": "e2e-and-a11y",
+      "title": "Playwright E2E (desktop + mobile) + axe-core a11y",
+      "phase": "verification",
+      "deps": ["T8"],
+      "wave": 6,
+      "estimate": "S",
+      "status": "pending",
+      "confidence": "high",
+      "branch": "feat/dashboard-stats-T9"
+    },
+    {
+      "id": "T10",
+      "slug": "bundle-and-launch",
+      "title": "bundle-analyzer baseline+delta + ADR no CLAUDE.md + smoke test prod",
+      "phase": "launch",
+      "deps": ["T9"],
+      "wave": 6,
+      "estimate": "S",
+      "status": "pending",
+      "confidence": "high",
+      "branch": "feat/dashboard-stats-T10"
+    }
+  ]
+}
