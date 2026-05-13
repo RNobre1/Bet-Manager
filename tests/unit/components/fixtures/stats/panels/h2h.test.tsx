@@ -94,13 +94,16 @@ describe("<H2H />", () => {
   });
 
   it("renders score strings (e.g. 2-1) on each card", () => {
-    render(
+    const { container } = render(
       <H2H
         matches={[match({ homeGoalsFt: 2, awayGoalsFt: 1 })]}
         homeTeam="Flamengo"
         awayTeam="Palmeiras"
       />,
     );
-    expect(screen.getByText(/2.*1/)).toBeDefined();
+    const card = container.querySelector("[data-h2h-card]") as HTMLElement;
+    expect(card).not.toBeNull();
+    // Score appears as "2-1" inside the .num span of the card.
+    expect(card.textContent).toMatch(/2-1/);
   });
 });
