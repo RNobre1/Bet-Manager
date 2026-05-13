@@ -35,42 +35,71 @@ export function computeContentHash(opts: ComputeContentHashOpts): string {
   return createHash("sha256").update(payload).digest("hex");
 }
 
+export interface CachedUsage {
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens?: number;
+}
+
+export interface CacheLookupResult {
+  content: string;
+  usage?: CachedUsage;
+}
+
 /**
  * Look up a cached analysis by content_hash. Returns `null` on miss.
  * `response_json.content` is the assembled assistant message text.
+ * `response_json.usage` (optional) carries the token counts from the run
+ * that originally generated the entry — surfaces in the dev log so cache
+ * hits show the same operational meta as fresh runs.
  */
 export async function lookupByHash(
   hash: string,
   supabase: FromSupabase,
-): Promise<{ content: string } | null> {
+): Promise<CacheLookupResult | null> {
   const { data, error } = await supabase
     .from("analysis_cache")
     .select("response_json")
     .eq("content_hash", hash)
     .maybeSingle();
   if (error || !data) return null;
-  const responseJson = (data as { response_json?: { content?: unknown } })
-    .response_json;
+  const responseJson = (
+    data as { response_json?: { content?: unknown; usage?: unknown } }
+  ).response_json;
   const content = responseJson?.content;
   if (typeof content !== "string") return null;
-  return { content };
+  const usage = isCachedUsage(responseJson?.usage) ? responseJson.usage : undefined;
+  return usage ? { content, usage } : { content };
+}
+
+function isCachedUsage(value: unknown): value is CachedUsage {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.prompt_tokens === "number" &&
+    typeof v.completion_tokens === "number"
+  );
 }
 
 /**
  * Persist a freshly-generated analysis. Concurrent calls are tolerated:
  * the table has `UNIQUE (content_hash)`, so a parallel insert just no-ops
  * (we swallow the conflict error). Returns true on insert, false on noop.
+ *
+ * `usage` is optional and stored alongside the content so future cache hits
+ * can surface the same token counts they cost to produce originally.
  */
 export async function storeAnalysis(
   hash: string,
   fixtureId: number,
   content: string,
   supabase: FromSupabase,
+  usage?: CachedUsage,
 ): Promise<boolean> {
   const { error } = await supabase.from("analysis_cache").insert({
     fixture_id: fixtureId,
     content_hash: hash,
-    response_json: { content },
+    response_json: usage ? { content, usage } : { content },
   });
   if (!error) return true;
   // Postgres unique_violation = 23505 (concurrent write to the same hash).

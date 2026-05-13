@@ -55,6 +55,13 @@ export interface StreamChatCompletionOpts {
    * compatible providers (including OpenRouter) honor this.
    */
   includeUsage?: boolean;
+  /**
+   * Maximum tokens the model may emit. Critical for reasoning models like
+   * deepseek-r1 — they consume large chunks of the output budget on the
+   * hidden chain-of-thought, so the visible answer truncates unless this is
+   * generous (e.g. 16000).
+   */
+  maxTokens?: number;
 }
 
 export class OpenRouterError extends Error {
@@ -82,6 +89,9 @@ export async function streamChatCompletion(
   };
   if (opts.includeUsage) {
     body.stream_options = { include_usage: true };
+  }
+  if (opts.maxTokens) {
+    body.max_tokens = opts.maxTokens;
   }
   const res = await fetcher(ENDPOINT, {
     method: "POST",

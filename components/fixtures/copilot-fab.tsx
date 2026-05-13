@@ -178,7 +178,7 @@ export function CopilotFab({ date }: CopilotFabProps) {
       ) : null}
 
       {open ? (
-        <div className="fixed inset-0 z-50 flex">
+        <div className="fixed inset-0 z-[60] flex">
           <button
             type="button"
             aria-label="Fechar copilot"
@@ -189,7 +189,7 @@ export function CopilotFab({ date }: CopilotFabProps) {
             role="dialog"
             aria-modal="true"
             aria-label="Copilot de fixtures"
-            className="relative ml-auto flex h-[85vh] w-full flex-col overflow-hidden rounded-t-2xl border-t border-[var(--color-line)] bg-[var(--color-surface-1)] motion-safe:animate-in motion-safe:slide-in-from-bottom motion-safe:duration-300 mt-auto lg:h-full lg:max-w-[480px] lg:rounded-none lg:border-t-0 lg:border-l lg:motion-safe:slide-in-from-right"
+            className="relative ml-auto flex h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl border-t border-[var(--color-line)] bg-[var(--color-surface-1)] motion-safe:animate-in motion-safe:slide-in-from-bottom motion-safe:duration-300 mt-auto lg:h-full lg:max-w-[480px] lg:rounded-none lg:border-t-0 lg:border-l lg:motion-safe:slide-in-from-right"
           >
             <header className="flex items-center justify-between border-b border-[var(--color-line-subtle)] px-5 py-4">
               <div>

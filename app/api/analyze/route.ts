@@ -6,6 +6,7 @@ import {
   lookupByHash,
   storeAnalysis,
 } from "@/lib/fixtures/analysis-cache";
+import { recordLlmRequest } from "@/lib/llm-logs";
 import {
   buildSystemPrompt,
   DEFAULT_USER_PROMPT,
@@ -60,6 +61,10 @@ const bodySchema = z
   );
 
 const REASONER_MODEL = "deepseek/deepseek-r1";
+// R1 spends a large chunk of its output budget on the hidden chain-of-thought.
+// Without an explicit ceiling, OpenRouter's default cap (~4k) truncates the
+// visible answer mid-sentence. 16k leaves comfortable room for both.
+const REASONER_MAX_TOKENS = 16000;
 
 export async function POST(request: Request): Promise<Response> {
   // ─── 1. Validate body ─────────────────────────────────────────────────
@@ -140,6 +145,12 @@ export async function POST(request: Request): Promise<Response> {
         messages: upstreamMessages,
         model,
         apiKey: env.OPENROUTER_API_KEY,
+        maxTokens: useReasoner ? REASONER_MAX_TOKENS : undefined,
+        logCtx: {
+          supabase: untypedSb,
+          fixtureId: fixture_id,
+          reasoner: useReasoner,
+        },
       }),
       { status: 200, headers: sseHeaders() },
     );
@@ -161,6 +172,8 @@ export async function POST(request: Request): Promise<Response> {
         fixtureId: fixture_id,
         supabase: untypedSb,
         skipPersist: true,
+        reasoner: true,
+        maxTokens: REASONER_MAX_TOKENS,
       }),
       { status: 200, headers: sseHeaders() },
     );
@@ -176,12 +189,27 @@ export async function POST(request: Request): Promise<Response> {
 
   // ─── 5. Stream out ────────────────────────────────────────────────────
   if (cached) {
+    // Fire-and-forget log of the cache hit. Don't await — keeps the
+    // user-facing response path untouched.
+    void recordLlmRequest(untypedSb, {
+      route: "analyze",
+      fixture_id: fixture_id,
+      model,
+      cached: true,
+      reasoner: false,
+      follow_up: false,
+      latency_ms: 0,
+      prompt_tokens: cached.usage?.prompt_tokens ?? null,
+      completion_tokens: cached.usage?.completion_tokens ?? null,
+      total_tokens: cached.usage?.total_tokens ?? null,
+    });
     return new Response(
       buildCachedSseStream(cached.content, {
         model,
         cached: true,
         system_prompt_chars: systemPrompt.length,
         latency_ms: 0,
+        usage: cached.usage,
       }),
       { status: 200, headers: sseHeaders() },
     );
@@ -266,6 +294,13 @@ interface LiveMessagesArgs {
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>;
   model: string;
   apiKey: string;
+  maxTokens?: number;
+  logCtx: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    supabase: { from: (t: string) => any };
+    fixtureId: number;
+    reasoner?: boolean;
+  };
 }
 
 async function buildLiveSseStreamFromMessages(
@@ -283,6 +318,7 @@ async function buildLiveSseStreamFromMessages(
           apiKey: args.apiKey,
           messages: args.messages,
           includeUsage: true,
+          maxTokens: args.maxTokens,
         });
         const reader = upstream.getReader();
         try {
@@ -298,15 +334,28 @@ async function buildLiveSseStreamFromMessages(
         } finally {
           reader.releaseLock();
         }
+        const latencyMs = Date.now() - startedAt;
         controller.enqueue(
           encodeMeta({
             model: args.model,
             system_prompt_chars: systemPromptChars,
-            latency_ms: Date.now() - startedAt,
+            latency_ms: latencyMs,
             usage,
           }),
         );
         controller.enqueue(encodeDone());
+        void recordLlmRequest(args.logCtx.supabase, {
+          route: "analyze",
+          fixture_id: args.logCtx.fixtureId,
+          model: args.model,
+          cached: false,
+          reasoner: args.logCtx.reasoner ?? false,
+          follow_up: true,
+          latency_ms: latencyMs,
+          prompt_tokens: usage?.prompt_tokens ?? null,
+          completion_tokens: usage?.completion_tokens ?? null,
+          total_tokens: usage?.total_tokens ?? null,
+        });
       } catch (err) {
         const message =
           err instanceof OpenRouterError
@@ -315,6 +364,16 @@ async function buildLiveSseStreamFromMessages(
               ? err.message
               : "unknown error";
         controller.enqueue(encodeError(message));
+        void recordLlmRequest(args.logCtx.supabase, {
+          route: "analyze",
+          fixture_id: args.logCtx.fixtureId,
+          model: args.model,
+          cached: false,
+          reasoner: args.logCtx.reasoner ?? false,
+          follow_up: true,
+          latency_ms: Date.now() - startedAt,
+          error: message,
+        });
       } finally {
         controller.close();
       }
@@ -335,6 +394,9 @@ interface LiveStreamArgs {
   supabase: { from: (t: string) => any };
   /** Don't write to analysis_cache (e.g. reasoner mode). */
   skipPersist?: boolean;
+  /** Marks the request as a reasoner run for the log. */
+  reasoner?: boolean;
+  maxTokens?: number;
 }
 
 function encodeReasoning(reasoning: string): Uint8Array {
@@ -368,6 +430,7 @@ async function buildLiveSseStream(
             { role: "user", content: args.userPrompt },
           ],
           includeUsage: true,
+          maxTokens: args.maxTokens,
         });
         const reader = upstream.getReader();
         try {
@@ -386,11 +449,12 @@ async function buildLiveSseStream(
         } finally {
           reader.releaseLock();
         }
+        const latencyMs = Date.now() - startedAt;
         controller.enqueue(
           encodeMeta({
             model: args.model,
             system_prompt_chars: args.systemPrompt.length,
-            latency_ms: Date.now() - startedAt,
+            latency_ms: latencyMs,
             usage,
           }),
         );
@@ -403,10 +467,23 @@ async function buildLiveSseStream(
             args.fixtureId,
             assembled,
             args.supabase,
+            usage,
           ).catch(() => {
             /* swallow — stream already delivered */
           });
         }
+        void recordLlmRequest(args.supabase, {
+          route: "analyze",
+          fixture_id: args.fixtureId,
+          model: args.model,
+          cached: false,
+          reasoner: args.reasoner ?? false,
+          follow_up: false,
+          latency_ms: latencyMs,
+          prompt_tokens: usage?.prompt_tokens ?? null,
+          completion_tokens: usage?.completion_tokens ?? null,
+          total_tokens: usage?.total_tokens ?? null,
+        });
       } catch (err) {
         const message =
           err instanceof OpenRouterError
@@ -415,6 +492,16 @@ async function buildLiveSseStream(
               ? err.message
               : "unknown error";
         controller.enqueue(encodeError(message));
+        void recordLlmRequest(args.supabase, {
+          route: "analyze",
+          fixture_id: args.fixtureId,
+          model: args.model,
+          cached: false,
+          reasoner: args.reasoner ?? false,
+          follow_up: false,
+          latency_ms: Date.now() - startedAt,
+          error: message,
+        });
       } finally {
         controller.close();
       }

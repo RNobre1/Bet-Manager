@@ -6,6 +6,7 @@ import {
   queryFixtures,
   type QueryFixturesArgs,
 } from "@/lib/fixtures/copilot-tools";
+import { recordLlmRequest } from "@/lib/llm-logs";
 
 /**
  * POST /api/copilot — fixtures-day chat backed by tool calls.
@@ -57,6 +58,7 @@ const bodySchema = z
 const MAX_TOOL_HOPS = 3;
 const OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 const REASONER_MODEL = "deepseek/deepseek-r1";
+const REASONER_MAX_TOKENS = 16000;
 
 interface UpstreamMessage {
   role: "system" | "user" | "assistant" | "tool";
@@ -174,6 +176,7 @@ export async function POST(request: Request): Promise<Response> {
         messages,
         env.OPENROUTER_API_KEY,
         model,
+        useReasoner ? REASONER_MAX_TOKENS : undefined,
       );
       accumulateUsage(upstream.usage);
       const choice = upstream.choices[0];
@@ -181,7 +184,19 @@ export async function POST(request: Request): Promise<Response> {
       if (msg.reasoning) reasoning = msg.reasoning;
 
       if (!msg.tool_calls || msg.tool_calls.length === 0) {
-        return Response.json({ content: msg.content ?? "", meta: meta() });
+        const finalMeta = meta();
+        void recordLlmRequest(admin, {
+          route: "copilot",
+          model,
+          cached: false,
+          reasoner: useReasoner,
+          latency_ms: finalMeta.latency_ms,
+          prompt_tokens: finalMeta.usage_total.prompt_tokens,
+          completion_tokens: finalMeta.usage_total.completion_tokens,
+          total_tokens: finalMeta.usage_total.total_tokens,
+          hops: finalMeta.hops,
+        });
+        return Response.json({ content: msg.content ?? "", meta: finalMeta });
       }
 
       messages.push({
@@ -210,13 +225,38 @@ export async function POST(request: Request): Promise<Response> {
 
     // Hit MAX_TOOL_HOPS — model kept looping. Surface a safe message rather
     // than burning more budget.
+    const cappedMeta = meta();
+    void recordLlmRequest(admin, {
+      route: "copilot",
+      model,
+      cached: false,
+      reasoner: useReasoner,
+      latency_ms: cappedMeta.latency_ms,
+      prompt_tokens: cappedMeta.usage_total.prompt_tokens,
+      completion_tokens: cappedMeta.usage_total.completion_tokens,
+      total_tokens: cappedMeta.usage_total.total_tokens,
+      hops: cappedMeta.hops,
+      error: "max_tool_hops reached",
+    });
     return Response.json({
       content:
         "Não consegui formular uma resposta final em até 3 consultas. Tente reformular a pergunta com menos filtros.",
-      meta: meta(),
+      meta: cappedMeta,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "unknown error";
+    void recordLlmRequest(admin, {
+      route: "copilot",
+      model,
+      cached: false,
+      reasoner: useReasoner,
+      latency_ms: Date.now() - startedAt,
+      prompt_tokens: usageTotal.prompt_tokens,
+      completion_tokens: usageTotal.completion_tokens,
+      total_tokens: usageTotal.total_tokens,
+      hops,
+      error: message,
+    });
     return Response.json(
       { error: "upstream copilot error", details: message },
       { status: 502 },
@@ -228,7 +268,15 @@ async function callOpenRouter(
   messages: UpstreamMessage[],
   apiKey: string,
   model: string,
+  maxTokens?: number,
 ): Promise<UpstreamResponse> {
+  const body: Record<string, unknown> = {
+    model,
+    messages,
+    tools: [QUERY_FIXTURES_TOOL],
+    tool_choice: "auto",
+  };
+  if (maxTokens) body.max_tokens = maxTokens;
   const res = await fetch(OPENROUTER_ENDPOINT, {
     method: "POST",
     headers: {
@@ -237,12 +285,7 @@ async function callOpenRouter(
       "HTTP-Referer": "https://abissal.rnobre.dev",
       "X-Title": "Abissal Copilot",
     },
-    body: JSON.stringify({
-      model,
-      messages,
-      tools: [QUERY_FIXTURES_TOOL],
-      tool_choice: "auto",
-    }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
