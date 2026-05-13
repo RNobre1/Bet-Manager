@@ -43,8 +43,8 @@ describe("<RadarComparison />", () => {
         height={400}
       />,
     );
-    // recharts <Radar> renders an SVG <path> with class "recharts-radar-polygon".
-    const polygons = container.querySelectorAll("path.recharts-radar-polygon");
+    // recharts wraps each <Radar> in <g class="recharts-radar-polygon">.
+    const polygons = container.querySelectorAll("g.recharts-radar-polygon");
     expect(polygons.length).toBe(2);
   });
 

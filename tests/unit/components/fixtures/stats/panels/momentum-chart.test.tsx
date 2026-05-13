@@ -2,22 +2,31 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, cleanup } from "@testing-library/react";
 
 // Mock lightweight-charts — happy-dom has no real canvas / WebGL.
-// Each test gets fresh spies; verify createChart / addLineSeries / remove are invoked.
-const setDataMock = vi.fn();
-const addLineSeriesMock = vi.fn(() => ({ setData: setDataMock }));
-const removeMock = vi.fn();
-const fitContentMock = vi.fn();
-const applyOptionsMock = vi.fn();
-const createChartMock = vi.fn(() => ({
-  addLineSeries: addLineSeriesMock,
-  remove: removeMock,
-  applyOptions: applyOptionsMock,
-  timeScale: () => ({ fitContent: fitContentMock }),
-}));
+// `vi.hoisted` puts the mock vars *above* the auto-hoisted `vi.mock`.
+const mocks = vi.hoisted(() => {
+  const setData = vi.fn();
+  const addLineSeries = vi.fn(() => ({ setData }));
+  const remove = vi.fn();
+  const fitContent = vi.fn();
+  const applyOptions = vi.fn();
+  const createChart = vi.fn(() => ({
+    addLineSeries,
+    remove,
+    applyOptions,
+    timeScale: () => ({ fitContent }),
+  }));
+  return { setData, addLineSeries, remove, fitContent, applyOptions, createChart };
+});
 
 vi.mock("lightweight-charts", () => ({
-  createChart: createChartMock,
+  createChart: mocks.createChart,
 }));
+
+const setDataMock = mocks.setData;
+const addLineSeriesMock = mocks.addLineSeries;
+const removeMock = mocks.remove;
+const createChartMock = mocks.createChart;
+const fitContentMock = mocks.fitContent;
 
 import { MomentumChart } from "@/components/fixtures/stats/panels/momentum-chart";
 
