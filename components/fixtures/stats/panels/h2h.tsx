@@ -72,7 +72,9 @@ export function H2H({ matches, homeTeam, awayTeam }: H2HProps) {
       <ol className="flex flex-wrap gap-2">
         {cards.map((m, idx) => (
           <li
-            key={`${m.id ?? idx}`}
+            // Compose with idx so duplicate ids (rare but real — choistats
+            // has occasionally returned the same row twice) don't collide.
+            key={`${m.id ?? "h2h"}-${idx}`}
             data-h2h-card
             className="flex min-w-[6.5rem] flex-col gap-0.5 rounded-md bg-[var(--color-surface-2)] px-3 py-2"
           >
