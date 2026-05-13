@@ -14,6 +14,7 @@ const NAV = [
   { href: "/fixtures", label: "fixtures" },
   { href: "/explore", label: "explorar" },
   { href: "/audit", label: "auditoria" },
+  { href: "/logs", label: "logs IA" },
 ];
 
 export default async function DashboardLayout({
