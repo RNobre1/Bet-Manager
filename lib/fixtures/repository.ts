@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { brtDayWindowUtc, toIsoUtc, trimKoTime } from "./time";
+import { computeBadges } from "./badges";
 import type { FixtureDTO, FixtureRow } from "./types";
 
 const FIXTURE_COLUMNS =
@@ -70,6 +71,7 @@ function compareNullableString(a: string | null, b: string | null): number {
 }
 
 function toDto(row: FixtureRow): FixtureDTO {
+  const badges = computeBadges(row.detail_json);
   return {
     id: row.id,
     match_date: row.match_date,
@@ -81,5 +83,6 @@ function toDto(row: FixtureRow): FixtureDTO {
     source_url: row.source_url,
     has_detail: row.detail_json !== null && row.detail_json !== undefined,
     kickoff_utc: toIsoUtc(row.kickoff_utc),
+    ...(badges.length > 0 ? { badges } : {}),
   };
 }

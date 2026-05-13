@@ -1,3 +1,5 @@
+import type { Badge } from "./badges";
+
 /**
  * Fixture as exposed by the API to the client. Mirrors the columns of the
  * `fixtures` table after serialization (kickoff_utc normalized to ISO-8601 Z,
@@ -14,6 +16,7 @@ export interface FixtureDTO {
   source_url: string | null;
   has_detail: boolean;
   kickoff_utc: string | null; // ISO-8601 with Z suffix
+  badges?: Badge[];
 }
 
 /**

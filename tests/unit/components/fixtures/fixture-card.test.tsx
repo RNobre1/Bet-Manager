@@ -18,6 +18,7 @@ function fx(over: Partial<FixtureDTO> & { id: number }): FixtureDTO {
     has_detail: "has_detail" in over ? over.has_detail! : true,
     kickoff_utc:
       "kickoff_utc" in over ? over.kickoff_utc! : "2026-05-12T23:00:00Z",
+    ...("badges" in over ? { badges: over.badges } : {}),
   };
 }
 
@@ -51,5 +52,27 @@ describe("<FixtureCard />", () => {
       <FixtureCard fixture={fx({ id: 1, kickoff_utc: null, ko_time: "15:30" })} />,
     );
     expect(screen.getByText("15:30")).toBeDefined();
+  });
+
+  it("renders badge labels when fixture has badges[]", () => {
+    render(
+      <FixtureCard
+        fixture={fx({
+          id: 1,
+          badges: [
+            { id: "cartao-alto", label: "cartão alto", tone: "cards" },
+            { id: "over-alto", label: "over alto", tone: "over" },
+          ],
+        })}
+      />,
+    );
+    expect(screen.getByText("cartão alto")).toBeDefined();
+    expect(screen.getByText("over alto")).toBeDefined();
+  });
+
+  it("renders no badges when badges[] is empty / undefined", () => {
+    const { container } = render(<FixtureCard fixture={fx({ id: 1 })} />);
+    // Sanity check: the row should be there but no badge text is asserted.
+    expect(container.querySelector('[data-badge]')).toBeNull();
   });
 });
