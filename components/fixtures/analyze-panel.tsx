@@ -390,131 +390,140 @@ export function AnalyzePanel({ fixture }: AnalyzePanelProps) {
     );
   }
 
+  const logProps = {
+    messages,
+    messagesMeta,
+    messagesReasoning,
+    pendingReasoning,
+    streaming: status === "streaming",
+    useReasoner,
+    onClose: toggleLog,
+  };
+
   return (
-    <section className="flex flex-col gap-6" aria-label="Análise pré-jogo">
-      <div className="flex items-center justify-end gap-2">
-        <ToggleChip
-          on={useReasoner}
-          onClick={toggleReasoner}
-          label="reasoner"
-          title="Usar DeepSeek R1 (~2x mais caro/lento, com raciocínio visível)"
-        />
-        <ToggleChip
-          on={showLog}
-          onClick={toggleLog}
-          label="log"
-          title="Mostrar log de stream / fonte raw / metadados (debug)"
-        />
-      </div>
+    <>
+      <section className="flex flex-col gap-6" aria-label="Análise pré-jogo">
+        <div className="flex items-center justify-end gap-2">
+          <ToggleChip
+            on={useReasoner}
+            onClick={toggleReasoner}
+            label="reasoner"
+            title="Usar DeepSeek R1 (~2x mais caro/lento, com raciocínio visível)"
+          />
+          <ToggleChip
+            on={showLog}
+            onClick={toggleLog}
+            label="log"
+            title="Mostrar log de stream / metadados / raciocínio (debug)"
+          />
+        </div>
 
-      <div className="flex flex-col gap-5" aria-live="polite">
-        {messages.map((m, i) =>
-          m.hidden ? null : (
-            <div key={i} className="flex flex-col gap-2">
-              {messagesReasoning[i] ? (
-                <ReasoningDetails content={messagesReasoning[i]} />
-              ) : null}
-              <ChatMessageView message={m} />
-              {showLog && m.role === "assistant" ? (
-                <RawLogDetails
-                  content={m.content}
-                  meta={messagesMeta[i] ?? null}
-                />
-              ) : null}
-            </div>
-          ),
-        )}
+        <div className="flex flex-col gap-5" aria-live="polite">
+          {messages.map((m, i) =>
+            m.hidden ? null : <ChatMessageView key={i} message={m} />,
+          )}
 
-        {status === "streaming" && useReasoner && pendingReasoning ? (
-          <ReasoningDetails content={pendingReasoning} pending />
-        ) : null}
-
-        {status === "streaming" ? (
-          showLog ? (
-            // Log mode: live token stream visible everywhere (mobile + desktop).
-            // Falls back to the loader for the first ~second before chunks
-            // arrive so the screen never sits empty.
-            pending ? (
+          {status === "streaming" ? (
+            showLog && pending ? (
               <ChatMessageView
                 message={{ role: "assistant", content: pending }}
               />
             ) : (
               <AnalysisLoader phase={loaderPhase} />
             )
-          ) : (
-            <AnalysisLoader phase={loaderPhase} />
-          )
+          ) : null}
+        </div>
+
+        {status === "error" ? (
+          <div
+            role="alert"
+            className="card flex items-center justify-between gap-4 p-4"
+            style={{ borderColor: "var(--color-vermelho-low)" }}
+          >
+            <p className="text-sm" style={{ color: "var(--color-vermelho)" }}>
+              {error ?? "erro desconhecido"}
+            </p>
+            <button
+              type="button"
+              onClick={onRetry}
+              className="label hover:text-[var(--color-ink)]"
+            >
+              tentar novamente
+            </button>
+          </div>
         ) : null}
-      </div>
 
-      {status === "error" ? (
-        <div
-          role="alert"
-          className="card flex items-center justify-between gap-4 p-4"
-          style={{ borderColor: "var(--color-vermelho-low)" }}
+        {status === "aborted" ? (
+          <div
+            role="status"
+            className="card flex items-center justify-between gap-4 p-4"
+          >
+            <p className="text-sm text-[var(--color-ink-muted)]">
+              Análise cancelada.
+            </p>
+            <button
+              type="button"
+              onClick={onRetry}
+              className="label hover:text-[var(--color-ink)]"
+            >
+              retomar
+            </button>
+          </div>
+        ) : null}
+
+        <form
+          onSubmit={onSubmit}
+          className="flex items-center gap-2 border-t border-[var(--color-line-subtle)] pt-4"
         >
-          <p className="text-sm" style={{ color: "var(--color-vermelho)" }}>
-            {error ?? "erro desconhecido"}
-          </p>
-          <button
-            type="button"
-            onClick={onRetry}
-            className="label hover:text-[var(--color-ink)]"
-          >
-            tentar novamente
-          </button>
-        </div>
-      ) : null}
+          <label htmlFor="analyze-input" className="sr-only">
+            Pergunta de follow-up
+          </label>
+          <input
+            ref={inputRef}
+            id="analyze-input"
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            disabled={status === "streaming"}
+            placeholder="Pergunte algo sobre este jogo…"
+            className="flex-1 rounded-[var(--radius-sm)] border border-[var(--color-line)] bg-[var(--color-surface-2)] px-3 py-2 text-sm text-[var(--color-ink)] placeholder-[var(--color-ink-muted)] focus:border-[var(--color-line-strong)] focus:outline-none disabled:opacity-50"
+          />
+          {status === "streaming" ? (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="label rounded-[var(--radius-sm)] border border-[var(--color-line-strong)] px-3 py-2 hover:text-[var(--color-ink)]"
+            >
+              cancelar
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={!input.trim()}
+              className="label rounded-[var(--radius-sm)] bg-[var(--color-vermelho)] px-3 py-2 text-[var(--color-ink-display)] hover:bg-[var(--color-vermelho-hi)] disabled:opacity-50"
+            >
+              enviar
+            </button>
+          )}
+        </form>
+      </section>
 
-      {status === "aborted" ? (
-        <div role="status" className="card flex items-center justify-between gap-4 p-4">
-          <p className="text-sm text-[var(--color-ink-muted)]">Análise cancelada.</p>
-          <button
-            type="button"
-            onClick={onRetry}
-            className="label hover:text-[var(--color-ink)]"
+      {showLog ? (
+        <>
+          {/* Mobile: inline log block below the panel. */}
+          <div className="mt-6 flex flex-col gap-3 lg:hidden">
+            <DevLog {...logProps} variant="inline" />
+          </div>
+          {/* Desktop: fixed sidecar on the right edge. */}
+          <aside
+            aria-label="Log de desenvolvimento"
+            className="fixed top-24 right-4 bottom-4 z-30 hidden w-96 flex-col gap-3 overflow-y-auto rounded-[var(--radius)] border border-[var(--color-line-subtle)] bg-[var(--color-surface-1)] p-4 shadow-2xl lg:flex"
           >
-            retomar
-          </button>
-        </div>
+            <DevLog {...logProps} variant="sidecar" />
+          </aside>
+        </>
       ) : null}
-
-      <form
-        onSubmit={onSubmit}
-        className="flex items-center gap-2 border-t border-[var(--color-line-subtle)] pt-4"
-      >
-        <label htmlFor="analyze-input" className="sr-only">
-          Pergunta de follow-up
-        </label>
-        <input
-          ref={inputRef}
-          id="analyze-input"
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          disabled={status === "streaming"}
-          placeholder="Pergunte algo sobre este jogo…"
-          className="flex-1 rounded-[var(--radius-sm)] border border-[var(--color-line)] bg-[var(--color-surface-2)] px-3 py-2 text-sm text-[var(--color-ink)] placeholder-[var(--color-ink-muted)] focus:border-[var(--color-line-strong)] focus:outline-none disabled:opacity-50"
-        />
-        {status === "streaming" ? (
-          <button
-            type="button"
-            onClick={onCancel}
-            className="label rounded-[var(--radius-sm)] border border-[var(--color-line-strong)] px-3 py-2 hover:text-[var(--color-ink)]"
-          >
-            cancelar
-          </button>
-        ) : (
-          <button
-            type="submit"
-            disabled={!input.trim()}
-            className="label rounded-[var(--radius-sm)] bg-[var(--color-vermelho)] px-3 py-2 text-[var(--color-ink-display)] hover:bg-[var(--color-vermelho-hi)] disabled:opacity-50"
-          >
-            enviar
-          </button>
-        )}
-      </form>
-    </section>
+    </>
   );
 }
 
@@ -581,7 +590,84 @@ function ToggleChip({
   );
 }
 
-function ReasoningDetails({
+interface DevLogProps {
+  messages: ChatMessage[];
+  messagesMeta: Record<number, MetaInfo>;
+  messagesReasoning: Record<number, string>;
+  pendingReasoning: string;
+  streaming: boolean;
+  useReasoner: boolean;
+  onClose: () => void;
+  variant: "inline" | "sidecar";
+}
+
+function DevLog({
+  messages,
+  messagesMeta,
+  messagesReasoning,
+  pendingReasoning,
+  streaming,
+  useReasoner,
+  onClose,
+  variant,
+}: DevLogProps) {
+  // Only assistant turns matter for the log — user turns have no metadata.
+  const turns = messages
+    .map((m, i) => ({ m, i }))
+    .filter(({ m }) => m.role === "assistant");
+
+  return (
+    <>
+      <header className="flex items-center justify-between">
+        <span className="label">log do request</span>
+        {variant === "sidecar" ? (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Fechar log"
+            className="label text-[var(--color-ink-faint)] hover:text-[var(--color-ink)]"
+          >
+            ✕
+          </button>
+        ) : null}
+      </header>
+
+      {!useReasoner ? (
+        <p className="rounded-[var(--radius-sm)] border border-dashed border-[var(--color-line-subtle)] px-3 py-2 text-[11px] italic text-[var(--color-ink-muted)]">
+          ative <b>reasoner</b> no topo do painel pra ver o raciocínio do modelo
+          aqui. com o V3.2 (default) só os metadados operacionais aparecem.
+        </p>
+      ) : null}
+
+      {streaming && pendingReasoning ? (
+        <ReasoningBlock content={pendingReasoning} pending />
+      ) : null}
+
+      {turns.length === 0 && !streaming ? (
+        <p className="text-[11px] italic text-[var(--color-ink-faint)]">
+          aguardando primeiro turno…
+        </p>
+      ) : null}
+
+      {turns.map(({ i }, ordinal) => (
+        <article
+          key={i}
+          className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-[var(--color-line-subtle)] bg-[var(--color-surface-2)] p-3"
+        >
+          <span className="label text-[var(--color-ink-faint)]">
+            turno #{ordinal + 1}
+          </span>
+          {messagesMeta[i] ? <MetaPanel meta={messagesMeta[i]} /> : null}
+          {messagesReasoning[i] ? (
+            <ReasoningBlock content={messagesReasoning[i]} />
+          ) : null}
+        </article>
+      ))}
+    </>
+  );
+}
+
+function ReasoningBlock({
   content,
   pending,
 }: {
@@ -590,44 +676,17 @@ function ReasoningDetails({
 }) {
   return (
     <details
-      className="rounded-[var(--radius-sm)] border border-dashed border-[var(--color-line-subtle)] bg-[var(--color-surface-2)]"
+      className="rounded-[var(--radius-sm)] border border-dashed border-[var(--color-line-subtle)] bg-[var(--color-surface-1)]"
       open={pending}
     >
-      <summary className="label cursor-pointer select-none px-3 py-2 text-[var(--color-ink-faint)] hover:text-[var(--color-ink)]">
+      <summary className="label cursor-pointer select-none px-2 py-1.5 text-[var(--color-ink-faint)] hover:text-[var(--color-ink)]">
         {pending
           ? `raciocínio (gerando…) — ${content.length} chars`
           : `raciocínio — ${content.length} chars`}
       </summary>
-      <pre className="overflow-x-auto whitespace-pre-wrap break-words px-3 pb-3 font-mono text-[11px] leading-relaxed text-[var(--color-ink-muted)]">
+      <pre className="overflow-x-auto whitespace-pre-wrap break-words px-2 pb-2 font-mono text-[11px] leading-relaxed text-[var(--color-ink-muted)]">
         {content}
       </pre>
-    </details>
-  );
-}
-
-function RawLogDetails({
-  content,
-  meta,
-}: {
-  content: string;
-  meta: MetaInfo | null;
-}) {
-  return (
-    <details className="rounded-[var(--radius-sm)] border border-[var(--color-line-subtle)] bg-[var(--color-surface-2)]">
-      <summary className="label cursor-pointer select-none px-3 py-2 text-[var(--color-ink-faint)] hover:text-[var(--color-ink)]">
-        ver log do turno
-      </summary>
-      <div className="flex flex-col gap-3 px-3 pb-3">
-        {meta ? <MetaPanel meta={meta} /> : null}
-        <div className="flex flex-col gap-1">
-          <span className="label text-[var(--color-ink-faint)]">
-            fonte raw ({content.length} chars)
-          </span>
-          <pre className="overflow-x-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-[var(--color-ink-muted)]">
-            {content}
-          </pre>
-        </div>
-      </div>
     </details>
   );
 }
