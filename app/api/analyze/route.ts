@@ -46,6 +46,7 @@ const bodySchema = z
     fixture_id: z.number().int().positive(),
     question: z.string().optional(),
     messages: z.array(chatMessageSchema).optional(),
+    reasoner: z.boolean().optional(),
   })
   .refine(
     (b) =>
@@ -57,6 +58,8 @@ const bodySchema = z
       path: ["messages"],
     },
   );
+
+const REASONER_MODEL = "deepseek/deepseek-r1";
 
 export async function POST(request: Request): Promise<Response> {
   // ─── 1. Validate body ─────────────────────────────────────────────────
@@ -70,8 +73,9 @@ export async function POST(request: Request): Promise<Response> {
       { status: 400 },
     );
   }
-  const { fixture_id, question, messages } = parsed;
+  const { fixture_id, question, messages, reasoner } = parsed;
   const isFollowUp = messages !== undefined;
+  const useReasoner = reasoner === true;
 
   // ─── 2. Env precondition ──────────────────────────────────────────────
   if (!env.OPENROUTER_API_KEY) {
@@ -120,7 +124,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   // ─── 4. Compute hash + cache lookup (only for first-turn / legacy path) ─
-  const model = env.OPENROUTER_MODEL;
+  const model = useReasoner ? REASONER_MODEL : env.OPENROUTER_MODEL;
   const systemPrompt = buildSystemPrompt(fixtureRow);
 
   if (isFollowUp) {
@@ -136,6 +140,27 @@ export async function POST(request: Request): Promise<Response> {
         messages: upstreamMessages,
         model,
         apiKey: env.OPENROUTER_API_KEY,
+      }),
+      { status: 200, headers: sseHeaders() },
+    );
+  }
+
+  // Reasoner mode bypasses the cache entirely — its result keyspace is
+  // different (model param feeds the hash) and we don't want to mix R1 and
+  // V3.2 cache entries that the UI might surface under the same dev flag.
+  if (useReasoner) {
+    return new Response(
+      await buildLiveSseStream({
+        systemPrompt,
+        userPrompt: question
+          ? `${DEFAULT_USER_PROMPT}\n\n---\nPergunta de follow-up: ${question}`
+          : DEFAULT_USER_PROMPT,
+        model,
+        apiKey: env.OPENROUTER_API_KEY,
+        hash: "",
+        fixtureId: fixture_id,
+        supabase: untypedSb,
+        skipPersist: true,
       }),
       { status: 200, headers: sseHeaders() },
     );
@@ -265,6 +290,9 @@ async function buildLiveSseStreamFromMessages(
             const { value, done } = await reader.read();
             if (done) break;
             if (value?.delta) controller.enqueue(encodeDelta(value.delta));
+            if (value?.reasoning) {
+              controller.enqueue(encodeReasoning(value.reasoning));
+            }
             if (value?.usage) usage = value.usage;
           }
         } finally {
@@ -305,6 +333,14 @@ interface LiveStreamArgs {
   // generated Database type yet (see comment at the call site).
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: { from: (t: string) => any };
+  /** Don't write to analysis_cache (e.g. reasoner mode). */
+  skipPersist?: boolean;
+}
+
+function encodeReasoning(reasoning: string): Uint8Array {
+  return encoder.encode(
+    `event: reasoning\ndata: ${JSON.stringify({ reasoning })}\n\n`,
+  );
 }
 
 /**
@@ -342,6 +378,9 @@ async function buildLiveSseStream(
               assembled += value.delta;
               controller.enqueue(encodeDelta(value.delta));
             }
+            if (value?.reasoning) {
+              controller.enqueue(encodeReasoning(value.reasoning));
+            }
             if (value?.usage) usage = value.usage;
           }
         } finally {
@@ -358,7 +397,7 @@ async function buildLiveSseStream(
         controller.enqueue(encodeDone());
         // Persist after the user has the full response — concurrent calls
         // are tolerated by the unique index on content_hash.
-        if (assembled.length > 0) {
+        if (!args.skipPersist && assembled.length > 0) {
           await storeAnalysis(
             args.hash,
             args.fixtureId,

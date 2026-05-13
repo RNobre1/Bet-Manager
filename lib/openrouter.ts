@@ -23,12 +23,19 @@ export interface OpenRouterUsage {
 }
 
 /**
- * Union shape emitted by the parsed stream — most chunks carry a delta,
- * the final one (when include_usage is on) carries the usage object.
+ * Union shape emitted by the parsed stream:
+ *   - `delta`: a fragment of the visible answer (most chunks)
+ *   - `reasoning`: a fragment of the model's hidden chain-of-thought
+ *     (only when the model supports it, e.g. deepseek/deepseek-r1)
+ *   - `usage`: the final tally chunk (when include_usage is on)
+ *
+ * Multiple flags can coexist in a single chunk on edge cases — the
+ * consumer treats them independently.
  */
 export type ChatChunk =
-  | { delta: string; usage?: undefined }
-  | { delta?: undefined; usage: OpenRouterUsage };
+  | { delta: string; reasoning?: undefined; usage?: undefined }
+  | { delta?: undefined; reasoning: string; usage?: undefined }
+  | { delta?: undefined; reasoning?: undefined; usage: OpenRouterUsage };
 
 export interface StreamChatCompletionOpts {
   messages: OpenRouterMessage[];
@@ -128,6 +135,9 @@ export function parseOpenRouterSseStream(
             }
             if (parsed === null) continue;
             if (parsed.usage) controller.enqueue({ usage: parsed.usage });
+            if (parsed.reasoning && parsed.reasoning.length > 0) {
+              controller.enqueue({ reasoning: parsed.reasoning });
+            }
             if (parsed.delta && parsed.delta.length > 0) {
               controller.enqueue({ delta: parsed.delta });
             }
@@ -137,6 +147,9 @@ export function parseOpenRouterSseStream(
           const parsed = parseSseEvent(buffer);
           if (parsed && parsed !== "DONE") {
             if (parsed.usage) controller.enqueue({ usage: parsed.usage });
+            if (parsed.reasoning && parsed.reasoning.length > 0) {
+              controller.enqueue({ reasoning: parsed.reasoning });
+            }
             if (parsed.delta && parsed.delta.length > 0) {
               controller.enqueue({ delta: parsed.delta });
             }
@@ -154,7 +167,7 @@ export function parseOpenRouterSseStream(
 
 type ParsedEvent =
   | "DONE"
-  | { delta?: string; usage?: OpenRouterUsage }
+  | { delta?: string; reasoning?: string; usage?: OpenRouterUsage }
   | null;
 
 function parseSseEvent(rawEvent: string): ParsedEvent {
@@ -169,12 +182,15 @@ function parseSseEvent(rawEvent: string): ParsedEvent {
   if (data === "[DONE]") return "DONE";
   try {
     const parsed = JSON.parse(data) as {
-      choices?: Array<{ delta?: { content?: string } }>;
+      choices?: Array<{
+        delta?: { content?: string; reasoning?: string };
+      }>;
       usage?: OpenRouterUsage;
     };
-    const out: { delta?: string; usage?: OpenRouterUsage } = {};
-    const content = parsed.choices?.[0]?.delta?.content;
-    if (typeof content === "string") out.delta = content;
+    const out: { delta?: string; reasoning?: string; usage?: OpenRouterUsage } = {};
+    const delta = parsed.choices?.[0]?.delta;
+    if (typeof delta?.content === "string") out.delta = delta.content;
+    if (typeof delta?.reasoning === "string") out.reasoning = delta.reasoning;
     if (parsed.usage) out.usage = parsed.usage;
     return out;
   } catch {

@@ -341,6 +341,55 @@ describe("POST /api/copilot", () => {
     expect(body.meta.usage_total.prompt_tokens).toBe(800);
   });
 
+  it("reasoner:true switches the upstream model to deepseek/deepseek-r1", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(finalResponse("ok"));
+    const { POST } = await import("@/app/api/copilot/route");
+    const req = new Request("http://x/api/copilot", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "oi" }],
+        reasoner: true,
+      }),
+    });
+    await POST(req);
+    const [, init] = fetchSpy.mock.calls[0];
+    const payload = JSON.parse(String(init?.body));
+    expect(payload.model).toBe("deepseek/deepseek-r1");
+  });
+
+  it("reasoner mode surfaces message.reasoning in meta.reasoning", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      jsonResponse({
+        choices: [
+          {
+            message: {
+              role: "assistant",
+              content: "Resposta final.",
+              reasoning: "Primeiro pensei A, depois B, conclui C.",
+            },
+          },
+        ],
+      }),
+    );
+    const { POST } = await import("@/app/api/copilot/route");
+    const req = new Request("http://x/api/copilot", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "?" }],
+        reasoner: true,
+      }),
+    });
+    const res = await POST(req);
+    const body = await res.json();
+    expect(body.content).toBe("Resposta final.");
+    expect(body.meta.reasoning).toBe("Primeiro pensei A, depois B, conclui C.");
+    expect(body.meta.model).toBe("deepseek/deepseek-r1");
+  });
+
   it("rejects messages[] not ending with role=user", async () => {
     const { POST } = await import("@/app/api/copilot/route");
     const req = new Request("http://x/api/copilot", {

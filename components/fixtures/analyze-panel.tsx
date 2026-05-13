@@ -81,18 +81,48 @@ export function AnalyzePanel({ fixture }: AnalyzePanelProps) {
   // exposing the raw assembled markdown is appended under each assistant turn.
   // Default off so end-users get the polished UX; flip it on for debugging.
   const [showLog, setShowLog] = useState(false);
+  // Opt-in: use deepseek/deepseek-r1 (reasoning model) instead of v3.2. Slower
+  // and pricier but emits genuine chain-of-thought tokens that surface under
+  // the assistant turn when the log toggle is also on.
+  const [useReasoner, setUseReasoner] = useState(false);
+  // Accumulated reasoning text from the in-flight turn (R1 only).
+  const [pendingReasoning, setPendingReasoning] = useState("");
+  // Final reasoning indexed per assistant message (same scheme as messagesMeta).
+  const [messagesReasoning, setMessagesReasoning] = useState<
+    Record<number, string>
+  >({});
   const abortRef = useRef<AbortController | null>(null);
   const startedRef = useRef(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     try {
+      const log = window.localStorage.getItem("abissal:dev-log") === "1";
+      const reasoner =
+        window.localStorage.getItem("abissal:dev-reasoner") === "1";
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setShowLog(window.localStorage.getItem("abissal:dev-log") === "1");
+      setShowLog(log);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setUseReasoner(reasoner);
     } catch {
       // Safari private mode / SSR — keep default (off).
     }
   }, []);
+
+  function toggleReasoner() {
+    setUseReasoner((v) => {
+      const next = !v;
+      try {
+        window.localStorage.setItem(
+          "abissal:dev-reasoner",
+          next ? "1" : "0",
+        );
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }
 
   function toggleLog() {
     setShowLog((v) => {
@@ -141,8 +171,10 @@ export function AnalyzePanel({ fixture }: AnalyzePanelProps) {
       setStatus("streaming");
       setError(null);
       setPending("");
+      setPendingReasoning("");
 
       let assembled = "";
+      let reasoningBuf = "";
       let turnMeta: MetaInfo | null = null;
       try {
         // Follow-up turns ship the full conversation history so the backend
@@ -152,12 +184,13 @@ export function AnalyzePanel({ fixture }: AnalyzePanelProps) {
           question && history
             ? {
                 fixture_id: fixture.id,
+                reasoner: useReasoner,
                 messages: [
                   ...history.map((m) => ({ role: m.role, content: m.content })),
                   { role: "user" as const, content: question },
                 ],
               }
-            : { fixture_id: fixture.id };
+            : { fixture_id: fixture.id, reasoner: useReasoner };
         const res = await fetch("/api/analyze", {
           method: "POST",
           headers: {
@@ -204,6 +237,14 @@ export function AnalyzePanel({ fixture }: AnalyzePanelProps) {
               turnMeta = evt.data as MetaInfo;
               continue;
             }
+            if (evt.event === "reasoning" && evt.data) {
+              const r = evt.data.reasoning;
+              if (typeof r === "string") {
+                reasoningBuf += r;
+                setPendingReasoning(reasoningBuf);
+              }
+              continue;
+            }
             // Default event: delta chunk. Accumulate into `assembled`
             // (commits to messages at the end) and mirror to `pending` so
             // the desktop watcher renders the live stream.
@@ -227,12 +268,19 @@ export function AnalyzePanel({ fixture }: AnalyzePanelProps) {
                 { role: "assistant", content: assembled },
               ] as ChatMessage[])
             : [...prev, { role: "assistant", content: assembled } as ChatMessage];
+          const assistantIdx = next.length - 1;
           if (turnMeta) {
-            const assistantIdx = next.length - 1;
             setMessagesMeta((m) => ({ ...m, [assistantIdx]: turnMeta! }));
+          }
+          if (reasoningBuf.length > 0) {
+            setMessagesReasoning((m) => ({
+              ...m,
+              [assistantIdx]: reasoningBuf,
+            }));
           }
           return next;
         });
+        setPendingReasoning("");
         setStatus("ready");
       } catch (err) {
         if (controller.signal.aborted) {
@@ -243,7 +291,7 @@ export function AnalyzePanel({ fixture }: AnalyzePanelProps) {
         setStatus("error");
       }
     },
-    [fixture.id],
+    [fixture.id, useReasoner],
   );
 
   // Auto-kick the initial analysis when detail is available. We do call
@@ -344,31 +392,28 @@ export function AnalyzePanel({ fixture }: AnalyzePanelProps) {
 
   return (
     <section className="flex flex-col gap-6" aria-label="Análise pré-jogo">
-      <div className="flex justify-end">
-        <button
-          type="button"
+      <div className="flex items-center justify-end gap-2">
+        <ToggleChip
+          on={useReasoner}
+          onClick={toggleReasoner}
+          label="reasoner"
+          title="Usar DeepSeek R1 (~2x mais caro/lento, com raciocínio visível)"
+        />
+        <ToggleChip
+          on={showLog}
           onClick={toggleLog}
-          aria-pressed={showLog}
-          className="label inline-flex items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--color-line-subtle)] px-2.5 py-1 text-[var(--color-ink-faint)] hover:border-[var(--color-line)] hover:text-[var(--color-ink)]"
-          title="Mostrar log de stream / fonte raw (debug)"
-        >
-          <span
-            aria-hidden
-            className="inline-block h-1.5 w-1.5 rounded-full"
-            style={{
-              backgroundColor: showLog
-                ? "var(--color-vermelho)"
-                : "var(--color-ink-faint)",
-            }}
-          />
-          log
-        </button>
+          label="log"
+          title="Mostrar log de stream / fonte raw / metadados (debug)"
+        />
       </div>
 
       <div className="flex flex-col gap-5" aria-live="polite">
         {messages.map((m, i) =>
           m.hidden ? null : (
             <div key={i} className="flex flex-col gap-2">
+              {messagesReasoning[i] ? (
+                <ReasoningDetails content={messagesReasoning[i]} />
+              ) : null}
               <ChatMessageView message={m} />
               {showLog && m.role === "assistant" ? (
                 <RawLogDetails
@@ -379,6 +424,10 @@ export function AnalyzePanel({ fixture }: AnalyzePanelProps) {
             </div>
           ),
         )}
+
+        {status === "streaming" && useReasoner && pendingReasoning ? (
+          <ReasoningDetails content={pendingReasoning} pending />
+        ) : null}
 
         {status === "streaming" ? (
           showLog ? (
@@ -496,6 +545,63 @@ function AnalysisLoader({ phase }: { phase: number }) {
         processando análise
       </span>
     </div>
+  );
+}
+
+function ToggleChip({
+  on,
+  onClick,
+  label,
+  title,
+}: {
+  on: boolean;
+  onClick: () => void;
+  label: string;
+  title: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={on}
+      title={title}
+      className="label inline-flex items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--color-line-subtle)] px-2.5 py-1 text-[var(--color-ink-faint)] hover:border-[var(--color-line)] hover:text-[var(--color-ink)]"
+    >
+      <span
+        aria-hidden
+        className="inline-block h-1.5 w-1.5 rounded-full"
+        style={{
+          backgroundColor: on
+            ? "var(--color-vermelho)"
+            : "var(--color-ink-faint)",
+        }}
+      />
+      {label}
+    </button>
+  );
+}
+
+function ReasoningDetails({
+  content,
+  pending,
+}: {
+  content: string;
+  pending?: boolean;
+}) {
+  return (
+    <details
+      className="rounded-[var(--radius-sm)] border border-dashed border-[var(--color-line-subtle)] bg-[var(--color-surface-2)]"
+      open={pending}
+    >
+      <summary className="label cursor-pointer select-none px-3 py-2 text-[var(--color-ink-faint)] hover:text-[var(--color-ink)]">
+        {pending
+          ? `raciocínio (gerando…) — ${content.length} chars`
+          : `raciocínio — ${content.length} chars`}
+      </summary>
+      <pre className="overflow-x-auto whitespace-pre-wrap break-words px-3 pb-3 font-mono text-[11px] leading-relaxed text-[var(--color-ink-muted)]">
+        {content}
+      </pre>
+    </details>
   );
 }
 

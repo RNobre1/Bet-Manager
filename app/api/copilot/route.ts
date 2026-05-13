@@ -47,6 +47,7 @@ const bodySchema = z
   .object({
     messages: z.array(chatMessageSchema).min(1),
     date: z.string().optional(),
+    reasoner: z.boolean().optional(),
   })
   .refine((b) => b.messages[b.messages.length - 1].role === "user", {
     message: "messages must end with role=user",
@@ -55,6 +56,7 @@ const bodySchema = z
 
 const MAX_TOOL_HOPS = 3;
 const OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
+const REASONER_MODEL = "deepseek/deepseek-r1";
 
 interface UpstreamMessage {
   role: "system" | "user" | "assistant" | "tool";
@@ -77,6 +79,7 @@ interface UpstreamChoice {
   message: {
     role: "assistant";
     content: string | null;
+    reasoning?: string;
     tool_calls?: UpstreamMessage["tool_calls"];
   };
 }
@@ -102,6 +105,7 @@ interface CopilotMeta {
     completion_tokens: number;
     total_tokens: number;
   };
+  reasoning?: string;
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -142,13 +146,17 @@ export async function POST(request: Request): Promise<Response> {
   const startedAt = Date.now();
   const hops: Hop[] = [];
   const usageTotal = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
+  const useReasoner = parsed.reasoner === true;
+  const model = useReasoner ? REASONER_MODEL : env.OPENROUTER_MODEL;
+  let reasoning: string | undefined;
 
   function meta(): CopilotMeta {
     return {
-      model: env.OPENROUTER_MODEL,
+      model,
       latency_ms: Date.now() - startedAt,
       hops,
       usage_total: usageTotal,
+      ...(reasoning ? { reasoning } : {}),
     };
   }
 
@@ -162,10 +170,15 @@ export async function POST(request: Request): Promise<Response> {
 
   try {
     for (let hop = 0; hop < MAX_TOOL_HOPS; hop++) {
-      const upstream = await callOpenRouter(messages, env.OPENROUTER_API_KEY);
+      const upstream = await callOpenRouter(
+        messages,
+        env.OPENROUTER_API_KEY,
+        model,
+      );
       accumulateUsage(upstream.usage);
       const choice = upstream.choices[0];
       const msg = choice.message;
+      if (msg.reasoning) reasoning = msg.reasoning;
 
       if (!msg.tool_calls || msg.tool_calls.length === 0) {
         return Response.json({ content: msg.content ?? "", meta: meta() });
@@ -214,6 +227,7 @@ export async function POST(request: Request): Promise<Response> {
 async function callOpenRouter(
   messages: UpstreamMessage[],
   apiKey: string,
+  model: string,
 ): Promise<UpstreamResponse> {
   const res = await fetch(OPENROUTER_ENDPOINT, {
     method: "POST",
@@ -224,7 +238,7 @@ async function callOpenRouter(
       "X-Title": "Abissal Copilot",
     },
     body: JSON.stringify({
-      model: env.OPENROUTER_MODEL,
+      model,
       messages,
       tools: [QUERY_FIXTURES_TOOL],
       tool_choice: "auto",

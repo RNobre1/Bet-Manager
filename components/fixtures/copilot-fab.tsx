@@ -23,6 +23,7 @@ interface CopilotMeta {
     completion_tokens: number;
     total_tokens: number;
   };
+  reasoning?: string;
 }
 
 const SUGGESTIONS: ReadonlyArray<string> = [
@@ -53,17 +54,38 @@ export function CopilotFab({ date }: CopilotFabProps) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showLog, setShowLog] = useState(false);
+  const [useReasoner, setUseReasoner] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     try {
+      const log = window.localStorage.getItem("abissal:dev-log") === "1";
+      const reasoner =
+        window.localStorage.getItem("abissal:dev-reasoner") === "1";
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setShowLog(window.localStorage.getItem("abissal:dev-log") === "1");
+      setShowLog(log);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setUseReasoner(reasoner);
     } catch {
       /* SSR / Safari private mode */
     }
   }, []);
+
+  function toggleReasoner() {
+    setUseReasoner((v) => {
+      const next = !v;
+      try {
+        window.localStorage.setItem(
+          "abissal:dev-reasoner",
+          next ? "1" : "0",
+        );
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }
 
   // ESC closes the drawer + body scroll lock while open.
   useEffect(() => {
@@ -106,6 +128,7 @@ export function CopilotFab({ date }: CopilotFabProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           date,
+          reasoner: useReasoner,
           messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
         }),
       });
@@ -173,14 +196,34 @@ export function CopilotFab({ date }: CopilotFabProps) {
                 <span className="label">copilot</span>
                 <h3 className="mt-1 text-lg">jogos do dia</h3>
               </div>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                aria-label="Fechar"
-                className="rounded-[var(--radius-sm)] border border-[var(--color-line-subtle)] p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
-              >
-                <X size={16} strokeWidth={1.75} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={toggleReasoner}
+                  aria-pressed={useReasoner}
+                  title="Usar DeepSeek R1 com raciocínio (mais caro/lento)"
+                  className="label inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--color-line-subtle)] px-2 py-1 text-[var(--color-ink-faint)] hover:text-[var(--color-ink)]"
+                >
+                  <span
+                    aria-hidden
+                    className="inline-block h-1.5 w-1.5 rounded-full"
+                    style={{
+                      backgroundColor: useReasoner
+                        ? "var(--color-vermelho)"
+                        : "var(--color-ink-faint)",
+                    }}
+                  />
+                  R1
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  aria-label="Fechar"
+                  className="rounded-[var(--radius-sm)] border border-[var(--color-line-subtle)] p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
+                >
+                  <X size={16} strokeWidth={1.75} />
+                </button>
+              </div>
             </header>
 
             <div
@@ -207,6 +250,11 @@ export function CopilotFab({ date }: CopilotFabProps) {
               ) : (
                 messages.map((m, i) => (
                   <div key={i} className="flex flex-col gap-2">
+                    {m.role === "assistant" && messagesMeta[i]?.reasoning ? (
+                      <CopilotReasoningDetails
+                        content={messagesMeta[i].reasoning!}
+                      />
+                    ) : null}
                     <ChatMessageView message={m} />
                     {showLog && m.role === "assistant" && messagesMeta[i] ? (
                       <CopilotLogDetails meta={messagesMeta[i]} />
@@ -259,6 +307,19 @@ export function CopilotFab({ date }: CopilotFabProps) {
         </div>
       ) : null}
     </>
+  );
+}
+
+function CopilotReasoningDetails({ content }: { content: string }) {
+  return (
+    <details className="rounded-[var(--radius-sm)] border border-dashed border-[var(--color-line-subtle)] bg-[var(--color-surface-2)]">
+      <summary className="label cursor-pointer select-none px-3 py-2 text-[var(--color-ink-faint)] hover:text-[var(--color-ink)]">
+        raciocínio — {content.length} chars
+      </summary>
+      <pre className="overflow-x-auto whitespace-pre-wrap break-words px-3 pb-3 font-mono text-[11px] leading-relaxed text-[var(--color-ink-muted)]">
+        {content}
+      </pre>
+    </details>
   );
 }
 

@@ -171,6 +171,14 @@ function openrouterDeltaChunk(text: string): string {
   return `data: ${JSON.stringify(payload)}\n\n`;
 }
 
+function openrouterReasoningChunk(text: string): string {
+  const payload = {
+    id: "chatcmpl-1",
+    choices: [{ delta: { reasoning: text } }],
+  };
+  return `data: ${JSON.stringify(payload)}\n\n`;
+}
+
 function openrouterUsageChunk(usage: {
   prompt_tokens: number;
   completion_tokens: number;
@@ -388,6 +396,73 @@ describe("POST /api/analyze", () => {
     await runOnce();
     await runOnce();
     expect(captured[0]).toBe(captured[1]);
+  });
+
+  it("reasoner:true switches the upstream model to deepseek/deepseek-r1", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(
+        fakeOpenrouterResponse([
+          openrouterDeltaChunk("ok"),
+          openrouterDoneChunk(),
+        ]),
+      );
+    const { POST } = await import("@/app/api/analyze/route");
+    const req = new Request("http://x/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fixture_id: 42, reasoner: true }),
+    });
+    const res = await POST(req);
+    await readBody(res);
+    const [, init] = fetchSpy.mock.calls[0];
+    const payload = JSON.parse(String(init?.body));
+    expect(payload.model).toBe("deepseek/deepseek-r1");
+  });
+
+  it("reasoner mode forwards reasoning chunks via SSE event:reasoning", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      fakeOpenrouterResponse([
+        openrouterReasoningChunk("Pensando: o time da casa tem 5W em 5… "),
+        openrouterReasoningChunk("então favorito leve."),
+        openrouterDeltaChunk("Análise:\n\nO time da casa é favorito."),
+        openrouterDoneChunk(),
+      ]),
+    );
+    const { POST } = await import("@/app/api/analyze/route");
+    const req = new Request("http://x/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fixture_id: 42, reasoner: true }),
+    });
+    const res = await POST(req);
+    const body = await readBody(res);
+    expect(body).toContain("event: reasoning");
+    expect(body).toMatch(/data: \{"reasoning":"Pensando[^"]+"\}/);
+    expect(body).toContain('"delta":"Análise:');
+  });
+
+  it("reasoner mode bypasses cache (different model than default)", async () => {
+    adminState.cacheRow = { content: "cached pelo v3.2" };
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      fakeOpenrouterResponse([
+        openrouterDeltaChunk("nova resposta R1"),
+        openrouterDoneChunk(),
+      ]),
+    );
+    const { POST } = await import("@/app/api/analyze/route");
+    const req = new Request("http://x/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fixture_id: 42, reasoner: true }),
+    });
+    const res = await POST(req);
+    const body = await readBody(res);
+    expect(body).not.toContain("cached pelo v3.2");
+    expect(body).toContain("nova resposta R1");
+    // No insert either — the route should skip writing the R1 result to the
+    // v3.2-keyed cache to avoid poisoning it.
+    expect(adminState.insertedCacheRows).toHaveLength(0);
   });
 
   it("requests stream_options.include_usage so usage shows up in the stream", async () => {
