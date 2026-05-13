@@ -134,7 +134,7 @@ export function Distributions({ home, away }: DistributionsProps) {
       eyebrow="min · Q1 · mediana · Q3 · max"
       gap={4}
     >
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 @md/card:grid-cols-2">
         <section>
           <h4 className="label mb-2 text-[var(--color-ink-faint)]">casa</h4>
           <SideColumn side="home" data={home} color="var(--color-vermelho)" />

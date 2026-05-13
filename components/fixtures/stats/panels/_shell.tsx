@@ -37,7 +37,7 @@ export function PanelShell({
 }: PanelShellProps) {
   const gapClass = gap === 4 ? "gap-4" : "gap-3";
   return (
-    <div className={`card flex flex-col ${gapClass} p-4 lg:p-5`}>
+    <div className={`card @container/card flex flex-col ${gapClass} p-4 lg:p-5`}>
       <header className="flex items-baseline justify-between gap-2">
         <h3 className="font-display text-lg text-[var(--color-ink-display)]">
           {title}

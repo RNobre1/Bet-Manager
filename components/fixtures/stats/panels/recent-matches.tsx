@@ -105,10 +105,10 @@ export function RecentMatchesPanel({
   }
 
   return (
-    <div className="card p-4">
-      <div className="mb-3 flex flex-wrap items-center gap-3">
+    <div className="card @container/card p-4">
+      <div className="mb-3 flex flex-wrap items-center gap-3 @max-[480px]/card:flex-col @max-[480px]/card:items-start">
         <span className="label">{title}</span>
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-1 @max-[480px]/card:w-full @max-[480px]/card:overflow-x-auto @max-[480px]/card:flex-nowrap @max-[480px]/card:pb-1 @max-[480px]/card:[scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {CHIPS.map((c) => {
             const isActive = c.key === active;
             return (
@@ -117,7 +117,7 @@ export function RecentMatchesPanel({
                 type="button"
                 aria-pressed={isActive}
                 onClick={() => setActive(c.key)}
-                className="label px-2 py-1 transition"
+                className="label shrink-0 px-2 py-1 transition"
                 style={{
                   background: isActive
                     ? "var(--color-vermelho)"

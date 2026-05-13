@@ -116,7 +116,7 @@ export function Players({
   }
 
   return (
-    <div className="card flex flex-col gap-4 p-4 lg:p-5">
+    <div className="card @container/card flex flex-col gap-4 p-4 lg:p-5">
       <header className="flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="font-display text-lg text-[var(--color-ink-display)]">
           Players

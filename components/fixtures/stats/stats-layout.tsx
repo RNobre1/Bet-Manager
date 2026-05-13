@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { PanelSkeleton } from "./skeleton";
+import { StatsLayoutResponsive } from "./stats-layout-responsive";
 
 /**
  * A single panel slot inside the StatsLayout grid.
@@ -20,10 +21,74 @@ export interface PanelSlot {
   label?: string;
 }
 
+/**
+ * Auto-derived mobile tab groupings. Each tab lists the panel ids it
+ * should mount. Order is significant — the first tab is the default.
+ *
+ * `page.tsx` is FORBIDDEN by T8, so the mapping is hardcoded here.
+ * Panels declared by `page.tsx` but absent from any tab fall back to
+ * the "visão" tab so nothing disappears on mobile.
+ */
+export const MOBILE_TABS: ReadonlyArray<{
+  id: string;
+  label: string;
+  panels: string[];
+}> = [
+  {
+    id: "visao",
+    label: "visão",
+    panels: ["B", "A-home", "A-away", "D", "E", "M", "K", "L", "N"],
+  },
+  {
+    id: "streaks",
+    label: "streaks",
+    panels: ["F"],
+  },
+  {
+    id: "jogos",
+    label: "jogos",
+    panels: ["C-home", "C-away"],
+  },
+  {
+    id: "players",
+    label: "players",
+    panels: ["G+"],
+  },
+  {
+    id: "odds",
+    label: "odds",
+    panels: ["H", "I", "J"],
+  },
+];
+
 interface StatsLayoutProps {
   fixtureId: number;
   hero: ReactNode;
   panels: PanelSlot[];
+}
+
+/**
+ * Wraps a panel in <Suspense> + the data-panel attribute slot. Shared
+ * between desktop grid and mobile tab content so SSR markup, a11y, and
+ * test selectors stay identical regardless of breakpoint.
+ */
+export function renderPanelSlot(p: PanelSlot, mobile = false): ReactNode {
+  return (
+    <Suspense
+      key={p.id}
+      fallback={
+        <PanelSkeleton h={p.h ?? 240} colSpan={p.colSpan} label={p.label} />
+      }
+    >
+      <div
+        data-panel={p.id}
+        style={mobile ? undefined : { gridColumn: p.colSpan }}
+        className={mobile ? "block" : "contents lg:block"}
+      >
+        {p.node}
+      </div>
+    </Suspense>
+  );
 }
 
 /**
@@ -32,10 +97,8 @@ interface StatsLayoutProps {
  * Top-to-bottom hierarchy:
  *  1. <header> with a back link to /fixtures/[id] (the AI analyze page).
  *  2. <section data-hero> — the Stadium Wall hero, full bleed.
- *  3. <section data-panels> — 12-column CSS grid for the panels.
- *     Each panel is wrapped in <Suspense> with a PanelSkeleton fallback.
- *
- * No client state lives here; everything is render-once Server-side.
+ *  3. <StatsLayoutResponsive> — Client wrapper that picks grid (desktop)
+ *     or Radix tabs (mobile, <768px) based on `window.matchMedia`.
  */
 export function StatsLayout({ fixtureId, hero, panels }: StatsLayoutProps) {
   return (
@@ -56,37 +119,7 @@ export function StatsLayout({ fixtureId, hero, panels }: StatsLayoutProps) {
         {hero}
       </section>
 
-      <section
-        data-panels
-        className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-6"
-      >
-        {panels.length === 0 ? (
-          <p className="label col-span-full text-[var(--color-ink-faint)]">
-            painéis em construção
-          </p>
-        ) : (
-          panels.map((p) => (
-            <Suspense
-              key={p.id}
-              fallback={
-                <PanelSkeleton
-                  h={p.h ?? 240}
-                  colSpan={p.colSpan}
-                  label={p.label}
-                />
-              }
-            >
-              <div
-                data-panel={p.id}
-                style={{ gridColumn: p.colSpan }}
-                className="contents lg:block"
-              >
-                {p.node}
-              </div>
-            </Suspense>
-          ))
-        )}
-      </section>
+      <StatsLayoutResponsive panels={panels} />
     </main>
   );
 }
