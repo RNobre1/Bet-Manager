@@ -98,6 +98,12 @@ vi.mock("next/navigation", () => ({
   notFound: () => {
     throw new NotFoundError();
   },
+  // Stub the Client Component hooks consumed by wave-4 panels
+  // (StreaksHeatmap, Players, MarketsBrowser). The Server Component itself
+  // doesn't call them; they execute when React renders the panel subtrees.
+  useSearchParams: () => new URLSearchParams(),
+  useRouter: () => ({ replace: () => {}, push: () => {}, refresh: () => {} }),
+  usePathname: () => "/",
 }));
 
 // Import AFTER mocks so the Server Component binds to them.
@@ -326,15 +332,17 @@ describe("StatsPage server component", () => {
 
     await renderPage("42");
 
-    // 1X2 odds from odds_summary.Match Result
-    expect(screen.getByText("2.05")).toBeDefined();
-    expect(screen.getByText("3.40")).toBeDefined();
-    expect(screen.getByText("3.60")).toBeDefined();
+    // 1X2 odds from odds_summary.Match Result. These odd values also surface
+    // in the MarketsBrowser headline cards (wave 4), so we use getAllByText
+    // and assert at least one occurrence.
+    expect(screen.getAllByText("2.05").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("3.40").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("3.60").length).toBeGreaterThan(0);
     // Over 2.5 implied probability — surfaced as the decimal odd "1.85"
     // so the hero tile is unambiguous on first read.
-    expect(screen.getByText("1.85")).toBeDefined();
+    expect(screen.getAllByText("1.85").length).toBeGreaterThan(0);
     // BTTS odd
-    expect(screen.getByText("1.70")).toBeDefined();
+    expect(screen.getAllByText("1.70").length).toBeGreaterThan(0);
     // Referee average booking points — surfaced both in the Hero KPI tile
     // and the Referee panel below; assert at least one exists.
     expect(screen.getAllByText("47.5").length).toBeGreaterThan(0);
@@ -351,7 +359,7 @@ describe("StatsPage server component", () => {
     expect(back).toBeDefined();
   });
 
-  it("mounts all 11 panel slots (A..N) when detail_json is populated", async () => {
+  it("mounts all panel slots (A..H) when detail_json is populated", async () => {
     setRow(makeRow({ detail_json: makeDetail() as unknown }));
 
     const { container } = await renderPage("42");
@@ -359,7 +367,9 @@ describe("StatsPage server component", () => {
     // 12-column grid IDs declared by page.tsx. Optional ones (I, J, N) only
     // mount when their source data is non-empty — the makeDetail() fixture
     // populates referee_record but not predictions/insights, so we assert
-    // only the always-present panels here.
+    // only the always-present panels here. F (streaks), G+ (players) and H
+    // (markets-browser) are wave-4 plugins; they always mount, panels handle
+    // empty data themselves.
     const expected = [
       "B",          // momentum chart
       "A-home",     // team record home
@@ -370,6 +380,9 @@ describe("StatsPage server component", () => {
       "K",          // radar
       "L",          // scatter
       "I",          // referee — present in this fixture
+      "F",          // streaks heatmap (wave 4)
+      "G+",         // players (wave 4)
+      "H",          // markets browser (wave 4)
       "C-home",     // recent matches home
       "C-away",     // recent matches away
     ];

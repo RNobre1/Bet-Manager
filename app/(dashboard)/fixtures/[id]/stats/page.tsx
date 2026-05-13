@@ -17,6 +17,8 @@ import {
   deriveSplits1h2h,
   deriveDistributions,
   deriveRadarAxes,
+  deriveStreakIndex,
+  deriveOddsCategories,
 } from "@/lib/fixtures/stats/derive";
 import {
   computeCorrelations,
@@ -40,6 +42,9 @@ import {
 import { RecentMatchesPanel } from "@/components/fixtures/stats/panels/recent-matches";
 import { RadarComparison } from "@/components/fixtures/stats/panels/radar-comparison";
 import { ScatterPlayground } from "@/components/fixtures/stats/panels/scatter-playground";
+import { StreaksHeatmap } from "@/components/fixtures/stats/panels/streaks-heatmap";
+import { Players } from "@/components/fixtures/stats/panels/players";
+import { MarketsBrowser } from "@/components/fixtures/stats/panels/markets-browser";
 
 export const dynamic = "force-dynamic";
 
@@ -271,6 +276,17 @@ function buildPanels(
   const momentumHome = buildMomentumSeries(recentHome);
   const momentumAway = buildMomentumSeries(recentAway);
 
+  // Wave 4 derivers — F (streaks), G+ (players), H (markets-browser).
+  // Each panel handles empty inputs internally; we always mount the slots
+  // so the layout stays stable and URL state survives refresh.
+  const streakIndex = deriveStreakIndex([
+    ...(detail.streaks?.home ?? []),
+    ...(detail.streaks?.away ?? []),
+  ]);
+  const playersHome = detail.player_stats?.home?.top_players ?? [];
+  const playersAway = detail.player_stats?.away?.top_players ?? [];
+  const oddsCategories = deriveOddsCategories(detail.odds_summary ?? null);
+
   // Insights — compute the four kinds across the home team's recent matches
   // (the "fixture perspective" for the upcoming match), then rank.
   const allInsights: Insight[] = [
@@ -381,6 +397,31 @@ function buildPanels(
       colSpan: "span 12 / span 12",
       label: "insights",
       node: <Insights insights={insights} />,
+    },
+    {
+      id: "F",
+      colSpan: "span 12 / span 12",
+      label: "streaks heatmap",
+      node: <StreaksHeatmap data={streakIndex} />,
+    },
+    {
+      id: "G+",
+      colSpan: "span 12 / span 12",
+      label: "players",
+      node: (
+        <Players
+          homeTeam={homeTeam}
+          awayTeam={awayTeam}
+          home={playersHome}
+          away={playersAway}
+        />
+      ),
+    },
+    {
+      id: "H",
+      colSpan: "span 12 / span 12",
+      label: "markets browser",
+      node: <MarketsBrowser data={oddsCategories} />,
     },
     {
       id: "C-home",
