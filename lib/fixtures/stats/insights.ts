@@ -21,6 +21,7 @@ import type {
   RefereeRecord,
   Streaks,
 } from "./detail-json-types";
+import { readCorrelation, readTrend, readOutlier } from "./readings";
 
 // ─── Types ───────────────────────────────────────────────────────────────
 
@@ -133,27 +134,21 @@ const STAT_KEYS: InsightStatKey[] = [
   "offsides_for",
 ];
 
-/** Human-readable label for headline construction. */
-const STAT_LABEL: Record<InsightStatKey, string> = {
-  goals_ft_for: "gols pró",
-  goals_ft_against: "gols sofridos",
-  goals_1h_for: "gols 1T pró",
-  goals_2h_for: "gols 2T pró",
-  corners_for: "escanteios pró",
-  corners_against: "escanteios sofridos",
-  corners_1h_for: "escanteios 1T pró",
-  corners_2h_for: "escanteios 2T pró",
-  cards_for: "cartões pró",
-  cards_1h_for: "cartões 1T pró",
-  cards_2h_for: "cartões 2T pró",
-  sot_for: "chutes no gol pró",
-  sot_against: "chutes no gol sofridos",
-  shots_for: "chutes pró",
-  booking_points_for: "booking points pró",
-  booking_points_against: "booking points sofridos",
-  fouls_for: "faltas pró",
-  offsides_for: "impedimentos pró",
-};
+// Pares estruturalmente determinísticos: correlação alta é tautológica, não sinal.
+const TAUTOLOGICAL_PAIRS: ReadonlySet<string> = new Set([
+  "cards_for|booking_points_for",
+  "cards_against|booking_points_against",
+  "goals_ft_for|goals_1h_for",
+  "goals_ft_for|goals_2h_for",
+  "goals_ft_against|goals_1h_against",
+  "goals_ft_against|goals_2h_against",
+]);
+
+function isTautological(a: string, b: string): boolean {
+  return (
+    TAUTOLOGICAL_PAIRS.has(`${a}|${b}`) || TAUTOLOGICAL_PAIRS.has(`${b}|${a}`)
+  );
+}
 
 /**
  * Extracts a non-null numeric series for a given stat key from a list of
@@ -206,6 +201,7 @@ export function computeCorrelations(
     for (let j = i + 1; j < STAT_KEYS.length; j++) {
       const keyA = STAT_KEYS[i];
       const keyB = STAT_KEYS[j];
+      if (isTautological(keyA, keyB)) continue;
       // Build aligned series using only matches where BOTH stats are present.
       const xs: number[] = [];
       const ys: number[] = [];
@@ -225,16 +221,14 @@ export function computeCorrelations(
       const r = pearsonR(xs, ys);
       if (r === null) continue;
       if (Math.abs(r) < CORR_R_THRESHOLD) continue;
-      const labelA = STAT_LABEL[keyA];
-      const labelB = STAT_LABEL[keyB];
-      const direction = r > 0 ? "+" : "−";
+      const reading = readCorrelation(keyA, keyB, r);
       out.push({
         kind: "correlation",
         statA: keyA,
         statB: keyB,
         r,
-        headline: `${labelA} × ${labelB} (${direction}${Math.abs(r).toFixed(2)})`,
-        text: `Correlação ${direction === "+" ? "positiva" : "negativa"} forte entre ${labelA} e ${labelB} nos últimos ${xs.length} jogos (r=${r.toFixed(2)}).`,
+        headline: reading.title,
+        text: reading.text,
         confidence: Math.min(1, Math.abs(r)),
       });
     }
@@ -267,20 +261,19 @@ export function computeTrends(
     if (Math.abs(slope) < TREND_SLOPE_THRESHOLD) continue;
 
     const direction: "up" | "down" = slope > 0 ? "up" : "down";
-    const arrow = direction === "up" ? "↑" : "↓";
-    const label = STAT_LABEL[key];
     // Confidence: |slope| capped at 1, blended with r²
     const r2 = Number.isFinite(result.r2) ? result.r2 : 0;
     const slopeConf = Math.min(1, Math.abs(slope));
     const confidence = Math.min(1, 0.5 * slopeConf + 0.5 * r2);
+    const reading = readTrend(key, slope);
 
     out.push({
       kind: "trend",
       stat: key,
       slope,
       direction,
-      headline: `${arrow} Tendência em ${label} (${slope >= 0 ? "+" : ""}${slope.toFixed(2)}/jogo)`,
-      text: `Regressão linear nos últimos ${values.length} jogos mostra inclinação ${slope >= 0 ? "+" : ""}${slope.toFixed(2)} ${label}/jogo (R²=${r2.toFixed(2)}).`,
+      headline: reading.title,
+      text: reading.text,
       confidence,
     });
   }
@@ -377,16 +370,15 @@ export function computeOutliers(
       const v = values[i];
       const z = (v - mu) / sd;
       if (Math.abs(z) < OUTLIER_Z_THRESHOLD) continue;
-      const arrow = z > 0 ? "↑" : "↓";
-      const label = STAT_LABEL[key];
+      const reading = readOutlier(key, v, mu);
       out.push({
         kind: "outlier",
         stat: key,
         matchId: ids[i],
         value: v,
         zScore: z,
-        headline: `${arrow} ${label}: ${v} (z=${z.toFixed(1)})`,
-        text: `Valor de ${v} para ${label} em um único jogo desvia ${Math.abs(z).toFixed(1)}σ da média (${mu.toFixed(2)}) das últimas ${values.length} partidas.`,
+        headline: reading.title,
+        text: reading.text,
         confidence: Math.min(1, Math.abs(z) / 4),
       });
     }

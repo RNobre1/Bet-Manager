@@ -76,6 +76,39 @@ function buildSeries(
   );
 }
 
+/**
+ * cards_for ≡ booking_points_for here (perfect linear) — a structurally
+ * deterministic pair that must be filtered out, not surfaced as a signal.
+ */
+function makeMatchesWithPerfectCardsBookingCorrelation(): NormalizedRecentMatch[] {
+  const cards = [1, 2, 3, 4, 5];
+  return cards.map((c, i) =>
+    makeMatch({
+      id: i,
+      date_iso: `2026-01-${String(i + 1).padStart(2, "0")}`,
+      cards_for: c,
+      booking_points_for: c * 10,
+    }),
+  );
+}
+
+/**
+ * sot_for × goals_ft_for series whose Pearson-r rounds to `0.88`
+ * (raw r ≈ 0.88388 for x=[0..4], y=[0,0,2,4,3]).
+ */
+function makeMatchesSotGoals(_r: number): NormalizedRecentMatch[] {
+  const xs = [0, 1, 2, 3, 4];
+  const ys = [0, 0, 2, 4, 3];
+  return xs.map((x, i) =>
+    makeMatch({
+      id: i,
+      date_iso: `2026-01-${String(i + 1).padStart(2, "0")}`,
+      sot_for: x,
+      goals_ft_for: ys[i],
+    }),
+  );
+}
+
 // ─── computeCorrelations ─────────────────────────────────────────────────
 
 describe("computeCorrelations", () => {
@@ -233,6 +266,26 @@ describe("computeCorrelations", () => {
     ];
     // No throw; pair containing only nulls is silently skipped.
     expect(() => computeCorrelations(matches)).not.toThrow();
+  });
+
+  it("filters tautological correlation pairs", () => {
+    // cartões ↔ booking points é determinístico → não deve virar insight
+    const matches = makeMatchesWithPerfectCardsBookingCorrelation();
+    const out = computeCorrelations(matches);
+    expect(
+      out.find(
+        (i) =>
+          (i.statA === "cards_for" && i.statB === "booking_points_for") ||
+          (i.statA === "booking_points_for" && i.statB === "cards_for"),
+      ),
+    ).toBeUndefined();
+  });
+
+  it("correlation insight uses readings.ts copy (mercado/r= present)", () => {
+    const out = computeCorrelations(makeMatchesSotGoals(0.88));
+    const ins = out[0];
+    expect(ins.text).toMatch(/r=0\.88/);
+    expect(ins.text.toLowerCase()).toContain("mercado");
   });
 });
 
