@@ -135,6 +135,8 @@ const STAT_KEYS: InsightStatKey[] = [
 ];
 
 // Pares estruturalmente determinísticos: correlação alta é tautológica, não sinal.
+// Os pares "_against" são defensivos — não estão em STAT_KEYS hoje (inalcançáveis),
+// mas mantidos pra que o filtro não silencie se STAT_KEYS passar a incluí-los.
 const TAUTOLOGICAL_PAIRS: ReadonlySet<string> = new Set([
   "cards_for|booking_points_for",
   "cards_against|booking_points_against",
