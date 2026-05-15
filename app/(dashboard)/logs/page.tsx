@@ -63,7 +63,9 @@ export default async function LogsPage({ searchParams }: LogsPageProps) {
 
 function parseFilter(raw: { route?: string; limit?: string }): LogsFilter {
   const route =
-    raw.route === "analyze" || raw.route === "copilot" ? raw.route : undefined;
+    raw.route === "analyze" || raw.route === "copilot" || raw.route === "fixture-copilot"
+      ? raw.route
+      : undefined;
   const limit = raw.limit ? Number.parseInt(raw.limit, 10) : undefined;
   return {
     route,
@@ -77,6 +79,7 @@ function FilterChips({ activeRoute }: { activeRoute?: string }) {
       { label: "todas", href: "/logs", key: undefined },
       { label: "analyze", href: "/logs?route=analyze", key: "analyze" },
       { label: "copilot", href: "/logs?route=copilot", key: "copilot" },
+      { label: "fixture-copilot", href: "/logs?route=fixture-copilot", key: "fixture-copilot" },
     ];
   return (
     <nav className="flex gap-2" aria-label="Filtros">

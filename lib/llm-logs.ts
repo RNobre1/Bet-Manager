@@ -11,7 +11,8 @@
 type FromSupabase = { from: (table: string) => any };
 
 export interface LlmLogInput {
-  route: "analyze" | "copilot";
+  /** Origem da request LLM: 'analyze' (legado) | 'copilot' (dia) | 'fixture-copilot' (jogo). */
+  route: "analyze" | "copilot" | "fixture-copilot";
   fixture_id?: number | null;
   model: string;
   cached?: boolean;
