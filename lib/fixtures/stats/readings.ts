@@ -13,6 +13,7 @@ export const METRIC_LABEL: Record<string, string> = {
   cards_for: "cartões",
   booking_points_for: "booking points",
   fouls_for: "faltas",
+  shots_for: "chutes",
 };
 
 const lbl = (k: string) => METRIC_LABEL[k] ?? k;

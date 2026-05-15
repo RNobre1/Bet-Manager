@@ -10,6 +10,7 @@ interface Props {
   yTicks: number[]; // descending domain ticks, top→bottom
   xLabels: string[];
   referenceLines?: ReferenceLine[];
+  /** Assumes a zero-based domain (referenceLines positioned as value/yMax). */
   yMax?: number; // defaults to max(yTicks)
   height?: number;
   children: ReactNode; // the actual chart, absolutely filling the plot
