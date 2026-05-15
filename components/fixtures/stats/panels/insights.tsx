@@ -5,8 +5,9 @@
  * from `lib/fixtures/stats/insights.ts`, which sorts by confidence DESC).
  * Returns `null` when the array is empty.
  *
- * Each card has a vermelho left-border + a per-kind unicode glyph. We keep
- * the icon set tiny (no extra dep) and rely on tokens for color.
+ * Each card has a vermelho left-border + a per-kind word label (instead of
+ * an opaque unicode glyph). The label is colored per kind via tokens so the
+ * reader can scan kinds at a glance without decoding symbols.
  */
 
 import { PanelShell } from "@/components/fixtures/stats/panels/_shell";
@@ -16,11 +17,18 @@ interface InsightsProps {
   insights: Insight[];
 }
 
-const ICON_BY_KIND: Record<Insight["kind"], string> = {
-  correlation: "∝",
-  trend: "↗",
-  pattern: "◈",
-  outlier: "‼",
+const LABEL_BY_KIND: Record<Insight["kind"], string> = {
+  correlation: "CORRELAÇÃO",
+  trend: "TENDÊNCIA",
+  pattern: "PADRÃO",
+  outlier: "OUTLIER",
+};
+
+const COLOR_BY_KIND: Record<Insight["kind"], string> = {
+  correlation: "var(--color-vermelho)",
+  trend: "var(--color-success)",
+  pattern: "var(--color-depth)",
+  outlier: "var(--color-warning)",
 };
 
 export function Insights({ insights }: InsightsProps) {
@@ -34,26 +42,24 @@ export function Insights({ insights }: InsightsProps) {
             key={`${ins.kind}-${idx}`}
             data-insight
             data-kind={ins.kind}
-            className="flex gap-3 rounded-md bg-[var(--color-surface-2)] p-3"
+            className="flex flex-col gap-0.5 rounded-md bg-[var(--color-surface-2)] p-3"
             style={{
               borderLeft: "3px solid var(--color-vermelho)",
             }}
           >
             <span
-              data-insight-icon
-              aria-hidden
-              className="num text-xl text-[var(--color-vermelho)]"
+              data-insight-label
+              className="label"
+              style={{ color: COLOR_BY_KIND[ins.kind] }}
             >
-              {ICON_BY_KIND[ins.kind]}
+              {LABEL_BY_KIND[ins.kind]}
             </span>
-            <div className="flex flex-col gap-0.5">
-              <span className="font-medium text-[var(--color-ink-display)]">
-                {ins.headline}
-              </span>
-              <span className="text-sm text-[var(--color-ink-muted)]">
-                {ins.text}
-              </span>
-            </div>
+            <span className="font-medium text-[var(--color-ink-display)]">
+              {ins.headline}
+            </span>
+            <span className="text-sm text-[var(--color-ink-muted)]">
+              {ins.text}
+            </span>
           </li>
         ))}
       </ul>

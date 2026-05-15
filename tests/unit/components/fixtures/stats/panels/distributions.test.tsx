@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { render } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { Distributions } from "@/components/fixtures/stats/panels/distributions";
 import type {
   BoxStats,
@@ -78,5 +78,30 @@ describe("<Distributions />", () => {
     zero.goals_ft_for = { min: 0, q1: 0, median: 0, q3: 0, max: 0 };
     const { container } = render(<Distributions home={zero} away={dist()} />);
     expect(container.querySelectorAll("[data-side='home'] [data-boxplot]").length).toBe(7);
+  });
+
+  it("shows a RichTooltipCard with formatted quartiles on box hover", () => {
+    const { container } = render(
+      <Distributions home={dist()} away={dist()} />,
+    );
+    const firstBox = container.querySelector(
+      "[data-side='home'] [data-boxplot]",
+    ) as HTMLElement;
+    const wrapper = firstBox.parentElement as HTMLElement;
+    fireEvent.mouseEnter(wrapper);
+    const tip = container.querySelector(
+      "[data-rich-tooltip]",
+    ) as HTMLElement;
+    expect(tip).not.toBeNull();
+    // min=0,q1=1,median=2,q3=3,max=5 → all fmtNum
+    expect(tip.textContent).toContain("5");
+    expect(tip.textContent).toContain("Mediana");
+  });
+
+  it("renders an InfoPopover trigger explaining the boxplot", () => {
+    render(<Distributions home={dist()} away={dist()} />);
+    expect(
+      screen.getByRole("button", { name: /como ler boxplot/i }),
+    ).toBeDefined();
   });
 });

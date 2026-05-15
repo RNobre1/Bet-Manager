@@ -83,12 +83,29 @@ describe("<Insights />", () => {
     expect(container.querySelectorAll("[data-insight]").length).toBe(6);
   });
 
-  it("varies the icon by kind", () => {
+  it("renders a word-label per kind (no glyph)", () => {
     const items = [corr(), trend(), pattern(), outlier()];
     const { container } = render(<Insights insights={items} />);
-    const icons = Array.from(container.querySelectorAll("[data-insight-icon]")) as HTMLElement[];
-    const texts = icons.map((i) => i.textContent);
-    // each kind has its own glyph
-    expect(new Set(texts).size).toBe(4);
+    const labels = Array.from(
+      container.querySelectorAll("[data-insight-label]"),
+    ) as HTMLElement[];
+    expect(labels.map((l) => l.textContent)).toEqual([
+      "CORRELAÇÃO",
+      "TENDÊNCIA",
+      "PADRÃO",
+      "OUTLIER",
+    ]);
+    // glyph element removed
+    expect(container.querySelector("[data-insight-icon]")).toBeNull();
+  });
+
+  it("colors the label per kind", () => {
+    const items = [corr(), outlier()];
+    const { container } = render(<Insights insights={items} />);
+    const labels = Array.from(
+      container.querySelectorAll("[data-insight-label]"),
+    ) as HTMLElement[];
+    expect(labels[0].style.color).not.toBe("");
+    expect(labels[0].style.color).not.toBe(labels[1].style.color);
   });
 });
