@@ -156,6 +156,34 @@ describe("<RecentMatchesPanel />", () => {
     expect(screen.getByText("Aston Villa")).toBeInTheDocument();
   });
 
+  it("legend is honest: trend swatch is dashed/faint, not solid away color", () => {
+    const { container } = render(
+      <RecentMatchesPanel
+        matches={matches}
+        title="X"
+        teamName="Aston Villa"
+        width={400}
+      />,
+    );
+    // Data series swatch = solid red (matches the <Line> stroke).
+    const dataSwatch = container.querySelector(
+      "[data-trend-swatch='series']",
+    ) as HTMLElement | null;
+    expect(dataSwatch).not.toBeNull();
+    expect(dataSwatch!.style.background).toContain("--color-vermelho");
+
+    // Trend swatch = dashed faint stroke (matches the dashed trend <Line>),
+    // NOT the solid blue-depth away color from the TeamLegend primitive.
+    const trendSwatch = container.querySelector(
+      "[data-trend-swatch='trend']",
+    ) as HTMLElement | null;
+    expect(trendSwatch).not.toBeNull();
+    expect(trendSwatch!.style.borderTopStyle).toBe("dashed");
+    expect(trendSwatch!.style.borderTopColor).toContain("--color-ink-faint");
+    // Honesty guard: must not paint the solid depth (away) color anywhere.
+    expect(trendSwatch!.style.background).not.toContain("--color-depth");
+  });
+
   it("renders a numeric Y axis tick", () => {
     const { container } = render(
       <RecentMatchesPanel

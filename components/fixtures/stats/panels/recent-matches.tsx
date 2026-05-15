@@ -14,10 +14,7 @@ import type { NormalizedRecentMatch } from "@/lib/fixtures/stats/detail-json-typ
 import { deriveRecentSeries } from "@/lib/fixtures/stats/derive";
 import { fmtNum } from "@/lib/fixtures/stats/format";
 import { ChartFrame } from "@/components/fixtures/stats/_primitives/chart-frame";
-import {
-  TeamLegend,
-  teamColor,
-} from "@/components/fixtures/stats/_primitives/team-legend";
+import { teamColor } from "@/components/fixtures/stats/_primitives/team-legend";
 import { RichTooltipCard } from "@/components/fixtures/stats/_primitives/rich-tooltip";
 import { InfoPopover } from "@/components/fixtures/stats/_primitives/info-popover";
 
@@ -278,11 +275,38 @@ export function RecentMatchesPanel({
           })}
         </div>
       </div>
-      <TeamLegend
-        home={teamName ?? "time"}
-        away="tendência"
-        className="mb-2"
-      />
+      {/* Legenda inline local: single-series + trend, NÃO 2-times. O
+          primitivo TeamLegend pintaria "tendência" com a cor sólida de
+          away (azul-depth) — mentindo sobre a trend line real, que é
+          var(--color-ink-faint) tracejada. Cada swatch espelha o
+          stroke/estilo real do <Line> correspondente. */}
+      <div
+        className="mb-2 flex gap-4 text-xs"
+        data-team-legend
+      >
+        <span className="inline-flex items-center gap-1.5 text-[var(--color-ink-muted)]">
+          <span
+            aria-hidden
+            data-trend-swatch="series"
+            className="inline-block h-2 w-2 rounded-full"
+            style={{ background: "var(--color-vermelho)" }}
+          />
+          {teamName ?? "time"}
+        </span>
+        <span className="inline-flex items-center gap-1.5 text-[var(--color-ink-muted)]">
+          <span
+            aria-hidden
+            data-trend-swatch="trend"
+            className="inline-block w-4"
+            style={{
+              borderTopWidth: 2,
+              borderTopStyle: "dashed",
+              borderTopColor: "var(--color-ink-faint)",
+            }}
+          />
+          tendência
+        </span>
+      </div>
       <ChartFrame
         yTicks={yTicks}
         xLabels={series.xLabels}
