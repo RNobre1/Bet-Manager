@@ -9,7 +9,43 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
+import { TeamLegend } from "@/components/fixtures/stats/_primitives/team-legend";
+import { RichTooltipCard } from "@/components/fixtures/stats/_primitives/rich-tooltip";
+import { fmtNum } from "@/lib/fixtures/stats/format";
 import type { RadarData } from "@/lib/fixtures/stats/detail-json-types";
+
+/**
+ * Recharts → RichTooltipCard adapter. recharts hands us a `payload` array
+ * (one entry per <Radar>) plus the active `label` (the axis name). We map
+ * the raw home/away values into a formatted two-row card.
+ */
+interface RechartsTooltipProps {
+  active?: boolean;
+  label?: string;
+  payload?: Array<{ payload: { homeRaw: number; awayRaw: number } }>;
+  homeTeam: string;
+  awayTeam: string;
+}
+
+function RadarTooltip({
+  active,
+  label,
+  payload,
+  homeTeam,
+  awayTeam,
+}: RechartsTooltipProps) {
+  if (!active || !payload || payload.length === 0) return null;
+  const row = payload[0].payload;
+  return (
+    <RichTooltipCard
+      title={label ?? ""}
+      rows={[
+        { k: homeTeam, v: fmtNum(row.homeRaw) },
+        { k: awayTeam, v: fmtNum(row.awayRaw) },
+      ]}
+    />
+  );
+}
 
 interface RadarComparisonProps {
   homeTeam: string;
@@ -60,12 +96,7 @@ export function RadarComparison({
     <div className="card @container/card p-4">
       <div className="mb-2 flex flex-wrap items-center gap-3">
         <span className="label">perfil comparativo</span>
-        <span className="num text-xs text-[var(--color-vermelho)]">
-          ● {homeTeam}
-        </span>
-        <span className="num text-xs text-[var(--color-depth)]">
-          ● {awayTeam}
-        </span>
+        <TeamLegend home={homeTeam} away={awayTeam} />
       </div>
       {width !== undefined ? (
         <div style={{ width, height }}>
@@ -152,13 +183,9 @@ function RadarBody({
         isAnimationActive={false}
       />
       <Tooltip
-        contentStyle={{
-          background: "var(--color-surface-2)",
-          border: "1px solid var(--color-ink-faint)",
-          color: "var(--color-ink-display)",
-          fontSize: 12,
-        }}
-        labelStyle={{ color: "var(--color-ink-muted)" }}
+        content={
+          <RadarTooltip homeTeam={homeTeam} awayTeam={awayTeam} />
+        }
       />
     </RadarChart>
   );

@@ -60,4 +60,20 @@ describe("<RadarComparison />", () => {
     );
     expect(screen.getByText(/sem dados/i)).toBeDefined();
   });
+
+  it("renders a <TeamLegend> with both team names", () => {
+    const { container } = render(
+      <RadarComparison
+        homeTeam="Tottenham"
+        awayTeam="Leeds"
+        data={radar}
+        width={400}
+        height={400}
+      />,
+    );
+    const legend = container.querySelector("[data-team-legend]");
+    expect(legend).not.toBeNull();
+    expect(legend?.textContent).toContain("Tottenham");
+    expect(legend?.textContent).toContain("Leeds");
+  });
 });
