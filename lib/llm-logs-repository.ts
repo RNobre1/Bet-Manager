@@ -12,7 +12,7 @@ type FromSupabase = { from: (table: string) => any };
 export interface LogRow {
   id: number;
   created_at: string; // ISO UTC
-  route: "analyze" | "copilot";
+  route: "analyze" | "copilot" | "fixture-copilot";
   fixture_id: number | null;
   model: string;
   cached: boolean;
@@ -27,7 +27,7 @@ export interface LogRow {
 }
 
 export interface LogsFilter {
-  route?: "analyze" | "copilot";
+  route?: "analyze" | "copilot" | "fixture-copilot";
   since?: string; // ISO date
   limit?: number;
 }
