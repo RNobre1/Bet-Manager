@@ -108,7 +108,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 // Import AFTER mocks so the Server Component binds to them.
-import StatsPage from "@/app/(dashboard)/fixtures/[id]/stats/page";
+import StatsPage from "@/app/(dashboard)/fixtures/[id]/page";
 
 const SAMPLE_KICKOFF = "2026-05-12T19:00:00+00:00"; // 16:00 BRT
 
