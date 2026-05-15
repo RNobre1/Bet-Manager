@@ -66,7 +66,7 @@ Resposta carrega `meta.hops[]` estruturado. UI renderiza **cada tool como passo 
 ## Auditoria / traceability
 
 - Reuso de `llm_request_logs`. `route` é `text not null` **sem CHECK/enum** (só índice) — gravar `route='fixture-copilot'` não exige DDL. Migration `0013_fixture_copilot_audit.sql` tem um único efeito: `COMMENT ON TABLE public.analysis_cache IS 'DEPRECATED 2026-05-15 — substituída pelo fluxo /api/fixture-copilot; mantida por histórico append-only'` (append-only, **não dropar**).
-- Cada request grava: `route`, `fixture_id`, `model`, `reasoner`, `latency_ms`, `prompt_tokens`/`completion_tokens`/`total_tokens`, `error?`, e `hops[]` onde **cada hop = `{ tool, args, result_summary, duration_ms, error? }`** — toda tool rastreável fim a fim.
+- Cada request grava: `route`, `fixture_id`, `model`, `reasoner`, `latency_ms`, `prompt_tokens`/`completion_tokens`/`total_tokens`, `error?`, e `hops[]` onde **cada hop = `{ tool, args, result_summary, took_ms }`** (espelha o shape de `Hop` já em prod no `/api/copilot`; erro de tool fica em `result_summary` prefixado `error:`) — toda tool rastreável fim a fim.
 
 ## UI
 
