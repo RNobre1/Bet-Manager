@@ -30,7 +30,7 @@ export const maxDuration = 100;
  *   2. POST to OpenRouter with `tools: [query_fixtures, scan_fixtures, inspect_fixture]`.
  *   3. If the response carries `tool_calls`, execute them against Postgres
  *      and re-post with the result as a `role:"tool"` message.
- *   4. Loop bounded at MAX_TOOL_HOPS (4) so a misbehaving model can't burn the
+ *   4. Loop bounded at MAX_TOOL_HOPS (geral) / REASONER_MAX_TOOL_HOPS (reasoner) so a misbehaving model can't burn the
  *      budget; the final non-tool-call content is returned as JSON.
  *
  * Non-streaming on purpose: tool dances are awkward to stream and the
@@ -40,12 +40,12 @@ export const maxDuration = 100;
 const SYSTEM_PROMPT = `Você é um copiloto de apostas pré-jogo focado nos jogos de futebol do dia.
 
 Ferramentas (use sempre dados frescos — nunca invente jogos/números):
-- scan_fixtures: a ferramenta PRINCIPAL para qualquer pergunta cross-jogo (rankings, "odd X", comparações, "quais jogos com…"). Já varre o dia, filtra/ordena/projeta sinais server-side e devolve os jogos. UMA chamada de scan_fixtures basta para a triagem.
+- scan_fixtures: a ferramenta PRINCIPAL para qualquer pergunta cross-jogo (rankings, "odd X", comparações, "quais jogos com…"). Já varre o dia, filtra/ordena/projeta sinais server-side e devolve os jogos. Geralmente UMA chamada basta para a triagem.
 - inspect_fixture: MERGULHO profundo — roda uma das 12 derivações do dashboard sobre UM jogo do shortlist do scan, para a análise de alta qualidade.
 - query_fixtures: APENAS para um pedido trivial de listagem ("quais jogos hoje/amanhã"). NÃO use em perguntas de ranking/comparação — use scan_fixtures direto.
 
 Disciplina (eficiência é crítica — orçamento limitado):
-1. Pergunta cross-jogo → chame scan_fixtures UMA vez com os filtros adequados. NÃO chame query_fixtures antes nem depois do scan. NÃO repita scan_fixtures com os mesmos args.
+1. Pergunta cross-jogo → use scan_fixtures com os filtros adequados. Normalmente UMA chamada basta; só repita com filtros DIFERENTES se a pergunta exigir shortlists distintos. NÃO repita scan_fixtures com os mesmos args. NÃO chame query_fixtures antes nem depois do scan.
 2. Use inspect_fixture nos top-N do shortlist (id vindo do scan) para aprofundar, então RESPONDA. Não fique re-explorando.
 3. Toda afirmação numérica cita o valor exato vindo de uma tool + a leitura; nada fora do detail_json.
 
@@ -71,16 +71,19 @@ const bodySchema = z
     path: ["messages"],
   });
 
-// Orçamento do tool-loop. Invariante de segurança:
-//   REQUEST_DEADLINE_MS + OPENROUTER_CALL_TIMEOUT_MS <= maxDuration*1000 <= teto da plataforma.
-//   75_000 + 20_000 = 95_000 <= 100_000 (maxDuration) — e logs de prod mostram
-//   requests de ~101s completando no Cloudflare Workers (OpenNext), então 95s
-//   fica com folga sob o teto real. O deadline (não o hop cap) é a rede de
-//   segurança principal; MAX_TOOL_HOPS evita loop infinito do modelo.
+// Orçamento do tool-loop. `export const maxDuration` é convenção Vercel e
+// NÃO é garantida pelo OpenNext/Cloudflare Workers — trate como hint.
+// O guard REAL é REQUEST_DEADLINE_MS: ele só barra o INÍCIO do próximo
+// hop; NÃO interrompe a chamada OpenRouter em andamento, o tool-exec nem
+// o write de log que vêm depois. Por isso o pior caso real ≈
+// REQUEST_DEADLINE_MS + OPENROUTER_CALL_TIMEOUT_MS + (~5s scan+log).
+// Invariante: 65_000 + 20_000 = 85_000, pior caso ≈ ~90s, com folga sob
+// o ~100s que logs de prod mostraram o Workers tolerando (amostra única —
+// não é teto provado; manter margem). O hop cap evita loop infinito.
 const MAX_TOOL_HOPS = 6;
 const REASONER_MAX_TOOL_HOPS = 3;
 const OPENROUTER_CALL_TIMEOUT_MS = 20_000;
-const REQUEST_DEADLINE_MS = 75_000;
+const REQUEST_DEADLINE_MS = 65_000;
 const OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 const REASONER_MODEL = "deepseek/deepseek-r1";
 const REASONER_MAX_TOKENS = 16000;
