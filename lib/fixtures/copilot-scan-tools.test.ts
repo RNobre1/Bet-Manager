@@ -52,29 +52,30 @@ function baseRow(detail: unknown): FixtureRowLite {
 describe("computeFixtureSignals", () => {
   it("computes all 7 signal groups from a full detail_json", () => {
     const s = computeFixtureSignals(baseRow(FULL_DETAIL));
-    expect(s.cards?.referee_avg_booking).toBe(48);
-    expect(typeof s.cards?.home_avg_cards).toBe("number");
-    expect(s.cards?.badge_cartao_alto).toBe(true);
-    expect(s.goals_over?.home_over25_pct).toBeCloseTo(0.5);
-    expect(typeof s.goals_over?.avg_total_goals).toBe("number");
-    expect(s.btts?.home_btts_pct).toBeCloseTo(0.5);
-    expect(s.first_half?.home_fh_goal_pct).toBeCloseTo(0.5);
-    expect(s.form?.home).toEqual({ w: 3, d: 1, l: 1, pts_recent: 10 });
-    expect(s.form?.away).toEqual({ w: 1, d: 2, l: 2, pts_recent: 5 });
-    expect(s.form?.home_streak).toBe("Over 2.5 nos últimos 6");
-    expect(s.form?.away_streak).toBeNull();
+    expect(s.cards.referee_avg_booking).toBe(48);
+    expect(typeof s.cards.home_avg_cards).toBe("number");
+    expect(s.cards.badge_cartao_alto).toBe(true);
+    expect(s.goals_over.home_over25_pct).toBeCloseTo(0.5);
+    expect(s.goals_over.home_avg_total_goals).toBeCloseTo(1.5);
+    expect(s.goals_over.away_avg_total_goals).toBeCloseTo(3);
+    expect(s.btts.home_btts_pct).toBeCloseTo(0.5);
+    expect(s.first_half.home_fh_goal_pct).toBeCloseTo(0.5);
+    expect(s.form.home).toEqual({ w: 3, d: 1, l: 1, pts_recent: 10 });
+    expect(s.form.away).toEqual({ w: 1, d: 2, l: 2, pts_recent: 5 });
+    expect(s.form.home_streak).toBe("Over 2.5 nos últimos 6");
+    expect(s.form.away_streak).toBeNull();
     expect(s.h2h).toEqual({ games: 2, avg_goals: 2.5 });
-    expect(s.odds?.categories.length).toBeGreaterThan(0);
-    expect(s.odds?.match_favorite).toBe("Home");
-    expect(s.odds?.adamchoi_pred).toBe("Over 2.5 Goals");
+    expect(s.odds.categories.length).toBeGreaterThan(0);
+    expect(s.odds.match_favorite).toBe("Home");
+    expect(s.odds.adamchoi_pred).toBe("Over 2.5 Goals");
   });
 
-  it("omits groups whose source section is absent (never throws)", () => {
+  it("returns null inner values when source sections are absent (never throws)", () => {
     const s = computeFixtureSignals(baseRow({}));
-    expect(s.cards?.referee_avg_booking).toBeNull();
-    expect(s.form?.home).toBeNull();
+    expect(s.cards.referee_avg_booking).toBeNull();
+    expect(s.form.home).toBeNull();
     expect(s.h2h).toEqual({ games: 0, avg_goals: 0 });
-    expect(s.odds?.match_favorite).toBeNull();
-    expect(s.odds?.adamchoi_pred).toBeNull();
+    expect(s.odds.match_favorite).toBeNull();
+    expect(s.odds.adamchoi_pred).toBeNull();
   });
 });

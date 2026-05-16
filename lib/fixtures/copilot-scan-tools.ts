@@ -28,7 +28,7 @@ interface FormSide { w: number; d: number; l: number; pts_recent: number }
 
 export interface FixtureSignals {
   cards: { referee_avg_booking: number | null; home_avg_cards: number | null; away_avg_cards: number | null; badge_cartao_alto: boolean };
-  goals_over: { home_over25_pct: number | null; away_over25_pct: number | null; avg_total_goals: number | null; badge_over_alto: boolean };
+  goals_over: { home_over25_pct: number | null; away_over25_pct: number | null; home_avg_total_goals: number | null; away_avg_total_goals: number | null; badge_over_alto: boolean };
   btts: { home_btts_pct: number | null; away_btts_pct: number | null; badge_btts_alto: boolean };
   first_half: { home_fh_goal_pct: number | null; away_fh_goal_pct: number | null; badge_primeiro_tempo: boolean };
   form: { home: FormSide | null; away: FormSide | null; home_streak: string | null; away_streak: string | null };
@@ -66,6 +66,15 @@ function totalGoals(m: NormalizedRecentMatch): number | null {
   return m.goals_ft_for + m.goals_ft_against;
 }
 
+function avgTotalGoals(matches: NormalizedRecentMatch[]): number | null {
+  const ts = matches.map(totalGoals).filter((v): v is number => v !== null);
+  if (ts.length === 0) return null;
+  return ts.reduce((a, b) => a + b, 0) / ts.length;
+}
+
+// Espelha o padrão de seleção honesta de lado do Sub-projeto A
+// (get_team_record: deriveTeamRecord({ home: tr?.[side] })) — o deriver
+// normaliza a perna passada sob a chave `home`, sem inventar lógica.
 function formSide(raw: unknown): FormSide | null {
   const d = deriveTeamRecord({ home: raw });
   if (!d) return null;
@@ -131,10 +140,8 @@ export function computeFixtureSignals(row: FixtureRowLite): FixtureSignals {
     goals_over: {
       home_over25_pct: pct(rh, (m) => { const t = totalGoals(m); return t !== null && t > 2.5; }),
       away_over25_pct: pct(ra, (m) => { const t = totalGoals(m); return t !== null && t > 2.5; }),
-      avg_total_goals: (() => {
-        const ts = rh.map(totalGoals).filter((v): v is number => v !== null);
-        return ts.length === 0 ? null : ts.reduce((a, b) => a + b, 0) / ts.length;
-      })(),
+      home_avg_total_goals: avgTotalGoals(rh),
+      away_avg_total_goals: avgTotalGoals(ra),
       badge_over_alto: has("over-alto"),
     },
     btts: {
