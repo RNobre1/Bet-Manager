@@ -435,7 +435,27 @@ describe("/api/copilot — 3 tools", () => {
     const json = await res.json();
     expect(res.status).toBe(200);
     expect(json.meta.hops.map((h: { tool: string }) => h.tool)).toEqual(["scan_fixtures", "inspect_fixture"]);
-    expect(json.meta.hops[1].result_summary).toMatch(/^inspect_fixture:/);
+    expect(json.meta.hops[1].result_summary).toMatch(/^inspect_fixture\[get_referee\]:/);
+  });
+
+  it("inspect_fixture error result yields error:-prefixed chip (not inspect_fixture[...])", async () => {
+    // fixture_id that does not exist → inspectFixture returns { error: "..." }
+    adminState.rows = [];
+    adminState.single = undefined; // maybeSingle returns null → not found
+
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(jsonResponse({ choices: [{ message: { role: "assistant", content: null, tool_calls: [{ id: "c1", type: "function", function: { name: "inspect_fixture", arguments: JSON.stringify({ fixture_id: 9999, tool: "get_referee" }) } }] } }], usage: { prompt_tokens: 1, completion_tokens: 1 } }))
+      .mockResolvedValueOnce(jsonResponse({ choices: [{ message: { role: "assistant", content: "Não encontrado." } }], usage: { prompt_tokens: 1, completion_tokens: 1 } }));
+
+    const { POST } = await import("@/app/api/copilot/route");
+    const res = await POST(new Request("http://t/api/copilot", { method: "POST", body: JSON.stringify({ messages: [{ role: "user", content: "árbitro do jogo 9999?" }] }) }));
+    const json = await res.json();
+    expect(res.status).toBe(200);
+    const inspectHop = json.meta.hops.find((h: { tool: string }) => h.tool === "inspect_fixture");
+    expect(inspectHop).toBeDefined();
+    // Must be detectable by chip logic (startsWith "error:") — NOT "inspect_fixture[...]:"
+    expect(inspectHop!.result_summary).toMatch(/^error:/);
+    expect(inspectHop!.result_summary).not.toMatch(/^inspect_fixture\[/);
   });
 });
 

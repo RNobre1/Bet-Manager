@@ -223,10 +223,14 @@ export async function POST(request: Request): Promise<Response> {
         const hopStarted = Date.now();
         const result = await executeToolCall(call.function, admin);
         const parsedArgs = parseToolArgs(call.function.arguments);
+        const subTool =
+          call.function.name === "inspect_fixture"
+            ? (parsedArgs as { tool?: string })?.tool
+            : undefined;
         hops.push({
           tool: call.function.name,
           args: parsedArgs,
-          result_summary: summarizeResult(call.function.name, result),
+          result_summary: summarizeResult(call.function.name, result, subTool),
           took_ms: Date.now() - hopStarted,
         });
         messages.push({
@@ -316,10 +320,15 @@ function parseToolArgs(raw: string): unknown {
   }
 }
 
-function summarizeResult(name: string, result: unknown): string {
+function summarizeResult(name: string, result: unknown, subTool?: string): string {
   if (!result || typeof result !== "object") return String(result);
   if (name === "scan_fixtures") return scanResultSummary(result);
-  if (name === "inspect_fixture") return summarizeFixtureToolResult(name, result);
+  if (name === "inspect_fixture") {
+    const r = result as Record<string, unknown>;
+    if (typeof r.error === "string") return `error: ${r.error}`;
+    const effectiveName = subTool ?? name;
+    return `inspect_fixture[${effectiveName}]: ${summarizeFixtureToolResult(effectiveName, result)}`;
+  }
   const r = result as Record<string, unknown>;
   if (typeof r.error === "string") return `error: ${r.error}`;
   if (Array.isArray(r.fixtures)) {

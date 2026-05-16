@@ -286,7 +286,7 @@ export const SCAN_FIXTURES_TOOL = {
             properties: {
               field: { type: "string", description: "Path pontuado (ver description da tool)." },
               op: { type: "string", enum: ["gte", "lte", "eq"] },
-              value: { description: "Número (gte/lte) ou número/string/boolean (eq) — campos badge_* são boolean." },
+              value: { type: ["number", "string", "boolean"], description: "Número (gte/lte) ou número/string/boolean (eq) — campos badge_* são boolean." },
             },
             required: ["field", "op", "value"],
             additionalProperties: false,
