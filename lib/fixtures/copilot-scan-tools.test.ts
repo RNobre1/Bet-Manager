@@ -181,6 +181,111 @@ describe("computeFixtureSignals", () => {
 
 import { SCAN_FIXTURES_TOOL, scanResultSummary } from "./copilot-scan-tools";
 import { inspectFixture, INSPECT_FIXTURE_TOOL } from "./copilot-scan-tools";
+import { leagueMatches, compactForLlm } from "./copilot-scan-tools";
+
+describe("leagueMatches — tolerant league matching", () => {
+  it("matches when needle is broader than the stored short label (THE reported bug)", () => {
+    expect(leagueMatches("Série A", "Brasileirão Série A")).toBe(true);
+  });
+
+  it("is accent- and case-insensitive", () => {
+    expect(leagueMatches("Série A", "serie a")).toBe(true);
+  });
+
+  it("matches on a stored superset of the needle", () => {
+    expect(leagueMatches("Premier League", "premier")).toBe(true);
+  });
+
+  it("rejects an unrelated league", () => {
+    expect(leagueMatches("Série A", "Bundesliga")).toBe(false);
+  });
+
+  it("treats an empty needle as match-all", () => {
+    expect(leagueMatches("Série A", "")).toBe(true);
+  });
+});
+
+describe("scanFixtures — tolerant league match + 0-result facets", () => {
+  it("returns fixtures when league_substr is broader than the stored label", async () => {
+    const rows = [
+      { ...baseRow(FULL_DETAIL), id: 1, league: "Série A", country: "brazil" },
+      { ...baseRow(FULL_DETAIL), id: 2, league: "Bundesliga", country: "germany" },
+    ];
+    const res = await scanFixtures({ league_substr: "Brasileirão Série A" }, buildAdmin(rows));
+    expect(res.fixtures.map((f) => f.id)).toEqual([1]);
+    expect(res.total).toBe(1);
+  });
+
+  it("returns available facets when the scan yields zero", async () => {
+    const rows = [
+      { ...baseRow(FULL_DETAIL), id: 1, league: "Série A", country: "brazil" },
+      { ...baseRow(FULL_DETAIL), id: 2, league: "Premier League", country: "england" },
+    ];
+    const res = await scanFixtures({ league_substr: "NHL Hockey" }, buildAdmin(rows));
+    expect(res.total).toBe(0);
+    expect(res.fixtures).toEqual([]);
+    expect(res.available).toBeDefined();
+    expect(res.available).toEqual(
+      expect.arrayContaining([
+        { country: "brazil", league: "Série A" },
+        { country: "england", league: "Premier League" },
+      ]),
+    );
+  });
+
+  it("does NOT add available to the campo-inválido error path", async () => {
+    const rows = [{ ...baseRow(FULL_DETAIL), id: 1 }];
+    const res = await scanFixtures(
+      { filters: [{ field: "nope.bad", op: "eq", value: 1 }] },
+      buildAdmin(rows),
+    );
+    expect(res.error).toMatch(/campo inválido/);
+    expect(res.available).toBeUndefined();
+  });
+
+  it("rounds signal numbers in returned entries", async () => {
+    const rows = [{ ...baseRow(FULL_DETAIL), id: 1 }];
+    const res = await scanFixtures({ signals: ["goals_over"] }, buildAdmin(rows));
+    const v = res.fixtures[0].signals.goals_over.away_avg_total_goals;
+    expect(v).not.toBeNull();
+    expect(v).toBe(Math.round((v as number) * 100) / 100);
+  });
+});
+
+describe("compactForLlm", () => {
+  it("caps arrays at 8 items plus an omission marker", () => {
+    const out = compactForLlm(Array.from({ length: 20 }, (_, i) => i)) as unknown[];
+    expect(out.length).toBe(9);
+    expect(out[8]).toBe("…(+12 itens omitidos)");
+  });
+
+  it("rounds floats to 2dp", () => {
+    expect(compactForLlm(1.23456)).toBe(1.23);
+  });
+
+  it("truncates long strings", () => {
+    const long = "x".repeat(300);
+    const out = compactForLlm(long) as string;
+    expect(out.length).toBe(241);
+    expect(out.endsWith("…")).toBe(true);
+  });
+
+  it("collapses objects beyond depth 6", () => {
+    const deep = { a: { b: { c: { d: { e: { f: { g: { h: 1 } } } } } } } };
+    const out = compactForLlm(deep) as Record<string, unknown>;
+    // a(1) b(2) c(3) d(4) e(5) f(6) -> g hits depth 6 => "{…}"
+    let cur: unknown = out;
+    for (const k of ["a", "b", "c", "d", "e", "f"]) {
+      cur = (cur as Record<string, unknown>)[k];
+    }
+    expect(cur).toBe("{…}");
+  });
+
+  it("preserves null and undefined", () => {
+    expect(compactForLlm(null)).toBeNull();
+    expect(compactForLlm(undefined)).toBeUndefined();
+  });
+});
 
 function buildAdminById(byId: Record<number, unknown>) {
   return {
@@ -260,5 +365,35 @@ describe("inspectFixture", () => {
   it("returns { error } when fixture_id is not a number", async () => {
     const res = await inspectFixture({ fixture_id: "7" as unknown as number, tool: "get_referee" }, admin);
     expect((res as { error?: string }).error).toMatch(/fixture_id obrigatório/);
+  });
+
+  it("keeps the { error } shape byte-stable for a missing fixture (no compaction)", async () => {
+    const res = await inspectFixture({ fixture_id: 999, tool: "get_referee" }, admin);
+    expect(res).toEqual({ error: "fixture 999 não encontrado" });
+  });
+
+  it("keeps the { error } shape byte-stable when no detail_json", async () => {
+    const a2 = buildAdminById({ 8: { id: 8, home_team: "X", away_team: "Y", detail_json: null } });
+    const res = await inspectFixture({ fixture_id: 8, tool: "get_referee" }, a2);
+    expect(res).toEqual({ error: "fixture 8 sem detail_json ainda" });
+  });
+
+  it("keeps the { error } shape byte-stable for a non-number id", async () => {
+    const res = await inspectFixture({ fixture_id: "7" as unknown as number, tool: "get_referee" }, admin);
+    expect(res).toEqual({ error: "fixture_id obrigatório" });
+  });
+
+  it("compacts a successful result, capping nested arrays at 8 + marker", async () => {
+    // get_h2h returns { matches: [...] }; seed >8 h2h rows so the array is capped.
+    const manyH2h = Array.from({ length: 12 }, () => ({ ...rmMatch({}), homeGoalsFt: 1, awayGoalsFt: 1 }));
+    const a3 = buildAdminById({
+      7: { id: 7, home_team: "Alpha", away_team: "Beta", detail_json: { ...FULL_DETAIL, h2h: manyH2h } },
+    });
+    const res = await inspectFixture({ fixture_id: 7, tool: "get_h2h" }, a3);
+    expect((res as { error?: unknown }).error).toBeUndefined();
+    const matches = (res as { matches: unknown[] }).matches;
+    expect(Array.isArray(matches)).toBe(true);
+    expect(matches.length).toBe(9);
+    expect(String(matches[8])).toMatch(/itens omitidos/);
   });
 });
