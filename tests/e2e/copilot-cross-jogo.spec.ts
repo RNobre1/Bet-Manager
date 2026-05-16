@@ -33,7 +33,7 @@ test.describe("Copilot geral cross-jogo", () => {
     });
 
     await page.goto("/fixtures");
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState("networkidle");
 
     // 1. Guard de custo: nenhuma chamada ao LLM no mount.
     expect(llmCalls, "não deve chamar /api/copilot no mount").toHaveLength(0);
