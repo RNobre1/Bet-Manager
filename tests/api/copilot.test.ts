@@ -438,3 +438,45 @@ describe("/api/copilot — 3 tools", () => {
     expect(json.meta.hops[1].result_summary).toMatch(/^inspect_fixture:/);
   });
 });
+
+describe("/api/copilot — hops cap + retrocompat", () => {
+  it("still answers a simple question using only query_fixtures (retrocompat)", async () => {
+    adminState.rows = [];
+    // 1st turn: model calls query_fixtures; 2nd turn: final content.
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        jsonResponse({
+          choices: [{ message: { role: "assistant", content: null, tool_calls: [{ id: "call_rc1", type: "function", function: { name: "query_fixtures", arguments: "{}" } }] } }],
+          usage: { prompt_tokens: 1, completion_tokens: 1 },
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          choices: [{ message: { role: "assistant", content: "Nenhum jogo." } }],
+          usage: { prompt_tokens: 1, completion_tokens: 1 },
+        }),
+      );
+    const { POST } = await import("@/app/api/copilot/route");
+    const res = await POST(new Request("http://t/api/copilot", { method: "POST", body: JSON.stringify({ messages: [{ role: "user", content: "tem jogo hoje?" }] }) }));
+    const json = await res.json();
+    expect(res.status).toBe(200);
+    expect(json.meta.hops.map((h: { tool: string }) => h.tool)).toEqual(["query_fixtures"]);
+  });
+
+  it("caps the loop at 6 hops", async () => {
+    adminState.rows = [];
+    // Every turn returns the same query_fixtures tool_call (model never finalizes).
+    // mockImplementation creates a fresh Response each call (body stream is single-use).
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+      jsonResponse({
+        choices: [{ message: { role: "assistant", content: null, tool_calls: [{ id: "call_loop", type: "function", function: { name: "query_fixtures", arguments: "{}" } }] } }],
+        usage: { prompt_tokens: 1, completion_tokens: 1 },
+      }),
+    );
+    const { POST } = await import("@/app/api/copilot/route");
+    const res = await POST(new Request("http://t/api/copilot", { method: "POST", body: JSON.stringify({ messages: [{ role: "user", content: "loop" }] }) }));
+    const json = await res.json();
+    expect(json.meta.hops.length).toBe(6);
+    expect(fetchSpy).toHaveBeenCalledTimes(6);
+  });
+});
