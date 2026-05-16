@@ -189,6 +189,18 @@ function resolveDate(input: string | undefined): string {
 
 export async function scanFixtures(args: ScanFixturesArgs, admin: AdminLike): Promise<ScanResult> {
   const date = resolveDate(args.date);
+
+  // Valida campos de filtro/sort ANTES de qualquer query/derivação — falha
+  // rápido, sem round-trip ao banco nem computar sinais de N fixtures.
+  const allFields = [
+    ...(args.filters?.map((f) => f.field) ?? []),
+    ...(args.sort ? [args.sort.field] : []),
+  ];
+  const bad = allFields.find((p) => !validField(p));
+  if (bad) {
+    return { date, total: 0, fixtures: [], error: `campo inválido: ${bad}` };
+  }
+
   const { startUtc, endUtc } = brtDayWindowUtc(date);
   const orExpr =
     `and(kickoff_utc.gte.${startUtc},kickoff_utc.lt.${endUtc}),` +
@@ -219,16 +231,7 @@ export async function scanFixtures(args: ScanFixturesArgs, admin: AdminLike): Pr
     signals: computeFixtureSignals(row),
   }));
 
-  // ── filtros server-side ────────────────────────────────────────────────
-  const allFields = [
-    ...(args.filters?.map((f) => f.field) ?? []),
-    ...(args.sort ? [args.sort.field] : []),
-  ];
-  const bad = allFields.find((p) => !validField(p));
-  if (bad) {
-    return { date, total: 0, fixtures: [], error: `campo inválido: ${bad}` };
-  }
-
+  // ── filtros server-side (campos já validados no topo) ──────────────────
   let filtered = entries;
   for (const f of args.filters ?? []) filtered = filtered.filter((e) => passesFilter(e, f));
 
