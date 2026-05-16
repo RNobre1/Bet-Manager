@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 type AdminState = {
   rows: unknown[];
+  single?: unknown;
 };
 
 const adminState: AdminState = { rows: [] };
@@ -32,6 +33,12 @@ function buildAdminMock(state: AdminState) {
         },
         order() {
           return chain;
+        },
+        eq() {
+          return chain;
+        },
+        maybeSingle() {
+          return Promise.resolve({ data: state.single ?? null, error: null });
         },
         then(resolve: (v: { data: unknown[]; error: null }) => void) {
           resolve({ data: state.rows, error: null });
@@ -404,5 +411,30 @@ describe("POST /api/copilot", () => {
     });
     const res = await POST(req);
     expect(res.status).toBe(400);
+  });
+});
+
+describe("/api/copilot — 3 tools", () => {
+  it("executes scan_fixtures then inspect_fixture in a tool loop", async () => {
+    adminState.rows = [
+      { id: 7, match_date: "2026-05-16", ko_time: "20:00", home_team: "Alpha",
+        away_team: "Beta", league: "Serie A", country: "brazil", source_url: null,
+        kickoff_utc: "2026-05-16T23:00:00Z",
+        detail_json: { referee_record: { name: "Ref", avg_total_booking_points: 48, completed: 10, fixtures_count: 10, avg_home_booking_points: 24, avg_away_booking_points: 24, total_yellow_reds: 1 } } },
+    ];
+    adminState.single = { id: 7, home_team: "Alpha", away_team: "Beta", detail_json: (adminState.rows[0] as { detail_json: unknown }).detail_json };
+
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ choices: [{ message: { role: "assistant", content: null, tool_calls: [{ id: "c1", type: "function", function: { name: "scan_fixtures", arguments: JSON.stringify({ date: "2026-05-16" }) } }] } }], usage: { prompt_tokens: 1, completion_tokens: 1 } }))
+      .mockResolvedValueOnce(jsonResponse({ choices: [{ message: { role: "assistant", content: null, tool_calls: [{ id: "c2", type: "function", function: { name: "inspect_fixture", arguments: JSON.stringify({ fixture_id: 7, tool: "get_referee" }) } }] } }], usage: { prompt_tokens: 1, completion_tokens: 1 } }))
+      .mockResolvedValueOnce(jsonResponse({ choices: [{ message: { role: "assistant", content: "Pronto." } }], usage: { prompt_tokens: 1, completion_tokens: 1 } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { POST } = await import("@/app/api/copilot/route");
+    const res = await POST(new Request("http://t/api/copilot", { method: "POST", body: JSON.stringify({ messages: [{ role: "user", content: "melhor árbitro hoje?" }] }) }));
+    const json = await res.json();
+    expect(res.status).toBe(200);
+    expect(json.meta.hops.map((h: { tool: string }) => h.tool)).toEqual(["scan_fixtures", "inspect_fixture"]);
+    expect(json.meta.hops[1].result_summary).toMatch(/get_referee|ok/);
   });
 });

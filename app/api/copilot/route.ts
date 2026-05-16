@@ -6,6 +6,16 @@ import {
   queryFixtures,
   type QueryFixturesArgs,
 } from "@/lib/fixtures/copilot-tools";
+import {
+  SCAN_FIXTURES_TOOL,
+  INSPECT_FIXTURE_TOOL,
+  scanFixtures,
+  scanResultSummary,
+  inspectFixture,
+  type ScanFixturesArgs,
+  type InspectFixtureArgs,
+} from "@/lib/fixtures/copilot-scan-tools";
+import { summarizeFixtureToolResult } from "@/lib/fixtures/fixture-copilot-tools";
 import { recordLlmRequest } from "@/lib/llm-logs";
 
 /**
@@ -212,7 +222,7 @@ export async function POST(request: Request): Promise<Response> {
         hops.push({
           tool: call.function.name,
           args: parsedArgs,
-          result_summary: summarizeResult(result),
+          result_summary: summarizeResult(call.function.name, result),
           took_ms: Date.now() - hopStarted,
         });
         messages.push({
@@ -273,7 +283,7 @@ async function callOpenRouter(
   const body: Record<string, unknown> = {
     model,
     messages,
-    tools: [QUERY_FIXTURES_TOOL],
+    tools: [QUERY_FIXTURES_TOOL, SCAN_FIXTURES_TOOL, INSPECT_FIXTURE_TOOL],
     tool_choice: "auto",
   };
   if (maxTokens) body.max_tokens = maxTokens;
@@ -302,10 +312,12 @@ function parseToolArgs(raw: string): unknown {
   }
 }
 
-function summarizeResult(result: unknown): string {
+function summarizeResult(name: string, result: unknown): string {
   if (!result || typeof result !== "object") return String(result);
   const r = result as Record<string, unknown>;
   if (typeof r.error === "string") return `error: ${r.error}`;
+  if (name === "scan_fixtures") return scanResultSummary(result);
+  if (name === "inspect_fixture") return summarizeFixtureToolResult(name, result);
   if (Array.isArray(r.fixtures)) {
     const n = r.fixtures.length;
     const total = typeof r.total === "number" ? r.total : n;
@@ -319,14 +331,15 @@ async function executeToolCall(
   fn: { name: string; arguments: string },
   admin: ReturnType<typeof createAdminClient>,
 ): Promise<unknown> {
-  if (fn.name !== "query_fixtures") {
-    return { error: `unknown tool: ${fn.name}` };
-  }
-  let args: QueryFixturesArgs;
+  let args: unknown;
   try {
-    args = JSON.parse(fn.arguments) as QueryFixturesArgs;
+    args = JSON.parse(fn.arguments);
   } catch {
     return { error: "invalid JSON arguments" };
   }
-  return queryFixtures(args, admin as unknown as { from: (t: string) => unknown });
+  const a = admin as unknown as { from: (t: string) => unknown };
+  if (fn.name === "query_fixtures") return queryFixtures(args as QueryFixturesArgs, a);
+  if (fn.name === "scan_fixtures") return scanFixtures(args as ScanFixturesArgs, a);
+  if (fn.name === "inspect_fixture") return inspectFixture(args as InspectFixtureArgs, a);
+  return { error: `unknown tool: ${fn.name}` };
 }
