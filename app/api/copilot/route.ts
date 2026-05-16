@@ -18,7 +18,7 @@ import {
 import { summarizeFixtureToolResult } from "@/lib/fixtures/fixture-copilot-tools";
 import { recordLlmRequest } from "@/lib/llm-logs";
 
-export const maxDuration = 60;
+export const maxDuration = 100;
 
 /**
  * POST /api/copilot — fixtures-day chat backed by tool calls.
@@ -30,7 +30,7 @@ export const maxDuration = 60;
  *   2. POST to OpenRouter with `tools: [query_fixtures, scan_fixtures, inspect_fixture]`.
  *   3. If the response carries `tool_calls`, execute them against Postgres
  *      and re-post with the result as a `role:"tool"` message.
- *   4. Loop bounded at MAX_TOOL_HOPS (4) so a misbehaving model can't burn the
+ *   4. Loop bounded at MAX_TOOL_HOPS (geral) / REASONER_MAX_TOOL_HOPS (reasoner) so a misbehaving model can't burn the
  *      budget; the final non-tool-call content is returned as JSON.
  *
  * Non-streaming on purpose: tool dances are awkward to stream and the
@@ -40,14 +40,14 @@ export const maxDuration = 60;
 const SYSTEM_PROMPT = `Você é um copiloto de apostas pré-jogo focado nos jogos de futebol do dia.
 
 Ferramentas (use sempre dados frescos — nunca invente jogos/números):
-- query_fixtures: lista compacta dos jogos do dia (badges, árbitro).
-- scan_fixtures: TRIAGEM rasa cross-jogo — varre o dia com sinais derivados, filtra/ordena/projeta server-side. Use para "quais jogos…", rankings e comparações amplas.
-- inspect_fixture: MERGULHO profundo — roda uma das 12 derivações do dashboard sobre UM jogo. Use só nos jogos do shortlist do scan, para a análise de alta qualidade.
+- scan_fixtures: a ferramenta PRINCIPAL para qualquer pergunta cross-jogo (rankings, "odd X", comparações, "quais jogos com…"). Já varre o dia, filtra/ordena/projeta sinais server-side e devolve os jogos. Geralmente UMA chamada basta para a triagem.
+- inspect_fixture: MERGULHO profundo — roda uma das 12 derivações do dashboard sobre UM jogo do shortlist do scan, para a análise de alta qualidade.
+- query_fixtures: APENAS para um pedido trivial de listagem ("quais jogos hoje/amanhã"). NÃO use em perguntas de ranking/comparação — use scan_fixtures direto.
 
-Disciplina (2 etapas):
-1. Para qualquer pergunta cross-jogo, comece por query_fixtures/scan_fixtures (triagem). Nunca pule direto pro inspect sem ter o id de um jogo.
-2. Só então chame inspect_fixture nos top-N do shortlist (várias vezes se preciso) antes de concluir.
-- Regra sempre válida: toda afirmação numérica cita o valor exato vindo de uma tool + a leitura; nada fora do detail_json.
+Disciplina (eficiência é crítica — orçamento limitado):
+1. Pergunta cross-jogo → use scan_fixtures com os filtros adequados. Normalmente UMA chamada basta; só repita com filtros DIFERENTES se a pergunta exigir shortlists distintos. NÃO repita scan_fixtures com os mesmos args. NÃO chame query_fixtures antes nem depois do scan.
+2. Use inspect_fixture nos top-N do shortlist (id vindo do scan) para aprofundar, então RESPONDA. Não fique re-explorando.
+3. Toda afirmação numérica cita o valor exato vindo de uma tool + a leitura; nada fora do detail_json.
 
 Convenções de resposta:
 - Português do Brasil, em markdown, seções curtas.
@@ -71,10 +71,19 @@ const bodySchema = z
     path: ["messages"],
   });
 
-const MAX_TOOL_HOPS = 4;
+// Orçamento do tool-loop. `export const maxDuration` é convenção Vercel e
+// NÃO é garantida pelo OpenNext/Cloudflare Workers — trate como hint.
+// O guard REAL é REQUEST_DEADLINE_MS: ele só barra o INÍCIO do próximo
+// hop; NÃO interrompe a chamada OpenRouter em andamento, o tool-exec nem
+// o write de log que vêm depois. Por isso o pior caso real ≈
+// REQUEST_DEADLINE_MS + OPENROUTER_CALL_TIMEOUT_MS + (~5s scan+log).
+// Invariante: 65_000 + 20_000 = 85_000, pior caso ≈ ~90s, com folga sob
+// o ~100s que logs de prod mostraram o Workers tolerando (amostra única —
+// não é teto provado; manter margem). O hop cap evita loop infinito.
+const MAX_TOOL_HOPS = 6;
 const REASONER_MAX_TOOL_HOPS = 3;
-const OPENROUTER_CALL_TIMEOUT_MS = 25_000;
-const REQUEST_DEADLINE_MS = 30_000;
+const OPENROUTER_CALL_TIMEOUT_MS = 20_000;
+const REQUEST_DEADLINE_MS = 65_000;
 const OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 const REASONER_MODEL = "deepseek/deepseek-r1";
 const REASONER_MAX_TOKENS = 16000;

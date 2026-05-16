@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  *   1. Call OpenRouter with system + messages + tools.
  *   2. If the response includes tool_calls, execute query_fixtures and
  *      re-call with the tool results appended.
- *   3. Loop bounded by hop cap (4 / reasoner 3) + wall-clock deadline + per-call timeout.
+ *   3. Loop bounded by hop cap (6 / reasoner 3) + wall-clock deadline + per-call timeout.
  *   4. Return the final text content as JSON.
  *
  * No streaming for the first version — keeps the tool dance simple.
@@ -483,7 +483,7 @@ describe("/api/copilot — hops cap + retrocompat", () => {
     expect(json.meta.hops.map((h: { tool: string }) => h.tool)).toEqual(["query_fixtures"]);
   });
 
-  it("caps the loop at 4 hops", async () => {
+  it("caps the loop at 6 hops", async () => {
     adminState.rows = [];
     // Every turn returns the same query_fixtures tool_call (model never finalizes).
     // mockImplementation creates a fresh Response each call (body stream is single-use).
@@ -496,8 +496,8 @@ describe("/api/copilot — hops cap + retrocompat", () => {
     const { POST } = await import("@/app/api/copilot/route");
     const res = await POST(new Request("http://t/api/copilot", { method: "POST", body: JSON.stringify({ messages: [{ role: "user", content: "loop" }] }) }));
     const json = await res.json();
-    expect(json.meta.hops.length).toBe(4);
-    expect(fetchSpy).toHaveBeenCalledTimes(4);
+    expect(json.meta.hops.length).toBe(6);
+    expect(fetchSpy).toHaveBeenCalledTimes(6);
   });
 });
 
@@ -515,7 +515,7 @@ describe("/api/copilot — loop budget (bug fix)", () => {
     expect(spy).toHaveBeenCalledTimes(3);
   });
 
-  it("caps the general loop at 4 hops", async () => {
+  it("caps the general loop at 6 hops", async () => {
     adminState.rows = [];
     const spy = vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
       toolCallResponse("query_fixtures", {}, "g"),
@@ -523,7 +523,7 @@ describe("/api/copilot — loop budget (bug fix)", () => {
     const { POST } = await import("@/app/api/copilot/route");
     const res = await POST(new Request("http://x/api/copilot", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: [{ role: "user", content: "?" }] }) }));
     expect(res.status).toBe(200);
-    expect(spy).toHaveBeenCalledTimes(4);
+    expect(spy).toHaveBeenCalledTimes(6);
   });
 
   it("returns a safe JSON message when the wall-clock deadline is exceeded (before hop cap, before any OpenRouter call)", async () => {
