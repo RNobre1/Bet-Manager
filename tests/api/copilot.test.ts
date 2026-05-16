@@ -483,7 +483,7 @@ describe("/api/copilot — hops cap + retrocompat", () => {
     expect(json.meta.hops.map((h: { tool: string }) => h.tool)).toEqual(["query_fixtures"]);
   });
 
-  it("caps the loop at 6 hops", async () => {
+  it("caps the loop at 4 hops", async () => {
     adminState.rows = [];
     // Every turn returns the same query_fixtures tool_call (model never finalizes).
     // mockImplementation creates a fresh Response each call (body stream is single-use).
@@ -496,7 +496,66 @@ describe("/api/copilot — hops cap + retrocompat", () => {
     const { POST } = await import("@/app/api/copilot/route");
     const res = await POST(new Request("http://t/api/copilot", { method: "POST", body: JSON.stringify({ messages: [{ role: "user", content: "loop" }] }) }));
     const json = await res.json();
-    expect(json.meta.hops.length).toBe(6);
-    expect(fetchSpy).toHaveBeenCalledTimes(6);
+    expect(json.meta.hops.length).toBe(4);
+    expect(fetchSpy).toHaveBeenCalledTimes(4);
+  });
+});
+
+describe("/api/copilot — loop budget (bug fix)", () => {
+  it("caps reasoner (R1) loop at 3 hops", async () => {
+    adminState.rows = [];
+    const spy = vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+      toolCallResponse("query_fixtures", {}, "r"),
+    );
+    const { POST } = await import("@/app/api/copilot/route");
+    const res = await POST(new Request("http://x/api/copilot", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reasoner: true, messages: [{ role: "user", content: "?" }] }) }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(typeof body.content).toBe("string");
+    expect(spy).toHaveBeenCalledTimes(3);
+  });
+
+  it("caps the general loop at 4 hops", async () => {
+    adminState.rows = [];
+    const spy = vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+      toolCallResponse("query_fixtures", {}, "g"),
+    );
+    const { POST } = await import("@/app/api/copilot/route");
+    const res = await POST(new Request("http://x/api/copilot", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: [{ role: "user", content: "?" }] }) }));
+    expect(res.status).toBe(200);
+    expect(spy).toHaveBeenCalledTimes(4);
+  });
+
+  it("returns a safe JSON message when the wall-clock deadline is exceeded (before hop cap, before any OpenRouter call)", async () => {
+    adminState.rows = [];
+    // Date.now: 1st call = startedAt; every later call jumps far past any
+    // reasonable REQUEST_DEADLINE_MS, so the deadline guard at the top of
+    // the first loop iteration breaks before fetch is ever called.
+    let n = 0;
+    vi.spyOn(Date, "now").mockImplementation(() => (n++ === 0 ? 1_000 : 1_000 + 10 * 60_000));
+    const spy = vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+      toolCallResponse("query_fixtures", {}, "d"),
+    );
+    const { POST } = await import("@/app/api/copilot/route");
+    const res = await POST(new Request("http://x/api/copilot", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: [{ role: "user", content: "?" }] }) }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(typeof body.content).toBe("string");
+    expect(body.content.length).toBeGreaterThan(0);
+    expect(spy).not.toHaveBeenCalled(); // broke on the deadline before calling OpenRouter
+  });
+
+  it("passes an AbortSignal to the OpenRouter fetch and surfaces an aborted call as 502 JSON", async () => {
+    adminState.rows = [];
+    const spy = vi.spyOn(globalThis, "fetch").mockImplementation(async (_url: unknown, init?: { signal?: unknown }) => {
+      expect(init?.signal).toBeInstanceOf(AbortSignal);
+      throw new DOMException("The operation was aborted.", "AbortError");
+    });
+    const { POST } = await import("@/app/api/copilot/route");
+    const res = await POST(new Request("http://x/api/copilot", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: [{ role: "user", content: "?" }] }) }));
+    expect(res.status).toBe(502);
+    const body = await res.json();
+    expect(body.error).toBeTruthy();
+    expect(spy).toHaveBeenCalled();
   });
 });
