@@ -18,7 +18,7 @@ import {
 import { summarizeFixtureToolResult } from "@/lib/fixtures/fixture-copilot-tools";
 import { recordLlmRequest } from "@/lib/llm-logs";
 
-export const maxDuration = 60;
+export const maxDuration = 100;
 
 /**
  * POST /api/copilot — fixtures-day chat backed by tool calls.
@@ -40,14 +40,14 @@ export const maxDuration = 60;
 const SYSTEM_PROMPT = `Você é um copiloto de apostas pré-jogo focado nos jogos de futebol do dia.
 
 Ferramentas (use sempre dados frescos — nunca invente jogos/números):
-- query_fixtures: lista compacta dos jogos do dia (badges, árbitro).
-- scan_fixtures: TRIAGEM rasa cross-jogo — varre o dia com sinais derivados, filtra/ordena/projeta server-side. Use para "quais jogos…", rankings e comparações amplas.
-- inspect_fixture: MERGULHO profundo — roda uma das 12 derivações do dashboard sobre UM jogo. Use só nos jogos do shortlist do scan, para a análise de alta qualidade.
+- scan_fixtures: a ferramenta PRINCIPAL para qualquer pergunta cross-jogo (rankings, "odd X", comparações, "quais jogos com…"). Já varre o dia, filtra/ordena/projeta sinais server-side e devolve os jogos. UMA chamada de scan_fixtures basta para a triagem.
+- inspect_fixture: MERGULHO profundo — roda uma das 12 derivações do dashboard sobre UM jogo do shortlist do scan, para a análise de alta qualidade.
+- query_fixtures: APENAS para um pedido trivial de listagem ("quais jogos hoje/amanhã"). NÃO use em perguntas de ranking/comparação — use scan_fixtures direto.
 
-Disciplina (2 etapas):
-1. Para qualquer pergunta cross-jogo, comece por query_fixtures/scan_fixtures (triagem). Nunca pule direto pro inspect sem ter o id de um jogo.
-2. Só então chame inspect_fixture nos top-N do shortlist (várias vezes se preciso) antes de concluir.
-- Regra sempre válida: toda afirmação numérica cita o valor exato vindo de uma tool + a leitura; nada fora do detail_json.
+Disciplina (eficiência é crítica — orçamento limitado):
+1. Pergunta cross-jogo → chame scan_fixtures UMA vez com os filtros adequados. NÃO chame query_fixtures antes nem depois do scan. NÃO repita scan_fixtures com os mesmos args.
+2. Use inspect_fixture nos top-N do shortlist (id vindo do scan) para aprofundar, então RESPONDA. Não fique re-explorando.
+3. Toda afirmação numérica cita o valor exato vindo de uma tool + a leitura; nada fora do detail_json.
 
 Convenções de resposta:
 - Português do Brasil, em markdown, seções curtas.
@@ -71,10 +71,16 @@ const bodySchema = z
     path: ["messages"],
   });
 
-const MAX_TOOL_HOPS = 4;
+// Orçamento do tool-loop. Invariante de segurança:
+//   REQUEST_DEADLINE_MS + OPENROUTER_CALL_TIMEOUT_MS <= maxDuration*1000 <= teto da plataforma.
+//   75_000 + 20_000 = 95_000 <= 100_000 (maxDuration) — e logs de prod mostram
+//   requests de ~101s completando no Cloudflare Workers (OpenNext), então 95s
+//   fica com folga sob o teto real. O deadline (não o hop cap) é a rede de
+//   segurança principal; MAX_TOOL_HOPS evita loop infinito do modelo.
+const MAX_TOOL_HOPS = 6;
 const REASONER_MAX_TOOL_HOPS = 3;
-const OPENROUTER_CALL_TIMEOUT_MS = 25_000;
-const REQUEST_DEADLINE_MS = 30_000;
+const OPENROUTER_CALL_TIMEOUT_MS = 20_000;
+const REQUEST_DEADLINE_MS = 75_000;
 const OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 const REASONER_MODEL = "deepseek/deepseek-r1";
 const REASONER_MAX_TOKENS = 16000;
