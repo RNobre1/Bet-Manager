@@ -18,6 +18,8 @@ import {
 import { summarizeFixtureToolResult } from "@/lib/fixtures/fixture-copilot-tools";
 import { recordLlmRequest } from "@/lib/llm-logs";
 
+export const maxDuration = 60;
+
 /**
  * POST /api/copilot — fixtures-day chat backed by tool calls.
  *
@@ -28,7 +30,7 @@ import { recordLlmRequest } from "@/lib/llm-logs";
  *   2. POST to OpenRouter with `tools: [query_fixtures, scan_fixtures, inspect_fixture]`.
  *   3. If the response carries `tool_calls`, execute them against Postgres
  *      and re-post with the result as a `role:"tool"` message.
- *   4. Loop bounded at MAX_TOOL_HOPS (6) so a misbehaving model can't burn the
+ *   4. Loop bounded at MAX_TOOL_HOPS (4) so a misbehaving model can't burn the
  *      budget; the final non-tool-call content is returned as JSON.
  *
  * Non-streaming on purpose: tool dances are awkward to stream and the
@@ -69,7 +71,10 @@ const bodySchema = z
     path: ["messages"],
   });
 
-const MAX_TOOL_HOPS = 6;
+const MAX_TOOL_HOPS = 4;
+const REASONER_MAX_TOOL_HOPS = 3;
+const OPENROUTER_CALL_TIMEOUT_MS = 25_000;
+const REQUEST_DEADLINE_MS = 30_000;
 const OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 const REASONER_MODEL = "deepseek/deepseek-r1";
 const REASONER_MAX_TOKENS = 16000;
@@ -184,13 +189,21 @@ export async function POST(request: Request): Promise<Response> {
       u.total_tokens ?? u.prompt_tokens + u.completion_tokens;
   }
 
+  const hopCap = useReasoner ? REASONER_MAX_TOOL_HOPS : MAX_TOOL_HOPS;
+  let exitReason: "cap" | "deadline" = "cap";
+
   try {
-    for (let hop = 0; hop < MAX_TOOL_HOPS; hop++) {
+    for (let hop = 0; hop < hopCap; hop++) {
+      if (Date.now() - startedAt > REQUEST_DEADLINE_MS) {
+        exitReason = "deadline";
+        break;
+      }
       const upstream = await callOpenRouter(
         messages,
         env.OPENROUTER_API_KEY,
         model,
         useReasoner ? REASONER_MAX_TOKENS : undefined,
+        OPENROUTER_CALL_TIMEOUT_MS,
       );
       accumulateUsage(upstream.usage);
       const choice = upstream.choices[0];
@@ -239,10 +252,13 @@ export async function POST(request: Request): Promise<Response> {
           content: JSON.stringify(result),
         });
       }
+      if (Date.now() - startedAt > REQUEST_DEADLINE_MS) {
+        exitReason = "deadline";
+        break;
+      }
     }
 
-    // Hit MAX_TOOL_HOPS — model kept looping. Surface a safe message rather
-    // than burning more budget.
+    // Hit hopCap or deadline — Surface a safe message rather than burning more budget.
     const cappedMeta = meta();
     await recordLlmRequest(admin, {
       route: "copilot",
@@ -254,11 +270,11 @@ export async function POST(request: Request): Promise<Response> {
       completion_tokens: cappedMeta.usage_total.completion_tokens,
       total_tokens: cappedMeta.usage_total.total_tokens,
       hops: cappedMeta.hops,
-      error: "max_tool_hops reached",
+      error: exitReason === "deadline" ? "deadline_exceeded" : "max_tool_hops reached",
     });
     return Response.json({
       content:
-        "Não consegui formular uma resposta final em até 6 consultas. Tente reformular a pergunta com menos filtros.",
+        "Não consegui finalizar a resposta a tempo. Tente uma pergunta mais específica (menos jogos ou filtros).",
       meta: cappedMeta,
     });
   } catch (err) {
@@ -286,30 +302,38 @@ async function callOpenRouter(
   messages: UpstreamMessage[],
   apiKey: string,
   model: string,
-  maxTokens?: number,
+  maxTokens: number | undefined,
+  timeoutMs: number,
 ): Promise<UpstreamResponse> {
-  const body: Record<string, unknown> = {
+  const reqBody: Record<string, unknown> = {
     model,
     messages,
     tools: [QUERY_FIXTURES_TOOL, SCAN_FIXTURES_TOOL, INSPECT_FIXTURE_TOOL],
     tool_choice: "auto",
   };
-  if (maxTokens) body.max_tokens = maxTokens;
-  const res = await fetch(OPENROUTER_ENDPOINT, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": "https://abissal.rnobre.dev",
-      "X-Title": "Abissal Copilot",
-    },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`OpenRouter ${res.status}: ${body.slice(0, 200)}`);
+  if (maxTokens) reqBody.max_tokens = maxTokens;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(OPENROUTER_ENDPOINT, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://abissal.rnobre.dev",
+        "X-Title": "Abissal Copilot",
+      },
+      body: JSON.stringify(reqBody),
+      signal: ctrl.signal,
+    });
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => "");
+      throw new Error(`OpenRouter ${res.status}: ${errBody.slice(0, 200)}`);
+    }
+    return res.json() as Promise<UpstreamResponse>;
+  } finally {
+    clearTimeout(timer);
   }
-  return res.json() as Promise<UpstreamResponse>;
 }
 
 function parseToolArgs(raw: string): unknown {
