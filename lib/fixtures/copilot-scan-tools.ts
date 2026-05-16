@@ -261,6 +261,63 @@ export async function scanFixtures(args: ScanFixturesArgs, admin: AdminLike): Pr
   return { date, total, fixtures: projected.slice(0, limit) };
 }
 
+export const SCAN_FIXTURES_TOOL = {
+  type: "function" as const,
+  function: {
+    name: "scan_fixtures",
+    description:
+      "Triagem rasa cross-jogo: varre os jogos do dia (BRT) e devolve um shortlist rankeado com sinais derivados. Use ANTES de inspect_fixture para escolher quais jogos mergulhar. Campos de filtro/ordenação (path pontuado): cards.referee_avg_booking|cards.home_avg_cards|cards.away_avg_cards|cards.badge_cartao_alto; goals_over.home_over25_pct|goals_over.away_over25_pct|goals_over.home_avg_total_goals|goals_over.away_avg_total_goals|goals_over.badge_over_alto; btts.home_btts_pct|btts.away_btts_pct|btts.badge_btts_alto; first_half.home_fh_goal_pct|first_half.away_fh_goal_pct|first_half.badge_primeiro_tempo; form.home.pts_recent|form.away.pts_recent|form.home_streak|form.away_streak; h2h.games|h2h.avg_goals; odds.match_favorite|odds.adamchoi_pred.",
+    parameters: {
+      type: "object",
+      properties: {
+        date: { type: "string", description: "'today'(default) | 'tomorrow' | 'YYYY-MM-DD' (BRT)." },
+        league_substr: { type: "string", description: "Pré-filtro: substring do nome da liga (case-insensitive)." },
+        country: { type: "string", description: "Pré-filtro: slug do país (case-insensitive)." },
+        filters: {
+          type: "array",
+          description: "Predicados aplicados server-side sobre os sinais.",
+          items: {
+            type: "object",
+            properties: {
+              field: { type: "string", description: "Path pontuado (ver description da tool)." },
+              op: { type: "string", enum: ["gte", "lte", "eq"] },
+              value: { description: "Número (gte/lte) ou número/string (eq)." },
+            },
+            required: ["field", "op", "value"],
+            additionalProperties: false,
+          },
+        },
+        sort: {
+          type: "object",
+          properties: {
+            field: { type: "string" },
+            dir: { type: "string", enum: ["asc", "desc"] },
+          },
+          required: ["field", "dir"],
+          additionalProperties: false,
+        },
+        signals: {
+          type: "array",
+          items: { type: "string", enum: ["cards", "goals_over", "btts", "first_half", "form", "h2h", "odds"] },
+          description: "Projeta só estes grupos (default: todos).",
+        },
+        limit: { type: "number", description: "Tamanho do shortlist, 1..30 (default 15)." },
+      },
+      additionalProperties: false,
+    },
+  },
+};
+
+export function scanResultSummary(result: unknown): string {
+  if (!result || typeof result !== "object") return String(result);
+  const r = result as Record<string, unknown>;
+  if (typeof r.error === "string") return `error: ${r.error}`;
+  const n = Array.isArray(r.fixtures) ? r.fixtures.length : 0;
+  const total = typeof r.total === "number" ? r.total : n;
+  const date = typeof r.date === "string" ? r.date : "?";
+  return `scan_fixtures: ${n}/${total} (${date})`;
+}
+
 export function computeFixtureSignals(row: FixtureRowLite): FixtureSignals {
   const d = row.detail_json;
   const rh = recent(d, "home", row.home_team);

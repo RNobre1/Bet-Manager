@@ -178,3 +178,29 @@ describe("computeFixtureSignals", () => {
     expect(s.odds.adamchoi_pred).toBeNull();
   });
 });
+
+import { SCAN_FIXTURES_TOOL, scanResultSummary } from "./copilot-scan-tools";
+
+describe("SCAN_FIXTURES_TOOL + summary", () => {
+  it("exposes a function schema named scan_fixtures with the expected args", () => {
+    expect(SCAN_FIXTURES_TOOL.function.name).toBe("scan_fixtures");
+    const props = SCAN_FIXTURES_TOOL.function.parameters.properties as Record<string, unknown>;
+    for (const k of ["date", "league_substr", "country", "filters", "sort", "signals", "limit"]) {
+      expect(props[k]).toBeDefined();
+    }
+  });
+
+  it("enumerates the symmetric goals_over fields (no avg_total_goals) in the description", () => {
+    const desc = SCAN_FIXTURES_TOOL.function.description;
+    expect(desc).toContain("goals_over.home_avg_total_goals");
+    expect(desc).toContain("goals_over.away_avg_total_goals");
+    expect(desc).not.toContain("goals_over.avg_total_goals");
+  });
+
+  it("summarizes a scan result compactly", () => {
+    expect(scanResultSummary({ date: "2026-05-16", total: 12, fixtures: [{}, {}] })).toBe(
+      "scan_fixtures: 2/12 (2026-05-16)",
+    );
+    expect(scanResultSummary({ error: "campo inválido: x" })).toBe("error: campo inválido: x");
+  });
+});
