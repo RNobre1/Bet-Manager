@@ -74,7 +74,7 @@ const bodySchema = z
 const MAX_TOOL_HOPS = 4;
 const REASONER_MAX_TOOL_HOPS = 3;
 const OPENROUTER_CALL_TIMEOUT_MS = 25_000;
-const REQUEST_DEADLINE_MS = 45_000;
+const REQUEST_DEADLINE_MS = 30_000;
 const OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 const REASONER_MODEL = "deepseek/deepseek-r1";
 const REASONER_MAX_TOKENS = 16000;
@@ -251,6 +251,10 @@ export async function POST(request: Request): Promise<Response> {
           tool_call_id: call.id,
           content: JSON.stringify(result),
         });
+      }
+      if (Date.now() - startedAt > REQUEST_DEADLINE_MS) {
+        exitReason = "deadline";
+        break;
       }
     }
 

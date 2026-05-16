@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  *   1. Call OpenRouter with system + messages + tools.
  *   2. If the response includes tool_calls, execute query_fixtures and
  *      re-call with the tool results appended.
- *   3. Loop bounded at MAX_TOOL_HOPS (6) to keep token cost capped.
+ *   3. Loop bounded by hop cap (4 / reasoner 3) + wall-clock deadline + per-call timeout.
  *   4. Return the final text content as JSON.
  *
  * No streaming for the first version — keeps the tool dance simple.
@@ -557,5 +557,27 @@ describe("/api/copilot — loop budget (bug fix)", () => {
     const body = await res.json();
     expect(body.error).toBeTruthy();
     expect(spy).toHaveBeenCalled();
+  });
+
+  it("breaks on the deadline AFTER tool execution, before the next OpenRouter call", async () => {
+    adminState.rows = [];
+    // Date.now sequence: call#1 = startedAt (1000); the loop-top check on
+    // iteration 0 must PASS (still 1000), then after the tool executes the
+    // post-tool check must FAIL (far past the deadline) → break with 1 fetch.
+    let n = 0;
+    vi.spyOn(Date, "now").mockImplementation(() => {
+      n += 1;
+      // 1: startedAt, 2: loop-top guard iter0 (pass), 3+: post-tool guard (fail)
+      return n <= 2 ? 1_000 : 1_000 + 10 * 60_000;
+    });
+    const spy = vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+      toolCallResponse("query_fixtures", {}, "p"),
+    );
+    const { POST } = await import("@/app/api/copilot/route");
+    const res = await POST(new Request("http://x/api/copilot", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: [{ role: "user", content: "?" }] }) }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(typeof body.content).toBe("string");
+    expect(spy).toHaveBeenCalledTimes(1); // one hop, then post-tool deadline broke it
   });
 });
