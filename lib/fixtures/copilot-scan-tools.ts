@@ -122,6 +122,45 @@ function oddsSignal(detail: unknown): { categories: string[]; match_favorite: st
   return { categories, match_favorite, adamchoi_pred };
 }
 
+export function normText(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+export function leagueMatches(rowLeague: string | null, needle: string): boolean {
+  const a = normText(rowLeague ?? "");
+  const b = normText(needle);
+  if (!b) return true;
+  return a.includes(b) || b.includes(a);
+}
+
+function roundNum(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+export function compactForLlm(value: unknown, depth = 0): unknown {
+  if (value === null || value === undefined) return value;
+  if (typeof value === "number") return Number.isFinite(value) ? roundNum(value) : value;
+  if (typeof value === "string") return value.length > 240 ? value.slice(0, 240) + "…" : value;
+  if (Array.isArray(value)) {
+    const MAX = 8;
+    // Amostra os 8 primeiros itens (compactação forte aceita perda de
+    // detalhe fino). Sem sentinela in-band: um marcador string dentro de
+    // um array tipado corromperia contagens .length a jusante.
+    return value.slice(0, MAX).map((v) => compactForLlm(v, depth + 1));
+  }
+  if (typeof value === "object") {
+    if (depth >= 6) return "{…}";
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) out[k] = compactForLlm(v, depth + 1);
+    return out;
+  }
+  return value;
+}
+
 const SCAN_COLUMNS =
   "id, match_date, ko_time, home_team, away_team, league, country, source_url, detail_json, kickoff_utc";
 
@@ -153,7 +192,7 @@ export interface ScanEntry {
   signals: FixtureSignals;
 }
 
-export interface ScanResult { date: string; total: number; fixtures: ScanEntry[]; error?: string }
+export interface ScanResult { date: string; total: number; fixtures: ScanEntry[]; error?: string; available?: Array<{ country: string | null; league: string | null }> }
 
 const SIGNAL_GROUPS = ["cards", "goals_over", "btts", "first_half", "form", "h2h", "odds"] as const;
 
@@ -216,8 +255,8 @@ export async function scanFixtures(args: ScanFixturesArgs, admin: AdminLike): Pr
 
   const coarse = data.filter((row) => {
     if (row.detail_json === null || row.detail_json === undefined) return false;
-    if (args.country && (row.country ?? "").toLowerCase() !== args.country.toLowerCase()) return false;
-    if (args.league_substr && !(row.league ?? "").toLowerCase().includes(args.league_substr.toLowerCase())) return false;
+    if (args.country && normText(row.country ?? "") !== normText(args.country)) return false;
+    if (args.league_substr && !leagueMatches(row.league, args.league_substr)) return false;
     return true;
   });
 
@@ -252,16 +291,32 @@ export async function scanFixtures(args: ScanFixturesArgs, admin: AdminLike): Pr
   // os grupos (fallback deliberado — nunca devolve signals vazio por engano).
   const wanted = args.signals?.filter((s) => (SIGNAL_GROUPS as readonly string[]).includes(s));
   const projected = filtered.map((e) => {
-    if (!wanted || wanted.length === 0) return e;
+    if (!wanted || wanted.length === 0) {
+      return { ...e, signals: compactForLlm(e.signals) as unknown as FixtureSignals };
+    }
     const sig: Record<string, unknown> = {};
     for (const g of wanted) sig[g] = (e.signals as unknown as Record<string, unknown>)[g];
-    return { ...e, signals: sig as unknown as FixtureSignals };
+    return { ...e, signals: compactForLlm(sig) as unknown as FixtureSignals };
   });
 
   const rawLimit = args.limit ?? 15;
   const limit = Number.isFinite(rawLimit)
     ? Math.max(1, Math.min(30, Math.floor(rawLimit)))
     : 15;
+
+  if (total === 0) {
+    const seen = new Set<string>();
+    const available: Array<{ country: string | null; league: string | null }> = [];
+    for (const row of data) {
+      if (row.detail_json === null || row.detail_json === undefined) continue;
+      const key = `${row.country ?? ""}|${row.league ?? ""}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      available.push({ country: row.country, league: row.league });
+    }
+    return { date, total: 0, fixtures: [], available };
+  }
+
   return { date, total, fixtures: projected.slice(0, limit) };
 }
 
@@ -274,7 +329,7 @@ export const SCAN_FIXTURES_TOOL = {
   function: {
     name: "scan_fixtures",
     description:
-      "Triagem rasa cross-jogo: varre os jogos do dia (BRT) e devolve um shortlist rankeado com sinais derivados. Use ANTES de inspect_fixture para escolher quais jogos mergulhar. Campos de filtro/ordenação (path pontuado): cards.referee_avg_booking|cards.home_avg_cards|cards.away_avg_cards|cards.badge_cartao_alto; goals_over.home_over25_pct|goals_over.away_over25_pct|goals_over.home_avg_total_goals|goals_over.away_avg_total_goals|goals_over.badge_over_alto; btts.home_btts_pct|btts.away_btts_pct|btts.badge_btts_alto; first_half.home_fh_goal_pct|first_half.away_fh_goal_pct|first_half.badge_primeiro_tempo; form.home.pts_recent|form.away.pts_recent|form.home_streak|form.away_streak; h2h.games|h2h.avg_goals; odds.match_favorite|odds.adamchoi_pred.",
+      "Triagem rasa cross-jogo: varre os jogos do dia (BRT) e devolve um shortlist rankeado com sinais derivados. Use ANTES de inspect_fixture para escolher quais jogos mergulhar. Campos de filtro/ordenação (path pontuado): cards.referee_avg_booking|cards.home_avg_cards|cards.away_avg_cards|cards.badge_cartao_alto; goals_over.home_over25_pct|goals_over.away_over25_pct|goals_over.home_avg_total_goals|goals_over.away_avg_total_goals|goals_over.badge_over_alto; btts.home_btts_pct|btts.away_btts_pct|btts.badge_btts_alto; first_half.home_fh_goal_pct|first_half.away_fh_goal_pct|first_half.badge_primeiro_tempo; form.home.pts_recent|form.away.pts_recent|form.home_streak|form.away_streak; h2h.games|h2h.avg_goals; odds.match_favorite|odds.adamchoi_pred. Matching de liga/país é tolerante (sem acento, bidirecional). Se voltar total:0, o campo `available` lista as ligas/países realmente presentes no dia — reescreva o filtro com base nele em vez de tentar de novo às cegas.",
     parameters: {
       type: "object",
       properties: {
@@ -405,7 +460,9 @@ export async function inspectFixture(
     homeTeam: row.home_team,
     awayTeam: row.away_team,
   };
-  return executeFixtureTool(args.tool, args.tool_args, ctx);
+  const r = await executeFixtureTool(args.tool, args.tool_args, ctx);
+  if (r && typeof (r as { error?: unknown }).error === "string") return r;
+  return compactForLlm(r) as Record<string, unknown>;
 }
 
 export const INSPECT_FIXTURE_TOOL = {
