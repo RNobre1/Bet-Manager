@@ -134,10 +134,7 @@ export function leagueMatches(rowLeague: string | null, needle: string): boolean
   const a = normText(rowLeague ?? "");
   const b = normText(needle);
   if (!b) return true;
-  if (a.includes(b) || b.includes(a)) return true;
-  const at = a.split(/\s+/).filter(Boolean);
-  const bt = b.split(/\s+/).filter((t) => t.length > 2);
-  return bt.length > 0 && bt.every((t) => at.includes(t) || a.includes(t));
+  return a.includes(b) || b.includes(a);
 }
 
 function roundNum(n: number): number {
@@ -150,8 +147,10 @@ export function compactForLlm(value: unknown, depth = 0): unknown {
   if (typeof value === "string") return value.length > 240 ? value.slice(0, 240) + "…" : value;
   if (Array.isArray(value)) {
     const MAX = 8;
-    const head = value.slice(0, MAX).map((v) => compactForLlm(v, depth + 1));
-    return value.length > MAX ? [...head, `…(+${value.length - MAX} itens omitidos)`] : head;
+    // Amostra os 8 primeiros itens (compactação forte aceita perda de
+    // detalhe fino). Sem sentinela in-band: um marcador string dentro de
+    // um array tipado corromperia contagens .length a jusante.
+    return value.slice(0, MAX).map((v) => compactForLlm(v, depth + 1));
   }
   if (typeof value === "object") {
     if (depth >= 6) return "{…}";
