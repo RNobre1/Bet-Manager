@@ -133,13 +133,21 @@ export function CopilotFab({ date }: CopilotFabProps) {
           messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
         }),
       });
-      const body = (await res.json()) as {
-        content?: string;
-        error?: string;
-        meta?: CopilotMeta;
-      };
-      if (!res.ok) {
-        setError(body.error ?? `HTTP ${res.status}`);
+      const raw = await res.text();
+      let body:
+        | { content?: string; error?: string; meta?: CopilotMeta }
+        | null = null;
+      try {
+        body = raw ? JSON.parse(raw) : null;
+      } catch {
+        body = null;
+      }
+      if (!res.ok || !body) {
+        setError(
+          body?.error ??
+            "O copilot demorou demais ou falhou. Tente uma pergunta mais específica" +
+              (useReasoner ? " ou desligue o R1." : "."),
+        );
         return;
       }
       setMessages((prev) => {
