@@ -136,13 +136,9 @@ export interface ScanFixturesArgs {
   date?: string;
   league_substr?: string;
   country?: string;
-  /** Reservado — só honrado a partir da Task 3 (filtros/sort/projeção/limit server-side). */
   filters?: ScanFilter[];
-  /** Reservado — só honrado a partir da Task 3 (filtros/sort/projeção/limit server-side). */
   sort?: ScanSort;
-  /** Reservado — só honrado a partir da Task 3 (filtros/sort/projeção/limit server-side). */
   signals?: string[];
-  /** Reservado — só honrado a partir da Task 3 (filtros/sort/projeção/limit server-side). */
   limit?: number;
 }
 
@@ -156,7 +152,32 @@ export interface ScanEntry {
   signals: FixtureSignals;
 }
 
-export interface ScanResult { date: string; total: number; fixtures: ScanEntry[] }
+export interface ScanResult { date: string; total: number; fixtures: ScanEntry[]; error?: string }
+
+const SIGNAL_GROUPS = ["cards", "goals_over", "btts", "first_half", "form", "h2h", "odds"] as const;
+
+function getByPath(obj: unknown, path: string): unknown {
+  return path.split(".").reduce<unknown>((acc, key) => {
+    if (acc && typeof acc === "object") return (acc as Record<string, unknown>)[key];
+    return undefined;
+  }, obj);
+}
+
+function validField(path: string): boolean {
+  return path.startsWith("signals.") || SIGNAL_GROUPS.some((g) => path === g || path.startsWith(`${g}.`));
+}
+
+function normPath(path: string): string {
+  return path.startsWith("signals.") ? path : `signals.${path}`;
+}
+
+function passesFilter(entry: ScanEntry, f: ScanFilter): boolean {
+  const v = getByPath(entry, normPath(f.field));
+  if (v === null || v === undefined) return false;
+  if (f.op === "eq") return v === f.value;
+  if (typeof v !== "number" || typeof f.value !== "number") return false;
+  return f.op === "gte" ? v >= f.value : v <= f.value;
+}
 
 function resolveDate(input: string | undefined): string {
   if (!input) return todayBrt();
@@ -195,7 +216,42 @@ export async function scanFixtures(args: ScanFixturesArgs, admin: AdminLike): Pr
     signals: computeFixtureSignals(row),
   }));
 
-  return { date, total: entries.length, fixtures: entries };
+  // ── filtros server-side ────────────────────────────────────────────────
+  const allFields = [
+    ...(args.filters?.map((f) => f.field) ?? []),
+    ...(args.sort ? [args.sort.field] : []),
+  ];
+  const bad = allFields.find((p) => !validField(p));
+  if (bad) {
+    return { date, total: 0, fixtures: [], error: `campo inválido: ${bad}` };
+  }
+
+  let filtered = entries;
+  for (const f of args.filters ?? []) filtered = filtered.filter((e) => passesFilter(e, f));
+
+  if (args.sort) {
+    const { field, dir } = args.sort;
+    filtered = [...filtered].sort((a, b) => {
+      const av = getByPath(a, normPath(field));
+      const bv = getByPath(b, normPath(field));
+      const an = typeof av === "number" ? av : Number.NEGATIVE_INFINITY;
+      const bn = typeof bv === "number" ? bv : Number.NEGATIVE_INFINITY;
+      return dir === "asc" ? an - bn : bn - an;
+    });
+  }
+
+  const total = filtered.length;
+
+  const wanted = args.signals?.filter((s) => (SIGNAL_GROUPS as readonly string[]).includes(s));
+  const projected = filtered.map((e) => {
+    if (!wanted || wanted.length === 0) return e;
+    const sig: Record<string, unknown> = {};
+    for (const g of wanted) sig[g] = (e.signals as unknown as Record<string, unknown>)[g];
+    return { ...e, signals: sig as unknown as FixtureSignals };
+  });
+
+  const limit = Math.max(1, Math.min(30, Math.floor(args.limit ?? 15)));
+  return { date, total, fixtures: projected.slice(0, limit) };
 }
 
 export function computeFixtureSignals(row: FixtureRowLite): FixtureSignals {

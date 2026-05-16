@@ -50,6 +50,7 @@ function baseRow(detail: unknown): FixtureRowLite {
 }
 
 import { scanFixtures } from "./copilot-scan-tools";
+import type { ScanFixturesArgs } from "./copilot-scan-tools";
 
 function buildAdmin(rows: unknown[]) {
   return {
@@ -92,6 +93,36 @@ describe("scanFixtures — core", () => {
     expect(r1.fixtures.map((f) => f.id)).toEqual([9]);
     const r2 = await scanFixtures({ league_substr: "serie" }, buildAdmin(rows));
     expect(r2.fixtures.map((f) => f.id)).toEqual([7]);
+  });
+});
+
+describe("scanFixtures — filter/sort/projection/limit", () => {
+  const rows = [
+    { ...baseRow(FULL_DETAIL), id: 1 },
+    { ...baseRow({ ...FULL_DETAIL, referee_record: { ...FULL_DETAIL.referee_record, avg_total_booking_points: 20 } }), id: 2 },
+  ];
+
+  it("filters server-side by dotted field with gte", async () => {
+    const args: ScanFixturesArgs = { filters: [{ field: "cards.referee_avg_booking", op: "gte", value: 40 }] };
+    const res = await scanFixtures(args, buildAdmin(rows));
+    expect(res.fixtures.map((f) => f.id)).toEqual([1]);
+    expect(res.total).toBe(1);
+  });
+
+  it("sorts by dotted field desc and respects limit", async () => {
+    const res = await scanFixtures({ sort: { field: "cards.referee_avg_booking", dir: "desc" }, limit: 1 }, buildAdmin(rows));
+    expect(res.fixtures.map((f) => f.id)).toEqual([1]);
+    expect(res.total).toBe(2);
+  });
+
+  it("projects only requested signal groups", async () => {
+    const res = await scanFixtures({ signals: ["cards"] }, buildAdmin(rows));
+    expect(Object.keys(res.fixtures[0].signals)).toEqual(["cards"]);
+  });
+
+  it("returns { error } for an unknown filter field", async () => {
+    const res = await scanFixtures({ filters: [{ field: "nope.bad", op: "eq", value: 1 }] }, buildAdmin(rows));
+    expect((res as unknown as { error?: string }).error).toMatch(/campo inválido/);
   });
 });
 
