@@ -49,6 +49,52 @@ function baseRow(detail: unknown): FixtureRowLite {
   };
 }
 
+import { scanFixtures, type ScanFixturesArgs } from "./copilot-scan-tools";
+
+function buildAdmin(rows: unknown[]) {
+  return {
+    from(table: string) {
+      if (table !== "fixtures") throw new Error(`unexpected table: ${table}`);
+      const chain = {
+        select() { return chain; },
+        or() { return chain; },
+        order() { return chain; },
+        then(resolve: (v: { data: unknown[]; error: null }) => void) {
+          resolve({ data: rows, error: null });
+        },
+      };
+      return chain;
+    },
+  };
+}
+
+describe("scanFixtures — core", () => {
+  it("returns one entry per fixture with detail, excluding null-detail rows", async () => {
+    const rows = [
+      baseRow(FULL_DETAIL),
+      { ...baseRow(null), id: 8 },
+      { ...baseRow(FULL_DETAIL), id: 9, league: "Premier League", country: "england" },
+    ];
+    const res = await scanFixtures({ date: "2026-05-16" }, buildAdmin(rows));
+    expect(res.date).toBe("2026-05-16");
+    expect(res.total).toBe(2);
+    expect(res.fixtures.map((f) => f.id).sort()).toEqual([7, 9]);
+    expect(res.fixtures[0]).toMatchObject({ home_team: "Alpha", away_team: "Beta" });
+    expect(res.fixtures[0].signals.cards.referee_avg_booking).toBe(48);
+  });
+
+  it("applies coarse league_substr / country pre-filters", async () => {
+    const rows = [
+      baseRow(FULL_DETAIL),
+      { ...baseRow(FULL_DETAIL), id: 9, league: "Premier League", country: "england" },
+    ];
+    const r1 = await scanFixtures({ country: "england" }, buildAdmin(rows));
+    expect(r1.fixtures.map((f) => f.id)).toEqual([9]);
+    const r2 = await scanFixtures({ league_substr: "serie" }, buildAdmin(rows));
+    expect(r2.fixtures.map((f) => f.id)).toEqual([7]);
+  });
+});
+
 describe("computeFixtureSignals", () => {
   it("computes all 7 signal groups from a full detail_json", () => {
     const s = computeFixtureSignals(baseRow(FULL_DETAIL));

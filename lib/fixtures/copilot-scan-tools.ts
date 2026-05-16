@@ -5,6 +5,7 @@ import {
   deriveStreakIndex,
   deriveOddsCategories,
 } from "@/lib/fixtures/stats/derive";
+import { brtDayWindowUtc, formatUtcAsBrt, parseDateParam, todayBrt } from "./time";
 import type {
   NormalizedRecentMatch,
   Prediction,
@@ -118,6 +119,79 @@ function oddsSignal(detail: unknown): { categories: string[]; match_favorite: st
     adamchoi_pred = top ? top.stat_type + (top.chance_team ? `: ${top.chance_team}` : "") : null;
   }
   return { categories, match_favorite, adamchoi_pred };
+}
+
+const SCAN_COLUMNS =
+  "id, match_date, ko_time, home_team, away_team, league, country, source_url, detail_json, kickoff_utc";
+
+interface AdminLike {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  from: (table: string) => any;
+}
+
+export interface ScanFilter { field: string; op: "gte" | "lte" | "eq"; value: number | string }
+export interface ScanSort { field: string; dir: "asc" | "desc" }
+
+export interface ScanFixturesArgs {
+  date?: string;
+  league_substr?: string;
+  country?: string;
+  filters?: ScanFilter[];
+  sort?: ScanSort;
+  signals?: string[];
+  limit?: number;
+}
+
+export interface ScanEntry {
+  id: number;
+  home_team: string;
+  away_team: string;
+  league: string | null;
+  country: string | null;
+  kickoff_brt: string | null;
+  signals: FixtureSignals;
+}
+
+export interface ScanResult { date: string; total: number; fixtures: ScanEntry[] }
+
+function resolveDate(input: string | undefined): string {
+  if (!input) return todayBrt();
+  return parseDateParam(input) ?? todayBrt();
+}
+
+export async function scanFixtures(args: ScanFixturesArgs, admin: AdminLike): Promise<ScanResult> {
+  const date = resolveDate(args.date);
+  const { startUtc, endUtc } = brtDayWindowUtc(date);
+  const orExpr =
+    `and(kickoff_utc.gte.${startUtc},kickoff_utc.lt.${endUtc}),` +
+    `and(kickoff_utc.is.null,match_date.eq.${date})`;
+
+  const result = await admin
+    .from("fixtures")
+    .select(SCAN_COLUMNS)
+    .or(orExpr)
+    .order("kickoff_utc", { ascending: true, nullsFirst: false });
+
+  const data: FixtureRowLite[] = (result?.data ?? []) as FixtureRowLite[];
+
+  const coarse = data.filter((row) => {
+    if (row.detail_json === null || row.detail_json === undefined) return false;
+    if (args.country && (row.country ?? "").toLowerCase() !== args.country.toLowerCase()) return false;
+    if (args.league_substr && !(row.league ?? "").toLowerCase().includes(args.league_substr.toLowerCase())) return false;
+    return true;
+  });
+
+  const entries: ScanEntry[] = coarse.map((row) => ({
+    id: row.id,
+    home_team: row.home_team,
+    away_team: row.away_team,
+    league: row.league,
+    country: row.country,
+    kickoff_brt: formatUtcAsBrt(row.kickoff_utc),
+    signals: computeFixtureSignals(row),
+  }));
+
+  return { date, total: entries.length, fixtures: entries };
 }
 
 export function computeFixtureSignals(row: FixtureRowLite): FixtureSignals {
