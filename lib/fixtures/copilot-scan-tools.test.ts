@@ -180,6 +180,25 @@ describe("computeFixtureSignals", () => {
 });
 
 import { SCAN_FIXTURES_TOOL, scanResultSummary } from "./copilot-scan-tools";
+import { inspectFixture, INSPECT_FIXTURE_TOOL } from "./copilot-scan-tools";
+
+function buildAdminById(byId: Record<number, unknown>) {
+  return {
+    from(table: string) {
+      if (table !== "fixtures") throw new Error("unexpected table");
+      let wanted: number | null = null;
+      const chain = {
+        select() { return chain; },
+        eq(_col: string, id: number) { wanted = id; return chain; },
+        maybeSingle() {
+          const row = wanted !== null ? byId[wanted] ?? null : null;
+          return Promise.resolve({ data: row, error: null });
+        },
+      };
+      return chain;
+    },
+  };
+}
 
 describe("SCAN_FIXTURES_TOOL + summary", () => {
   it("exposes a function schema named scan_fixtures with the expected args", () => {
@@ -207,5 +226,34 @@ describe("SCAN_FIXTURES_TOOL + summary", () => {
   it("returns String(result) for non-object input (parity with summarizeFixtureToolResult)", () => {
     expect(scanResultSummary(null)).toBe("null");
     expect(scanResultSummary(undefined)).toBe("undefined");
+  });
+});
+
+describe("inspectFixture", () => {
+  const admin = buildAdminById({
+    7: { id: 7, home_team: "Alpha", away_team: "Beta", detail_json: FULL_DETAIL },
+  });
+
+  it("delegates to an A tool over the fixture's detail_json", async () => {
+    const res = await inspectFixture({ fixture_id: 7, tool: "get_referee", tool_args: {} }, admin);
+    expect((res as Record<string, unknown>).name).toBe("Ref");
+  });
+
+  it("returns { error } for a missing fixture", async () => {
+    const res = await inspectFixture({ fixture_id: 999, tool: "get_referee" }, admin);
+    expect((res as { error?: string }).error).toMatch(/não encontr/);
+  });
+
+  it("returns { error } when the fixture has no detail_json", async () => {
+    const a2 = buildAdminById({ 8: { id: 8, home_team: "X", away_team: "Y", detail_json: null } });
+    const res = await inspectFixture({ fixture_id: 8, tool: "get_referee" }, a2);
+    expect((res as { error?: string }).error).toMatch(/sem detail/);
+  });
+
+  it("exposes a schema named inspect_fixture enumerating the 12 A tools", () => {
+    expect(INSPECT_FIXTURE_TOOL.function.name).toBe("inspect_fixture");
+    const toolProp = (INSPECT_FIXTURE_TOOL.function.parameters.properties as Record<string, { enum?: string[] }>).tool;
+    expect(toolProp.enum).toContain("get_insights");
+    expect(toolProp.enum?.length).toBe(12);
   });
 });

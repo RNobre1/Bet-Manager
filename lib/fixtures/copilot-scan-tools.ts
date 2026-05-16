@@ -5,6 +5,7 @@ import {
   deriveStreakIndex,
   deriveOddsCategories,
 } from "@/lib/fixtures/stats/derive";
+import { executeFixtureTool, type FixtureToolCtx } from "@/lib/fixtures/fixture-copilot-tools";
 import { brtDayWindowUtc, formatUtcAsBrt, parseDateParam, todayBrt } from "./time";
 import type {
   NormalizedRecentMatch,
@@ -366,3 +367,61 @@ export function computeFixtureSignals(row: FixtureRowLite): FixtureSignals {
     odds: oddsSignal(d),
   };
 }
+
+const A_TOOL_NAMES = [
+  "get_insights", "get_team_record", "get_recent_matches", "get_h2h",
+  "get_splits", "get_distributions", "get_radar", "get_player_stats",
+  "get_streaks", "get_referee", "get_odds", "get_predictions",
+] as const;
+
+export interface InspectFixtureArgs {
+  fixture_id: number;
+  tool: string;
+  tool_args?: unknown;
+}
+
+export async function inspectFixture(
+  args: InspectFixtureArgs,
+  admin: AdminLike,
+): Promise<Record<string, unknown>> {
+  if (typeof args?.fixture_id !== "number") return { error: "fixture_id obrigatório" };
+  const { data } = await admin
+    .from("fixtures")
+    .select("id, home_team, away_team, detail_json")
+    .eq("id", args.fixture_id)
+    .maybeSingle();
+  if (!data) return { error: `fixture ${args.fixture_id} não encontrado na janela` };
+  const row = data as { home_team: string; away_team: string; detail_json: unknown };
+  if (row.detail_json === null || row.detail_json === undefined) {
+    return { error: `fixture ${args.fixture_id} sem detail_json ainda` };
+  }
+  const ctx: FixtureToolCtx = {
+    detail: row.detail_json,
+    homeTeam: row.home_team,
+    awayTeam: row.away_team,
+  };
+  return executeFixtureTool(args.tool, args.tool_args, ctx);
+}
+
+export const INSPECT_FIXTURE_TOOL = {
+  type: "function" as const,
+  function: {
+    name: "inspect_fixture",
+    description:
+      "Mergulho profundo num jogo: roda UMA das 12 derivações do dashboard sobre o detail_json do fixture. Use nos jogos do shortlist do scan_fixtures para análise de alta qualidade. Chame várias vezes (tools/lados diferentes) conforme precisar.",
+    parameters: {
+      type: "object",
+      properties: {
+        fixture_id: { type: "number", description: "id do fixture (vindo de query_fixtures/scan_fixtures)." },
+        tool: { type: "string", enum: [...A_TOOL_NAMES], description: "Qual derivação rodar." },
+        tool_args: {
+          type: "object",
+          description: "Args da derivação. Ex.: { side: 'home'|'away' } para tools com lado; {} caso não use.",
+          additionalProperties: true,
+        },
+      },
+      required: ["fixture_id", "tool"],
+      additionalProperties: false,
+    },
+  },
+};
