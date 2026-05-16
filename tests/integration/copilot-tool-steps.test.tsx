@@ -40,6 +40,6 @@ describe("CopilotToolSteps", () => {
 describe("CopilotFab wiring", () => {
   it("composes with CopilotToolSteps without throwing", () => {
     const { container } = render(<CopilotFab date="today" />);
-    expect(container).toBeTruthy();
+    expect(container.firstChild).not.toBeNull();
   });
 });
