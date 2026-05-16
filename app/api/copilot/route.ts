@@ -6,6 +6,16 @@ import {
   queryFixtures,
   type QueryFixturesArgs,
 } from "@/lib/fixtures/copilot-tools";
+import {
+  SCAN_FIXTURES_TOOL,
+  INSPECT_FIXTURE_TOOL,
+  scanFixtures,
+  scanResultSummary,
+  inspectFixture,
+  type ScanFixturesArgs,
+  type InspectFixtureArgs,
+} from "@/lib/fixtures/copilot-scan-tools";
+import { summarizeFixtureToolResult } from "@/lib/fixtures/fixture-copilot-tools";
 import { recordLlmRequest } from "@/lib/llm-logs";
 
 /**
@@ -14,30 +24,34 @@ import { recordLlmRequest } from "@/lib/llm-logs";
  * Body: { messages: [{role,content},...], date?: string }
  *
  * Flow:
- *   1. Build a system prompt that primes the agent + describes the tool.
- *   2. POST to OpenRouter with `tools: [query_fixtures]`.
+ *   1. Build a system prompt that primes the agent + describes all 3 tools.
+ *   2. POST to OpenRouter with `tools: [query_fixtures, scan_fixtures, inspect_fixture]`.
  *   3. If the response carries `tool_calls`, execute them against Postgres
  *      and re-post with the result as a `role:"tool"` message.
- *   4. Loop bounded at MAX_TOOL_HOPS so a misbehaving model can't burn the
+ *   4. Loop bounded at MAX_TOOL_HOPS (6) so a misbehaving model can't burn the
  *      budget; the final non-tool-call content is returned as JSON.
  *
  * Non-streaming on purpose: tool dances are awkward to stream and the
  * round-trip is typically 1–3 seconds. The UI shows a loader meanwhile.
  */
 
-const SYSTEM_PROMPT = `Você é um copiloto de apostas pré-jogo focado em fixtures de futebol do dia.
-Sempre que o usuário perguntar sobre os jogos do dia, ligas, times, árbitros, cartões,
-gols, BTTS ou 1º tempo, USE a tool query_fixtures pra puxar dados frescos do banco —
-não invente partidas nem estatísticas.
+const SYSTEM_PROMPT = `Você é um copiloto de apostas pré-jogo focado nos jogos de futebol do dia.
+
+Ferramentas (use sempre dados frescos — nunca invente jogos/números):
+- query_fixtures: lista compacta dos jogos do dia (badges, árbitro).
+- scan_fixtures: TRIAGEM rasa cross-jogo — varre o dia com sinais derivados, filtra/ordena/projeta server-side. Use para "quais jogos…", rankings e comparações amplas.
+- inspect_fixture: MERGULHO profundo — roda uma das 12 derivações do dashboard sobre UM jogo. Use só nos jogos do shortlist do scan, para a análise de alta qualidade.
+
+Disciplina (2 etapas):
+1. Para qualquer pergunta cross-jogo, comece por query_fixtures/scan_fixtures (triagem). Nunca pule direto pro inspect sem ter o id de um jogo.
+2. Só então chame inspect_fixture nos top-N do shortlist (várias vezes se preciso) antes de concluir.
+- Regra sempre válida: toda afirmação numérica cita o valor exato vindo de uma tool + a leitura; nada fora do detail_json.
 
 Convenções de resposta:
-- Português do Brasil, em markdown, com seções curtas.
-- Sempre comece dizendo quantos jogos casaram com o filtro (ex: "Achei 3 jogos…").
-- Liste cada jogo como "HH:MM BRT • Time A vs Time B (Liga, País)".
-- Mencione os badges relevantes ("over alto", "cartão alto", etc.) entre parênteses.
-- Quando o usuário pede uma comparação ou recomendação, faça com base nos sinais
-  retornados pela tool (badges, referee_avg_booking, kickoff_brt). Não chute.
-- Se a tool não retornar nada, diga isso explicitamente.`;
+- Português do Brasil, em markdown, seções curtas.
+- Comece dizendo quantos jogos casaram ("Achei 3 jogos…").
+- Liste como "HH:MM BRT • Time A vs Time B (Liga, País)".
+- Se nada casar o filtro, diga isso explicitamente.`;
 
 const chatMessageSchema = z.object({
   role: z.enum(["user", "assistant"]),
@@ -55,7 +69,7 @@ const bodySchema = z
     path: ["messages"],
   });
 
-const MAX_TOOL_HOPS = 3;
+const MAX_TOOL_HOPS = 6;
 const OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 const REASONER_MODEL = "deepseek/deepseek-r1";
 const REASONER_MAX_TOKENS = 16000;
@@ -212,7 +226,7 @@ export async function POST(request: Request): Promise<Response> {
         hops.push({
           tool: call.function.name,
           args: parsedArgs,
-          result_summary: summarizeResult(result),
+          result_summary: summarizeResult(call.function.name, result),
           took_ms: Date.now() - hopStarted,
         });
         messages.push({
@@ -240,7 +254,7 @@ export async function POST(request: Request): Promise<Response> {
     });
     return Response.json({
       content:
-        "Não consegui formular uma resposta final em até 3 consultas. Tente reformular a pergunta com menos filtros.",
+        "Não consegui formular uma resposta final em até 6 consultas. Tente reformular a pergunta com menos filtros.",
       meta: cappedMeta,
     });
   } catch (err) {
@@ -273,7 +287,7 @@ async function callOpenRouter(
   const body: Record<string, unknown> = {
     model,
     messages,
-    tools: [QUERY_FIXTURES_TOOL],
+    tools: [QUERY_FIXTURES_TOOL, SCAN_FIXTURES_TOOL, INSPECT_FIXTURE_TOOL],
     tool_choice: "auto",
   };
   if (maxTokens) body.max_tokens = maxTokens;
@@ -302,8 +316,10 @@ function parseToolArgs(raw: string): unknown {
   }
 }
 
-function summarizeResult(result: unknown): string {
+function summarizeResult(name: string, result: unknown): string {
   if (!result || typeof result !== "object") return String(result);
+  if (name === "scan_fixtures") return scanResultSummary(result);
+  if (name === "inspect_fixture") return summarizeFixtureToolResult(name, result);
   const r = result as Record<string, unknown>;
   if (typeof r.error === "string") return `error: ${r.error}`;
   if (Array.isArray(r.fixtures)) {
@@ -319,14 +335,15 @@ async function executeToolCall(
   fn: { name: string; arguments: string },
   admin: ReturnType<typeof createAdminClient>,
 ): Promise<unknown> {
-  if (fn.name !== "query_fixtures") {
-    return { error: `unknown tool: ${fn.name}` };
-  }
-  let args: QueryFixturesArgs;
+  let args: unknown;
   try {
-    args = JSON.parse(fn.arguments) as QueryFixturesArgs;
+    args = JSON.parse(fn.arguments);
   } catch {
     return { error: "invalid JSON arguments" };
   }
-  return queryFixtures(args, admin as unknown as { from: (t: string) => unknown });
+  const a = admin as unknown as { from: (t: string) => unknown };
+  if (fn.name === "query_fixtures") return queryFixtures(args as QueryFixturesArgs, a);
+  if (fn.name === "scan_fixtures") return scanFixtures(args as ScanFixturesArgs, a);
+  if (fn.name === "inspect_fixture") return inspectFixture(args as InspectFixtureArgs, a);
+  return { error: `unknown tool: ${fn.name}` };
 }
