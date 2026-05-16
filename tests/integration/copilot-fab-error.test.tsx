@@ -64,6 +64,41 @@ describe("CopilotFab — parse defensivo da resposta", () => {
     );
   });
 
+  it("200 OK com body vazio exibe mensagem amigável e não vaza JSON.parse", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("", { status: 200 }) as Response,
+    );
+
+    openFab();
+    submitQuestion("teste body vazio");
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(/demorou demais ou falhou/i),
+      ).toBeInTheDocument(),
+    );
+
+    expect(screen.queryByText(/JSON\.parse/i)).not.toBeInTheDocument();
+  });
+
+  it('200 OK com body "true" fecha o slip-through e exibe mensagem amigável', async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("true", {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }) as Response,
+    );
+
+    openFab();
+    submitQuestion("teste json primitivo");
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(/demorou demais ou falhou/i),
+      ).toBeInTheDocument(),
+    );
+  });
+
   it("JSON de erro com status 502 exibe a mensagem de erro do body", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ error: "serviço indisponível" }), {

@@ -138,15 +138,17 @@ export function CopilotFab({ date }: CopilotFabProps) {
         | { content?: string; error?: string; meta?: CopilotMeta }
         | null = null;
       try {
-        body = raw ? JSON.parse(raw) : null;
+        const parsed: unknown = raw ? JSON.parse(raw) : null;
+        if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
+          body = parsed as { content?: string; error?: string; meta?: CopilotMeta };
+        }
       } catch {
         body = null;
       }
       if (!res.ok || !body) {
         setError(
           body?.error ??
-            "O copilot demorou demais ou falhou. Tente uma pergunta mais específica" +
-              (useReasoner ? " ou desligue o R1." : "."),
+            `O copilot demorou demais ou falhou. Tente uma pergunta mais específica${useReasoner ? " ou desligue o R1." : "."}`,
         );
         return;
       }
