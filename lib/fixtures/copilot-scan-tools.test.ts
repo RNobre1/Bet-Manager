@@ -203,4 +203,9 @@ describe("SCAN_FIXTURES_TOOL + summary", () => {
     );
     expect(scanResultSummary({ error: "campo inválido: x" })).toBe("error: campo inválido: x");
   });
+
+  it("returns String(result) for non-object input (parity with summarizeFixtureToolResult)", () => {
+    expect(scanResultSummary(null)).toBe("null");
+    expect(scanResultSummary(undefined)).toBe("undefined");
+  });
 });

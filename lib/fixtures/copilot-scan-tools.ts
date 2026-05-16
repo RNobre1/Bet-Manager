@@ -261,6 +261,10 @@ export async function scanFixtures(args: ScanFixturesArgs, admin: AdminLike): Pr
   return { date, total, fixtures: projected.slice(0, limit) };
 }
 
+// NOTE: a lista de campos pontuados na `description` espelha FixtureSignals —
+// manter em sincronia (testes asseguram um subconjunto). O schema espelha
+// intencionalmente QUERY_FIXTURES_TOOL: sem `required` (todos os params são
+// opcionais), `additionalProperties:false` — mesmo padrão dos 12 FIXTURE_TOOLS.
 export const SCAN_FIXTURES_TOOL = {
   type: "function" as const,
   function: {
@@ -281,7 +285,7 @@ export const SCAN_FIXTURES_TOOL = {
             properties: {
               field: { type: "string", description: "Path pontuado (ver description da tool)." },
               op: { type: "string", enum: ["gte", "lte", "eq"] },
-              value: { description: "Número (gte/lte) ou número/string (eq)." },
+              value: { description: "Número (gte/lte) ou número/string/boolean (eq) — campos badge_* são boolean." },
             },
             required: ["field", "op", "value"],
             additionalProperties: false,
@@ -298,7 +302,7 @@ export const SCAN_FIXTURES_TOOL = {
         },
         signals: {
           type: "array",
-          items: { type: "string", enum: ["cards", "goals_over", "btts", "first_half", "form", "h2h", "odds"] },
+          items: { type: "string", enum: [...SIGNAL_GROUPS] },
           description: "Projeta só estes grupos (default: todos).",
         },
         limit: { type: "number", description: "Tamanho do shortlist, 1..30 (default 15)." },
