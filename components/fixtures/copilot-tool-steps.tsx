@@ -1,3 +1,5 @@
+"use client";
+
 interface Hop {
   tool: string;
   args: unknown;
@@ -24,8 +26,9 @@ export function CopilotToolSteps({ hops }: { hops: Hop[] }) {
             <span aria-hidden style={{ color: failed ? "var(--color-vermelho)" : "var(--color-ink-muted)" }}>
               {failed ? "✗" : "✓"}
             </span>
+            <span className="sr-only">{failed ? "falhou" : "ok"}</span>
             <span className="text-[var(--color-vermelho)]">{h.tool}</span>
-            <span className="truncate text-[var(--color-ink-muted)]">· {h.result_summary}</span>
+            <span className={`truncate ${failed ? "text-[var(--color-vermelho)]" : "text-[var(--color-ink-muted)]"}`}>· {h.result_summary}</span>
           </li>
         );
       })}

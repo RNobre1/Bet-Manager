@@ -16,6 +16,7 @@ describe("CopilotToolSteps", () => {
     expect(screen.getByText("scan_fixtures")).toBeTruthy();
     expect(screen.getByText(/3\/12/)).toBeTruthy();
     expect(screen.getAllByText("✓").length).toBe(2);
+    expect(screen.getAllByText("ok").length).toBe(2);
   });
 
   it("marks a hop whose result_summary starts with error: as failed", () => {
@@ -25,6 +26,8 @@ describe("CopilotToolSteps", () => {
       />,
     );
     expect(screen.getByText("✗")).toBeTruthy();
+    expect(screen.getByText("falhou")).toBeTruthy();
+    expect(screen.getByText(/campo inválido/)).toBeTruthy();
   });
 
   it("renders nothing when there are no hops", () => {
