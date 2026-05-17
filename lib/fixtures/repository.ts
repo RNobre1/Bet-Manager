@@ -1,10 +1,33 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { brtDayWindowUtc, toIsoUtc, trimKoTime } from "./time";
 import { computeBadges } from "./badges";
-import type { FixtureDTO, FixtureRow } from "./types";
+import type { FixtureDTO } from "./types";
 
 const FIXTURE_COLUMNS =
-  "id, match_date, ko_time, home_team, away_team, league, country, source_url, detail_json, kickoff_utc";
+  "id, match_date, ko_time, home_team, away_team, league, country, source_url, kickoff_utc, " +
+  "rd_referee:detail_json->referee_record, rd_streaks:detail_json->streaks, rd_probe:detail_json->team_record";
+
+/**
+ * Compact raw row for the LIST query. We deliberately do NOT select the full
+ * `detail_json` jsonb blob (~118KB × ~285 rows/day ≈ 40MB → Cloudflare Worker
+ * CPU/memory kill, Error 1101). Instead we pull only the two sub-paths
+ * computeBadges reads plus a small probe for has_detail. This is local to the
+ * repository; the shared FixtureRow stays as the table-mirror contract.
+ */
+interface CompactFixtureRow {
+  id: number;
+  match_date: string;
+  ko_time: string | null;
+  home_team: string;
+  away_team: string;
+  league: string | null;
+  country: string | null;
+  source_url: string | null;
+  kickoff_utc: string | null;
+  rd_referee: unknown;
+  rd_streaks: unknown;
+  rd_probe: unknown;
+}
 
 /**
  * Returns the fixtures whose kickoff falls inside the BRT calendar day `date`,
@@ -43,12 +66,12 @@ export async function fixturesForBrtDay(
     throw new Error(error.message ?? "supabase query failed");
   }
 
-  const rows = (data ?? []) as FixtureRow[];
+  const rows = (data ?? []) as CompactFixtureRow[];
   const sorted = [...rows].sort(compareFixtures);
   return sorted.map(toDto);
 }
 
-function compareFixtures(a: FixtureRow, b: FixtureRow): number {
+function compareFixtures(a: CompactFixtureRow, b: CompactFixtureRow): number {
   // 1) kickoff_utc ascending, nulls last
   const kAuOrder = compareNullableString(a.kickoff_utc, b.kickoff_utc);
   if (kAuOrder !== 0) return kAuOrder;
@@ -70,8 +93,15 @@ function compareNullableString(a: string | null, b: string | null): number {
   return 0;
 }
 
-function toDto(row: FixtureRow): FixtureDTO {
-  const badges = computeBadges(row.detail_json);
+function toDto(row: CompactFixtureRow): FixtureDTO {
+  const detailSubset = {
+    referee_record: row.rd_referee ?? null,
+    streaks: row.rd_streaks ?? null,
+  };
+  const badges = computeBadges(detailSubset);
+  // Proxy: detail_json sempre traz team_record/streaks quando existe; evita puxar o blob inteiro (~40MB/dia). Exato exigiria view/RPC (follow-up).
+  const has_detail =
+    row.rd_referee != null || row.rd_streaks != null || row.rd_probe != null;
   return {
     id: row.id,
     match_date: row.match_date,
@@ -81,7 +111,7 @@ function toDto(row: FixtureRow): FixtureDTO {
     league: row.league,
     country: row.country,
     source_url: row.source_url,
-    has_detail: row.detail_json !== null && row.detail_json !== undefined,
+    has_detail,
     kickoff_utc: toIsoUtc(row.kickoff_utc),
     ...(badges.length > 0 ? { badges } : {}),
   };
