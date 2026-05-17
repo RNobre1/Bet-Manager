@@ -2,8 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * Raw row shape as returned by the COMPACT list select (post outage-1101 fix):
- * scalar columns + aliased detail_json sub-paths. The repository no longer
- * pulls the full detail_json blob, so the mock must mirror this shape.
+ * scalar columns + ONE tiny scalar probe (`hd_probe`). The repository no
+ * longer pulls the full detail_json blob nor any heavy sub-paths, so the mock
+ * must mirror this minimal shape.
  */
 type CompactRow = {
   id: number;
@@ -15,9 +16,7 @@ type CompactRow = {
   country: string | null;
   source_url: string | null;
   kickoff_utc: string | null;
-  rd_referee: unknown;
-  rd_streaks: unknown;
-  rd_probe: unknown;
+  hd_probe: string | null;
 };
 
 /**
@@ -127,9 +126,7 @@ function makeRow(overrides: Partial<CompactRow>): CompactRow {
     league: "Premier League",
     country: "england",
     source_url: "https://www.adamchoi.co.uk/fixture/1",
-    rd_referee: null,
-    rd_streaks: null,
-    rd_probe: null,
+    hd_probe: null,
     kickoff_utc: "2026-05-12T19:00:00+00:00",
     ...overrides,
   };
@@ -243,14 +240,12 @@ describe("GET /api/fixtures", () => {
     expect(body.map((r) => r.id)).toEqual([2, 1, 4, 3, 5]);
   });
 
-  it("derives has_detail from detail_json sub-paths and never ships detail_json", async () => {
+  it("derives has_detail from the scalar probe and never ships detail_json", async () => {
     setRows([
-      makeRow({ id: 1, rd_probe: { some: "blob" } }),
+      makeRow({ id: 1, hd_probe: "Home" }),
       makeRow({
         id: 2,
-        rd_referee: null,
-        rd_streaks: null,
-        rd_probe: null,
+        hd_probe: null,
         kickoff_utc: "2026-05-12T20:00:00+00:00",
       }),
     ]);

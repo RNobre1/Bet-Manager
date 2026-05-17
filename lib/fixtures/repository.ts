@@ -1,18 +1,23 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { brtDayWindowUtc, toIsoUtc, trimKoTime } from "./time";
-import { computeBadges } from "./badges";
 import type { FixtureDTO } from "./types";
 
 const FIXTURE_COLUMNS =
   "id, match_date, ko_time, home_team, away_team, league, country, source_url, kickoff_utc, " +
-  "rd_referee:detail_json->referee_record, rd_streaks:detail_json->streaks, rd_probe:detail_json->team_record";
+  "hd_probe:detail_json->>team_record";
 
 /**
  * Compact raw row for the LIST query. We deliberately do NOT select the full
- * `detail_json` jsonb blob (~118KB × ~285 rows/day ≈ 40MB → Cloudflare Worker
- * CPU/memory kill, Error 1101). Instead we pull only the two sub-paths
- * computeBadges reads plus a small probe for has_detail. This is local to the
- * repository; the shared FixtureRow stays as the table-mirror contract.
+ * `detail_json` jsonb blob nor any heavy sub-paths (`streaks`,
+ * `referee_record`) — those pulled ~34MB/day and killed the Cloudflare Worker
+ * (Error 1101). We pull ONLY scalar columns plus a presence probe
+ * (`detail_json->>team_record`, the team_record subtree as text) to derive
+ * has_detail. team_record is written by the scraper whenever detail_json
+ * exists, so the probe is non-null iff detail is present (validated against
+ * prod: 0 false-negatives over the full day window; a deep leaf such as
+ * `->home->overall->>type` had a real 1-row false-negative — rejected). The
+ * full window stays well under 300KB vs 34MB. This is local to the repository;
+ * the shared FixtureRow stays as the table-mirror contract.
  */
 interface CompactFixtureRow {
   id: number;
@@ -24,9 +29,7 @@ interface CompactFixtureRow {
   country: string | null;
   source_url: string | null;
   kickoff_utc: string | null;
-  rd_referee: unknown;
-  rd_streaks: unknown;
-  rd_probe: unknown;
+  hd_probe: string | null;
 }
 
 /**
@@ -94,14 +97,8 @@ function compareNullableString(a: string | null, b: string | null): number {
 }
 
 function toDto(row: CompactFixtureRow): FixtureDTO {
-  const detailSubset = {
-    referee_record: row.rd_referee ?? null,
-    streaks: row.rd_streaks ?? null,
-  };
-  const badges = computeBadges(detailSubset);
-  // Proxy: detail_json sempre traz team_record/streaks quando existe; evita puxar o blob inteiro (~40MB/dia). Exato exigiria view/RPC (follow-up).
-  const has_detail =
-    row.rd_referee != null || row.rd_streaks != null || row.rd_probe != null;
+  // Lista sem badges (payload mínimo p/ não estourar o Worker — ~40MB→KBs). has_detail é proxy via team_record; badges/has_detail exatos voltam via view/RPC (follow-up).
+  const has_detail = row.hd_probe != null;
   return {
     id: row.id,
     match_date: row.match_date,
@@ -113,6 +110,5 @@ function toDto(row: CompactFixtureRow): FixtureDTO {
     source_url: row.source_url,
     has_detail,
     kickoff_utc: toIsoUtc(row.kickoff_utc),
-    ...(badges.length > 0 ? { badges } : {}),
   };
 }
