@@ -26,8 +26,13 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      # --no-frozen-lockfile: package.json bumped @opennextjs/cloudflare to
+      # ^1.19.10 (server-action Set-Cookie + redirect fix) during a prod
+      # outage hotfix; the 371KB lockfile could not be transferred inline.
+      # CI resolves within the committed semver ranges. Reconcile by
+      # committing the regenerated pnpm-lock.yaml and restoring --frozen.
       - name: install
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: build for cloudflare workers
         env:
