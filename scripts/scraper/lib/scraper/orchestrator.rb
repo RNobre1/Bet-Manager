@@ -11,6 +11,8 @@ require_relative 'detail_parser'
 require_relative 'league_baseline'
 require_relative 'playwright_session'
 require_relative 'prediction_reconciler'
+require_relative 'simulation/runner'
+require_relative 'uk_time_helper'
 
 module AdamStats
   module Scraper
@@ -32,6 +34,82 @@ module AdamStats
           ).cmd_tuples
         end
       end
+    end
+
+    # Post-persist hook: computa a simulação pré-jogo (Runner.simulate) para
+    # cada fixture com detail e faz upsert em fixture_simulations. CADA fixture
+    # é isolada num rescue StandardError que só loga warning — uma fixture
+    # problemática NUNCA derruba o scrape (Lição #11). O Runner já degrada sem
+    # raise; este rescue cobre falha de DB/serialização por linha.
+    module SimulationHook
+      UPSERT_SQL = <<~SQL.freeze
+        INSERT INTO fixture_simulations
+          (fixture_id, home_team, away_team, league, kickoff_utc, model_version,
+           p_home, p_draw, p_away, p_btts, p_over_25,
+           top_scorelines, sim_stats, per_half_available, market_anchor,
+           player_events, status, created_at)
+        VALUES ($1, $2, $3, $4, $5::timestamptz, $6,
+                $7, $8, $9, $10, $11,
+                $12::jsonb, $13::jsonb, $14, $15::jsonb, $16::jsonb, $17, now())
+      SQL
+
+      module_function
+
+      # fixtures               — Array<Fixture> (parsed list)
+      # detail_json_by_source_url — { source_url => detail hash }
+      def run(fixtures, detail_json_by_source_url, logger:)
+        return if detail_json_by_source_url.nil? || detail_json_by_source_url.empty?
+
+        by_source = {}
+        fixtures.each { |fx| by_source[fx.source_url] = fx }
+
+        AdamStats::Scraper::DB.with_connection do |conn|
+          detail_json_by_source_url.each do |source_url, detail|
+            fixture = by_source[source_url]
+            next if fixture.nil?
+
+            begin
+              sim = Simulation::Runner.simulate(detail)
+              next if sim.nil? || sim[:status] == 'unsimulable'
+
+              conn.exec_params(UPSERT_SQL, build_params(fixture, sim))
+            rescue StandardError => e
+              logger.call("[scrape] simulation failed for #{source_url}: #{e.class}: #{e.message}")
+            end
+          end
+        end
+      rescue StandardError => e
+        # Falha global do hook (ex.: DB indisponível) — non-fatal, igual ao
+        # reconciler/baseline. O scrape em si já persistiu as fixtures.
+        logger.call("[scrape] simulation hook failed (non-fatal): #{e.class}: #{e.message}")
+      end
+
+      def build_params(fixture, sim)
+        kickoff = UkTimeHelper.to_utc_or_noon(fixture.match_date, fixture.ko_time)
+        [
+          fixture_api_id(fixture),
+          fixture.home_team,
+          fixture.away_team,
+          fixture.league,
+          kickoff&.strftime('%Y-%m-%d %H:%M:%S UTC'),
+          sim[:model_version],
+          sim[:p_home], sim[:p_draw], sim[:p_away], sim[:p_btts], sim[:p_over_25],
+          JSON.generate(sim[:top_scorelines] || []),
+          JSON.generate(sim[:sim_stats] || {}),
+          sim[:per_half_available],
+          JSON.generate(sim[:market_anchor] || {}),
+          JSON.generate(sim[:player_events] || []),
+          sim[:status] || 'pending'
+        ]
+      end
+      private_class_method :build_params
+
+      # source_url shape: /fixture/<id>/<slug> — extrai o id numérico se houver.
+      def fixture_api_id(fixture)
+        m = fixture.source_url.to_s.match(%r{/fixture/(\d+)})
+        m && m[1].to_i
+      end
+      private_class_method :fixture_api_id
     end
 
     module Orchestrator
@@ -75,6 +153,7 @@ module AdamStats
         parser: Parser,
         detail_parser: DetailParser,
         persister: Persister,
+        simulation_hook: SimulationHook,
         repo: DefaultRepo,
         baseline: LeagueBaseline,
         healthcheck: Healthcheck,
@@ -129,6 +208,11 @@ module AdamStats
           # metadata (home/away/league/ko_time/source_url) e detail_json=nil,
           # podendo ter o detail puxado on-demand via POST /api/fixtures/:id/refresh-detail.
           stats = persister.persist(parsed, detail_json_by_source_url: details_by_url)
+
+          # Hook aditivo pós-persist: simulação pré-jogo → fixture_simulations.
+          # Failure-isolated por fixture E globalmente (Lição #11) — não altera
+          # o comportamento existente do scrape.
+          simulation_hook.run(parsed, details_by_url, logger: logger)
         else
           stats = Stats.new(inserted: 0, updated: 0, failed: 0)
         end

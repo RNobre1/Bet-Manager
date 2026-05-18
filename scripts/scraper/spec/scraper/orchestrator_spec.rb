@@ -48,6 +48,7 @@ RSpec.describe AdamStats::Scraper::Orchestrator do
     detail_parser = double('detail_parser')
     allow(detail_parser).to receive(:parse_detail) { |_html, **_kwargs| double('detail', to_h: { stats: 1 }) }
     persister = double('persister', persist: persist_stats)
+    simulation_hook = double('simulation_hook', run: nil)
     repo = double('repo', purge_older_than: purge_count)
 
     {
@@ -56,6 +57,7 @@ RSpec.describe AdamStats::Scraper::Orchestrator do
       parser: parser,
       detail_parser: detail_parser,
       persister: persister,
+      simulation_hook: simulation_hook,
       repo: repo,
       baseline: baseline,
       healthcheck: healthcheck,
@@ -565,6 +567,113 @@ RSpec.describe AdamStats::Scraper::Orchestrator do
       )
       # Logger registra a falha citando a URL alvo
       expect(captured.any? { |m| m.include?('c-vs-d') && m.match?(/fail|error|timeout/i) }).to be(true)
+    end
+  end
+
+  describe '.run (simulation hook — post-persist, additive, failure-isolated)' do
+    it 'invokes the simulation hook AFTER persist with parsed fixtures + details' do
+      deps = build_deps
+      ordered = []
+      allow(deps[:persister]).to receive(:persist) do |*_a, **_k|
+        ordered << :persist
+        AdamStats::Scraper::Stats.new(inserted: 2, updated: 0, failed: 0)
+      end
+      expect(deps[:simulation_hook]).to receive(:run) do |fixtures_arg, details_arg, **kw|
+        ordered << :sim
+        expect(fixtures_arg).to eq([fixture_a, fixture_b])
+        expect(details_arg).to be_a(Hash)
+        expect(kw).to have_key(:logger)
+      end
+      described_class.run(**deps)
+      expect(ordered).to eq(%i[persist sim])
+    end
+
+    it 'does NOT invoke the hook when there are no parsed fixtures' do
+      deps = build_deps(parsed_list: [])
+      expect(deps[:simulation_hook]).not_to receive(:run)
+      described_class.run(**deps)
+    end
+
+    it 'passes a callable logger so the hook can warn (Lição #11 boundary)' do
+      deps = build_deps
+      seen_logger = nil
+      allow(deps[:simulation_hook]).to receive(:run) do |_fx, _det, logger:|
+        seen_logger = logger
+      end
+      described_class.run(**deps)
+      expect(seen_logger).to respond_to(:call)
+    end
+  end
+
+  describe AdamStats::Scraper::SimulationHook do
+    let(:fixture) do
+      AdamStats::Scraper::Fixture.new(
+        match_date: Date.today, ko_time: '20:00',
+        home_team: 'A', away_team: 'B', league: 'L',
+        source_url: '/fixture/999/l-a-vs-b', country: nil
+      )
+    end
+
+    it 'isolates a per-fixture failure: one bad detail does not stop the others' do
+      logged = []
+      logger = ->(m) { logged << m }
+      conn = double('conn')
+      allow(conn).to receive(:exec_params)
+      allow(AdamStats::Scraper::DB).to receive(:with_connection).and_yield(conn)
+
+      # First fixture detail makes Runner.simulate raise; second is fine.
+      allow(AdamStats::Scraper::Simulation::Runner).to receive(:simulate) do |detail|
+        raise StandardError, 'sim explode' if detail == { 'bad' => true }
+
+        { status: 'pending', model_version: 'v', p_home: 0.5, p_draw: 0.3, p_away: 0.2,
+          p_btts: 0.5, p_over_25: 0.5, top_scorelines: [], sim_stats: {},
+          per_half_available: false, market_anchor: {}, player_events: [] }
+      end
+
+      fx2 = AdamStats::Scraper::Fixture.new(
+        match_date: Date.today, ko_time: '21:00',
+        home_team: 'C', away_team: 'D', league: 'L',
+        source_url: '/fixture/1000/l-c-vs-d', country: nil
+      )
+
+      expect do
+        described_class.run(
+          [fixture, fx2],
+          { fixture.source_url => { 'bad' => true }, fx2.source_url => { 'ok' => true } },
+          logger: logger
+        )
+      end.not_to raise_error
+
+      expect(logged.any? { |m| m.include?(fixture.source_url) && m.match?(/fail|error|explode/i) }).to be(true)
+      # The good fixture still got upserted
+      expect(conn).to have_received(:exec_params).once
+    end
+
+    it 'skips upsert for unsimulable results (no raise)' do
+      conn = double('conn')
+      allow(conn).to receive(:exec_params)
+      allow(AdamStats::Scraper::DB).to receive(:with_connection).and_yield(conn)
+      allow(AdamStats::Scraper::Simulation::Runner).to receive(:simulate)
+        .and_return(status: 'unsimulable', model_version: 'v')
+
+      described_class.run([fixture], { fixture.source_url => { 'x' => 1 } }, logger: ->(_) {})
+      expect(conn).not_to have_received(:exec_params)
+    end
+
+    it 'is a no-op when there are no details' do
+      expect(AdamStats::Scraper::DB).not_to receive(:with_connection)
+      described_class.run([fixture], {}, logger: ->(_) {})
+    end
+
+    it 'a global DB failure is non-fatal (logged, never raised)' do
+      logged = []
+      allow(AdamStats::Scraper::DB).to receive(:with_connection).and_raise(StandardError, 'db down')
+      allow(AdamStats::Scraper::Simulation::Runner).to receive(:simulate)
+        .and_return(status: 'pending', model_version: 'v')
+      expect do
+        described_class.run([fixture], { fixture.source_url => { 'x' => 1 } }, logger: ->(m) { logged << m })
+      end.not_to raise_error
+      expect(logged.any? { |m| m.include?('non-fatal') }).to be(true)
     end
   end
 end
