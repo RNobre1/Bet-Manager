@@ -1,71 +1,26 @@
 /**
  * Task 3 — Snapshot idempotente dirigido por resolve_bet
  *
- * LIMITAÇÃO: o repo não tem harness SQL automatizado (sem Postgres local
- * configurado em CI/vitest). O teste verifica ao nível app-side:
+ * LIMITAÇÃO CONHECIDA (exceção consciente — ver CLAUDE.md Lesson B13):
+ * A verificação comportamental de 0014_banca_loop.sql (snapshot idempotente
+ * pós-resolve, assert de linha em balance_snapshots, geração real pela view)
+ * exige um harness Postgres/Supabase local que NÃO existe neste repo.
+ * O SQL foi auditado estaticamente pela spec-review e aprovado.
+ * O follow-up está em docs/tasks/loop-banca/01-followup-sql-harness.md.
  *
- *   (a) A migration 0014_banca_loop.sql existe e contém:
- *       - CREATE OR REPLACE FUNCTION resolve_bet com bloco EXCEPTION WHEN OTHERS
- *       - PERFORM generate_balance_snapshots(p_resolved_at::date)
- *   (b) A action `resolveBetAction` (wrapper app) chama supabase.rpc("resolve_bet")
- *       sem erro quando o RPC resolve com sucesso.
- *   (c) Idempotência do generate_balance_snapshots está expressa em 0003_balance_snapshots.sql
- *       (ON CONFLICT … DO UPDATE).
+ * O que este arquivo testa (app-side honesto):
+ *   - `resolveBetAction` chama supabase.rpc("resolve_bet") com os parâmetros
+ *     corretos quando o RPC resolve com sucesso.
+ *   - Idempotência ao nível da action: segunda chamada com mesmo bet_id
+ *     recebe o erro do Postgres e a action lança Error (não silencia).
  *
- * Testes SQL de integração real (assert de linha em balance_snapshots pós-resolve)
- * requerem harness Supabase local — documentado como follow-up se houver
- * necessidade de montar supabase test helpers no futuro.
+ * O que NÃO é testado aqui (por ausência de harness SQL):
+ *   - Que resolve_bet realmente cria/atualiza o ledger no Postgres.
+ *   - Que generate_balance_snapshots produz as linhas corretas.
+ *   - Que ON CONFLICT DO UPDATE é idempotente contra um banco real.
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-
-// ── (a) Verificação estática da migration SQL ──────────────────────────────
-
-const MIGRATION_PATH = resolve(
-  __dirname,
-  "../../supabase/migrations/0014_banca_loop.sql",
-);
-
-const SNAPSHOT_MIGRATION_PATH = resolve(
-  __dirname,
-  "../../supabase/migrations/0003_balance_snapshots.sql",
-);
-
-describe("Migration 0014_banca_loop.sql — resolve_bet com snapshot idempotente", () => {
-  it("migration 0014 existe", () => {
-    expect(() => readFileSync(MIGRATION_PATH, "utf-8")).not.toThrow();
-  });
-
-  it("contém CREATE OR REPLACE FUNCTION resolve_bet", () => {
-    const sql = readFileSync(MIGRATION_PATH, "utf-8");
-    expect(sql).toMatch(/create or replace function public\.resolve_bet/i);
-  });
-
-  it("contém PERFORM generate_balance_snapshots com a data do resolve", () => {
-    const sql = readFileSync(MIGRATION_PATH, "utf-8");
-    expect(sql).toMatch(/PERFORM\s+generate_balance_snapshots\s*\(\s*p_resolved_at\s*::\s*date\s*\)/i);
-  });
-
-  it("o bloco de snapshot é protegido por EXCEPTION WHEN OTHERS (warning-safe — não reverte o ledger)", () => {
-    const sql = readFileSync(MIGRATION_PATH, "utf-8");
-    expect(sql).toMatch(/EXCEPTION\s+WHEN\s+OTHERS\s+THEN/i);
-    expect(sql).toMatch(/RAISE\s+WARNING/i);
-  });
-});
-
-describe("Migration 0003 — generate_balance_snapshots é idempotente", () => {
-  it("usa ON CONFLICT … DO UPDATE (upsert idempotente)", () => {
-    const sql = readFileSync(SNAPSHOT_MIGRATION_PATH, "utf-8");
-    // Verifica a presença de "on conflict" e "do update" separadamente
-    // (estão em linhas diferentes no SQL)
-    expect(sql.toLowerCase()).toContain("on conflict");
-    expect(sql.toLowerCase()).toContain("do update");
-  });
-});
-
-// ── (b) Verificação app-side via mock Supabase ─────────────────────────────
 
 const rpcMock = vi.fn();
 
@@ -107,7 +62,7 @@ describe("resolveBetAction — chama supabase.rpc('resolve_bet') sem erro", () =
     }));
   });
 
-  it("resolve bet lost — RPC chamado", async () => {
+  it("resolve bet lost — RPC chamado com p_bet_id e p_status corretos", async () => {
     rpcMock.mockResolvedValue({ data: null, error: null });
 
     const { resolveBetAction } = await import(
@@ -126,7 +81,11 @@ describe("resolveBetAction — chama supabase.rpc('resolve_bet') sem erro", () =
     }));
   });
 
-  it("idempotência: chamar resolve_bet duas vezes com mesmo bet_id — segunda retorna erro do Postgres (already resolved) — app lança Error", async () => {
+  it("idempotência app-side: segunda chamada com mesmo bet_id recebe erro do Postgres e a action lança Error", async () => {
+    // Este teste cobre a borda app-side da idempotência: a action NÃO silencia
+    // o erro de "already resolved" — propaga como Error para o chamador.
+    // A idempotência SQL real (ON CONFLICT DO UPDATE em balance_snapshots)
+    // exige harness Postgres — ver limitação no cabeçalho deste arquivo.
     rpcMock
       .mockResolvedValueOnce({ data: null, error: null })
       .mockResolvedValueOnce({
@@ -151,5 +110,22 @@ describe("resolveBetAction — chama supabase.rpc('resolve_bet') sem erro", () =
     await expect(resolveBetAction(formData2)).rejects.toThrow(
       "bet already resolved",
     );
+  });
+
+  it("action lança Error quando RPC retorna erro (não silencia falhas)", async () => {
+    rpcMock.mockResolvedValue({
+      data: null,
+      error: { message: "invalid bet_id" },
+    });
+
+    const { resolveBetAction } = await import(
+      "@/app/(dashboard)/bets/actions"
+    );
+
+    const formData = new FormData();
+    formData.set("bet_id", "00000000-0000-0000-0000-000000000099");
+    formData.set("status", "won");
+
+    await expect(resolveBetAction(formData)).rejects.toThrow("invalid bet_id");
   });
 });
