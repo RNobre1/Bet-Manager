@@ -3,6 +3,11 @@
 -- fixture-copilot e reconcilia com o resultado real (pós-jogo).
 -- Auto-contida: não depende de fixtures (sem FK rígida), sobrevive
 -- à purga diária de 3-4 dias. service-role only (como llm_request_logs).
+--
+-- Numeração: este arquivo é 0016 porque 0014 (loop-banca) e 0015
+-- (alertas) vêm de sub-projetos paralelos que serão mergeados na main
+-- antes deste. A sequência final na main será 0013→0014→0015→0016,
+-- sem gap. Não renumere este arquivo.
 -- ============================================================
 
 create table if not exists public.ai_predictions (
@@ -34,6 +39,9 @@ create index if not exists ai_predictions_status_kickoff_idx
 
 alter table public.ai_predictions enable row level security;
 
--- service-role only (igual llm_request_logs): sem policy para anon/authenticated.
--- O cliente admin (service_role) bypassa RLS — acesso de leitura/escrita apenas server-side.
+-- RLS: postura service-role-only intencional — igual a llm_request_logs (0012) e
+-- fixture_copilot_audit (0013). Tabela de sistema interna: lida e escrita exclusivamente
+-- pelo scraper Ruby e pelo Worker Cloudflare via service_role key (bypassa RLS).
+-- Não há policy para authenticated/anon porque nenhum cliente público precisa de acesso
+-- direto; o frontend consome apenas as views/endpoints expostos pela API.
 grant select, insert, update on public.ai_predictions to service_role;
