@@ -575,4 +575,179 @@ RSpec.describe AdamStats::Scraper::WidgetMerger do
       expect { JSON.generate(merged.to_h) }.not_to raise_error
     end
   end
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # DEGRADATION specs — robustness against nil/partial payloads (fixes 1-7)
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  describe 'degradation: build_odds_devigged' do
+    # Fix 1 — nil outcome VALUE inside a market's outcomes hash
+    it 'does not raise when an outcome value is nil (null in JSON)' do
+      odds_with_nil_outcome = [
+        {
+          'market' => { 'name' => 'Result' },
+          'outcomes' => {
+            'Home' => { 'decimalOdds' => 1.74 },
+            'Draw' => nil,
+            'Away' => { 'decimalOdds' => 5.5 }
+          }
+        }
+      ]
+      expect do
+        described_class.build_odds_devigged(odds_with_nil_outcome)
+      end.not_to raise_error
+    end
+
+    it 'skips a market where any outcome value is nil (zero/undefined odds guard)' do
+      odds_with_nil_outcome = [
+        {
+          'market' => { 'name' => 'NilMarket' },
+          'outcomes' => { 'Home' => { 'decimalOdds' => 1.74 }, 'Draw' => nil }
+        }
+      ]
+      result = described_class.build_odds_devigged(odds_with_nil_outcome)
+      expect(result).not_to have_key('NilMarket')
+    end
+
+    # Fix 2 — nil market ELEMENT in the odds array
+    it 'does not raise when the odds array contains a nil element' do
+      odds_with_nil_market = [
+        nil,
+        {
+          'market' => { 'name' => 'Result' },
+          'outcomes' => {
+            'Home' => { 'decimalOdds' => 1.74 },
+            'Draw' => { 'decimalOdds' => 3.6 },
+            'Away' => { 'decimalOdds' => 5.5 }
+          }
+        }
+      ]
+      expect do
+        described_class.build_odds_devigged(odds_with_nil_market)
+      end.not_to raise_error
+    end
+
+    it 'still processes valid markets after a nil element in the array' do
+      odds_with_nil_market = [
+        nil,
+        {
+          'market' => { 'name' => 'Result' },
+          'outcomes' => {
+            'Home' => { 'decimalOdds' => 1.74 },
+            'Draw' => { 'decimalOdds' => 3.6 },
+            'Away' => { 'decimalOdds' => 5.5 }
+          }
+        }
+      ]
+      result = described_class.build_odds_devigged(odds_with_nil_market)
+      expect(result).to have_key('Result')
+      expect(result['Result'].values.sum).to be_within(0.001).of(1.0)
+    end
+  end
+
+  describe 'degradation: find_team_standing / build_standings' do
+    # Fix 3 — nil ELEMENT in standings array
+    it 'does not raise when the standings array contains a nil element' do
+      standings_with_nil = [nil, { 'team' => { 'id' => 99 }, 'position' => '1st', 'played' => 10, 'points' => 25, 'goalDiff' => 10, 'positionType' => 'Champions' }]
+      expect do
+        described_class.find_team_standing(standings_with_nil, 99)
+      end.not_to raise_error
+    end
+
+    it 'still finds the correct entry after a nil element in standings' do
+      standings_with_nil = [nil, { 'team' => { 'id' => 99 }, 'position' => '1st', 'played' => 10, 'points' => 25, 'goalDiff' => 10, 'positionType' => 'Champions' }]
+      result = described_class.find_team_standing(standings_with_nil, 99)
+      expect(result).to be_a(Hash)
+      expect(result['position']).to eq('1st')
+    end
+
+    # Fix 5 — no matching team id in standings (cup/playoff scenario)
+    it 'returns {} per side when standings arrays have no entry matching the team id' do
+      # Build a custom team_records payload where fws has team ids but standings list
+      # contains entries for different team ids (cup/playoff scenario).
+      team_records_no_match = {
+        'fixtureWithoutStats' => {
+          'homeTeam' => { 'id' => 1001 },
+          'awayTeam' => { 'id' => 1002 },
+          'stage'    => { 'name' => 'Cup Quarter-Final' },
+          'slug'     => 'cup-qf-home-vs-away',
+          'homeTeamPosition' => 'N/A',
+          'awayTeamPosition' => 'N/A'
+        },
+        'homeTeamResultsWithStandings' => [
+          { 'team' => { 'id' => 9999 }, 'position' => '5th', 'played' => 20, 'points' => 30, 'goalDiff' => 5, 'positionType' => 'Normal' }
+        ],
+        'awayTeamResultsWithStandings' => [
+          { 'team' => { 'id' => 8888 }, 'position' => '3rd', 'played' => 20, 'points' => 40, 'goalDiff' => 12, 'positionType' => 'Champions' }
+        ]
+      }
+      result = described_class.build_standings(team_records_no_match)
+      expect(result[:home]).to eq({})
+      expect(result[:away]).to eq({})
+    end
+  end
+
+  describe 'degradation: build_outcome_odds_by_player' do
+    # Fix 4 — empty/nil player name must not be stored as "" key
+    it 'does not create an empty-string key when a player has a nil or blank name' do
+      players_data = {
+        'homePlayers' => [
+          { 'name' => nil,  'outcomeOdds' => { 'ANYTIME_SCORER' => { 'decimalOdds' => 5.0 } } },
+          { 'name' => '  ', 'outcomeOdds' => { 'ANYTIME_SCORER' => { 'decimalOdds' => 7.0 } } },
+          { 'name' => 'Harry Kane', 'outcomeOdds' => { 'ANYTIME_SCORER' => { 'decimalOdds' => 2.5 } } }
+        ],
+        'awayPlayers' => []
+      }
+      result = described_class.build_outcome_odds_by_player(players_data)
+      expect(result).not_to have_key('')
+      expect(result).to have_key('Harry Kane')
+    end
+
+    it 'does not silently overwrite when two blank-named players appear in sequence' do
+      players_data = {
+        'homePlayers' => [
+          { 'name' => '', 'outcomeOdds' => { 'ANYTIME_SCORER' => { 'decimalOdds' => 5.0 } } },
+          { 'name' => '', 'outcomeOdds' => { 'ANYTIME_SCORER' => { 'decimalOdds' => 9.0 } } }
+        ],
+        'awayPlayers' => []
+      }
+      result = described_class.build_outcome_odds_by_player(players_data)
+      # Neither player should pollute the result hash
+      expect(result.keys).not_to include('')
+      expect(result).to be_empty
+    end
+  end
+
+  describe 'degradation: extract_avgs_block (fix 6 — single-pass rename)' do
+    it 'maps numMatches to :num_matches and drops the camelCase key' do
+      raw = { 'numMatches' => 10, 'avgGoalsTotal' => 2.5, 'avgCornersTotal' => 4.1 }
+      result = described_class.extract_avgs_block(raw)
+      expect(result).to have_key(:num_matches)
+      expect(result[:num_matches]).to eq(10)
+      expect(result).not_to have_key(:numMatches)
+    end
+
+    it 'preserves all other keys as symbols' do
+      raw = { 'numMatches' => 5, 'avgGoalsTotal' => 1.8, 'avgCornersTotal' => 3.9 }
+      result = described_class.extract_avgs_block(raw)
+      expect(result).to have_key(:avgGoalsTotal)
+      expect(result[:avgGoalsTotal]).to eq(1.8)
+      expect(result).to have_key(:avgCornersTotal)
+    end
+  end
+
+  describe 'degradation: outcome_odds decimalOdds coerced to Float (fix 7)' do
+    it 'stores decimalOdds as Float even when the JSON value is an Integer' do
+      players_data = {
+        'homePlayers' => [
+          { 'name' => 'Test Player', 'outcomeOdds' => { 'ANYTIME_SCORER' => { 'decimalOdds' => 7 } } }
+        ],
+        'awayPlayers' => []
+      }
+      result = described_class.build_outcome_odds_by_player(players_data)
+      val = result['Test Player']['ANYTIME_SCORER']
+      expect(val).to be_a(Float)
+      expect(val).to eq(7.0)
+    end
+  end
 end

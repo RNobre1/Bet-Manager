@@ -325,10 +325,7 @@ module AdamStats
 
         # Persist all metrics; rename numMatches → num_matches for Ruby convention;
         # also keep the camelCase metrics as-is (43 keys total preserved).
-        block = raw.each_with_object({}) { |(k, v), acc| acc[k.to_sym] = v }
-        block[:num_matches] = raw['numMatches']
-        block.delete(:numMatches)
-        block
+        raw.each_with_object({}) { |(k, v), acc| acc[k == 'numMatches' ? :num_matches : k.to_sym] = v }
       end
 
       # Item 2 — recent_all: home+away results from all venues
@@ -367,7 +364,7 @@ module AdamStats
       def find_team_standing(standings, team_id)
         return nil unless standings.is_a?(Array) && team_id
 
-        standings.find { |r| r.dig('team', 'id') == team_id }
+        standings.find { |r| r.is_a?(Hash) && r.dig('team', 'id') == team_id }
       end
 
       def build_standing_entry(entry, fixture_position, stage_name, fixture_slug)
@@ -392,19 +389,21 @@ module AdamStats
 
         result = {}
         data.each do |market|
+          next unless market.is_a?(Hash)
+
           name = market.dig('market', 'name')
           next unless name && market['outcomes'].is_a?(Hash)
 
           outcomes = market['outcomes']
-          odds_values = outcomes.values.map { |o| o['decimalOdds'].to_f }
-          # Skip market if any odds are zero (avoid division by zero)
+          odds_values = outcomes.values.map { |o| o.is_a?(Hash) ? o['decimalOdds'].to_f : 0.0 }
+          # Skip market if any odds are zero/nil (avoid division by zero)
           next if odds_values.any? { |o| o <= 0 }
 
           sum_inv = odds_values.sum { |o| 1.0 / o }
           next if sum_inv <= 0
 
           result[name] = outcomes.each_with_object({}) do |(outcome_name, outcome), acc|
-            acc[outcome_name] = ((1.0 / outcome['decimalOdds'].to_f) / sum_inv).round(6)
+            acc[outcome_name] = ((1.0 / (outcome.is_a?(Hash) ? outcome['decimalOdds'].to_f : 0.0)) / sum_inv).round(6)
           end
         end
         result
@@ -430,9 +429,11 @@ module AdamStats
         all_players.each_with_object({}) do |player, acc|
           next unless player.is_a?(Hash) && player['outcomeOdds'].is_a?(Hash) && !player['outcomeOdds'].empty?
 
-          name = player['name'].to_s
+          name = player['name'].to_s.strip
+          next if name.empty?
+
           acc[name] = player['outcomeOdds'].each_with_object({}) do |(outcome_type, odd_data), inner|
-            inner[outcome_type] = odd_data['decimalOdds']
+            inner[outcome_type] = odd_data.is_a?(Hash) ? odd_data['decimalOdds'].to_f : 0.0
           end
         end
       end
