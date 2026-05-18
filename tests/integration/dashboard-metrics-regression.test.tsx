@@ -152,6 +152,13 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+// DestaquesDoDia (feature alertas-proativos) é um Server Component async
+// renderizado pela OverviewPage; este teste cobre só as métricas de banca,
+// então o stubamos para isolar o que está sob teste (não é seu objeto).
+vi.mock("@/app/(dashboard)/_components/destaques-do-dia", () => ({
+  DestaquesDoDia: () => null,
+}));
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Dataset negativo — saques > depósitos (netCapital < 0) + resolvedStaked = 0
 // ──────────────────────────────────────────────────────────────────────────────
