@@ -25,11 +25,16 @@ module AdamStats
           btts = over25 = 0
           scoreline_counts = Hash.new(0)
           sec_samples = init_sec_samples(secondary, per_half_available)
+          # Per-iteration goal draws (from the SAME score model that feeds
+          # p_home/p_draw/p_away) — aggregated into the goals secondary metric.
+          goal_samples = { home: [], away: [] }
           player_acc = init_player_acc(players)
 
           n.times do
             hg, ag = sample_scoreline(rng, cdf, matrix.length)
             scoreline_counts["#{hg}-#{ag}"] += 1
+            goal_samples[:home] << hg
+            goal_samples[:away] << ag
             if hg > ag then home_wins += 1
             elsif hg < ag then away_wins += 1
             else draws += 1
@@ -49,7 +54,7 @@ module AdamStats
             p_btts: round4(btts / nf),
             p_over_25: round4(over25 / nf),
             top_scorelines: top_scorelines(scoreline_counts, nf),
-            sim_stats: aggregate_sec(sec_samples, per_half_available),
+            sim_stats: aggregate_sec(sec_samples, goal_samples, per_half_available),
             per_half_available: per_half_available,
             market_anchor: market_anchor,
             player_events: aggregate_players(player_acc, players, nf)
@@ -120,18 +125,25 @@ module AdamStats
         end
         private_class_method :sample_secondary
 
-        def aggregate_sec(samples, per_half)
-          out = {}
+        # Emits the CONSUMER contract: side → metric → {p10,p50,p90[,_1h/_2h]}.
+        # `goals` is derived from the per-iteration score-model draws (the SAME
+        # draws that feed p_home/p_draw/p_away) — full-match only, since the
+        # score model has no honest half split (no fabricated 1h/2h, spec §6.5).
+        def aggregate_sec(samples, goal_samples, per_half)
+          out = { home: {}, away: {} }
           samples.each do |metric, sides|
-            out[metric] = {}
             sides.each do |side, buckets|
               entry = pctiles(buckets[:total])
               if per_half && buckets[:h1]
                 entry[:p10_1h], entry[:p50_1h], entry[:p90_1h] = pct_triplet(buckets[:h1])
                 entry[:p10_2h], entry[:p50_2h], entry[:p90_2h] = pct_triplet(buckets[:h2])
               end
-              out[metric][side] = entry
+              (out[side] ||= {})[metric] = entry
             end
+          end
+          %i[home away].each do |side|
+            out[side] ||= {}
+            out[side][:goals] = pctiles(goal_samples[side])
           end
           out
         end

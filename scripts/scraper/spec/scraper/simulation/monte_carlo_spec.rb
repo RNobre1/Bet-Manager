@@ -53,17 +53,39 @@ RSpec.describe AdamStats::Scraper::Simulation::MonteCarlo do
       end
     end
 
-    it 'returns sim_stats with p10/p50/p90 per metric/team' do
-      ch = out[:sim_stats][:corners]
-      expect(ch[:home].keys).to include(:p10, :p50, :p90)
-      expect(ch[:home][:p10]).to be <= ch[:home][:p50]
-      expect(ch[:home][:p50]).to be <= ch[:home][:p90]
+    it 'structures sim_stats as side→metric (consumer contract)' do
+      expect(out[:sim_stats].keys).to include(:home, :away)
+      expect(out[:sim_stats][:home].keys).to include(:goals, :corners, :cards)
+      expect(out[:sim_stats][:away].keys).to include(:goals, :corners, :cards)
+    end
+
+    it 'returns sim_stats with p10/p50/p90 per team/metric' do
+      ch = out[:sim_stats][:home][:corners]
+      expect(ch.keys).to include(:p10, :p50, :p90)
+      expect(ch[:p10]).to be <= ch[:p50]
+      expect(ch[:p50]).to be <= ch[:p90]
+    end
+
+    it 'derives a goals metric per side from the scoreline draws' do
+      %i[home away].each do |side|
+        g = out[:sim_stats][side][:goals]
+        expect(g.keys).to include(:p10, :p50, :p90)
+        expect(g[:p10]).to be >= 0
+        expect(g[:p10]).to be <= g[:p50]
+        expect(g[:p50]).to be <= g[:p90]
+      end
     end
 
     it 'exposes per-half corners only when per_half_available' do
       expect(out[:per_half_available]).to be(true)
-      expect(out[:sim_stats][:corners][:home]).to have_key(:p50_1h)
-      expect(out[:sim_stats][:corners][:home]).to have_key(:p50_2h)
+      expect(out[:sim_stats][:home][:corners]).to have_key(:p50_1h)
+      expect(out[:sim_stats][:home][:corners]).to have_key(:p50_2h)
+    end
+
+    it 'keeps goals full-match only (score model has no honest half split)' do
+      expect(out[:per_half_available]).to be(true)
+      expect(out[:sim_stats][:home][:goals]).not_to have_key(:p50_1h)
+      expect(out[:sim_stats][:away][:goals]).not_to have_key(:p50_1h)
     end
 
     it 'echoes market_anchor unchanged (validation only, never an input)' do
@@ -105,7 +127,7 @@ RSpec.describe AdamStats::Scraper::Simulation::MonteCarlo do
     it 'omits per-half keys when per_half_available is false' do
       out = described_class.run(**base_args.merge(per_half_available: false))
       expect(out[:per_half_available]).to be(false)
-      expect(out[:sim_stats][:corners][:home]).not_to have_key(:p50_1h)
+      expect(out[:sim_stats][:home][:corners]).not_to have_key(:p50_1h)
     end
   end
 end
