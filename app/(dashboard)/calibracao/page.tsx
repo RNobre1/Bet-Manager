@@ -45,7 +45,9 @@ export default async function CalibracaoPage() {
     resolved.map((r) => ({
       correct_winner: r.correct_winner ?? false,
       correct_over_under: r.correct_over_under ?? false,
-      pred_confidence: r.pred_confidence,
+      // PostgREST pode devolver numeric como string — coerce explícito aqui
+      // evita que calibrationBuckets zere todos os buckets silenciosamente.
+      pred_confidence: Number(r.pred_confidence),
     }));
 
   const rates = hitRate(resolvedForMetrics);

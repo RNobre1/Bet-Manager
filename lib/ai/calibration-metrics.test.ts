@@ -125,4 +125,29 @@ describe("calibrationBuckets", () => {
     expect(result[2].range).toEqual([0.5, 0.75]);
     expect(result[3].range).toEqual([0.75, 1]);
   });
+
+  // PostgREST pode devolver numeric(4,3) como string em vez de number.
+  // Documenta o comportamento sem coerção (todos n=0) e com coerção (Number()).
+  it("pred_confidence como string é ignorado (sem coerção) — n permanece 0", () => {
+    // Simula PostgREST retornando "0.72" como string.
+    const rows = [
+      { pred_confidence: "0.72" as unknown as number, correct_winner: true, correct_over_under: true },
+    ];
+    const result = calibrationBuckets(rows, 5);
+    // Sem coerção, typeof "0.72" !== "number" → a row é ignorada.
+    expect(result.every((b) => b.n === 0)).toBe(true);
+  });
+
+  it("pred_confidence coagida via Number() é corretamente bucketizada", () => {
+    // Simula o mapeamento de page.tsx: Number("0.72") antes de passar pra calibrationBuckets.
+    const rows = [
+      { pred_confidence: Number("0.72"), correct_winner: true, correct_over_under: true },
+    ];
+    const result = calibrationBuckets(rows, 5);
+    // 0.72 cai no bucket 3 (index=3: [0.6, 0.8)).
+    const activeBucket = result.find((b) => b.n > 0);
+    expect(activeBucket).toBeDefined();
+    expect(activeBucket!.n).toBe(1);
+    expect(activeBucket!.realizedAccuracy).toBe(1);
+  });
 });

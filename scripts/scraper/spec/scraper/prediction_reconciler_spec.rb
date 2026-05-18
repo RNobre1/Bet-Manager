@@ -1,5 +1,6 @@
 require 'date'
 require 'time'
+require 'faraday'
 require_relative '../../lib/scraper/prediction_reconciler'
 
 # Nota: testes com mocks (sem banco real).
@@ -344,6 +345,78 @@ RSpec.describe AdamStats::Scraper::PredictionReconciler do
       expect { reconciler.run }.not_to raise_error
 
       expect(logger_msgs).to include(a_string_matching(/warn.*skip|error.*skip|network|failed/i))
+    end
+  end
+
+  # ── teste de contrato com payload REAL capturado em 2026-05-18 ──────────────
+  # Fixture: Manchester United 3-2 Nottingham Forest (Premier League, 2026-05-17)
+  # Fonte: GET https://api.choistats.com/api/widget/match/19427233/recent-results
+  # Arquivo: spec/scraper/fixtures/widgets/recent-results-played.json
+  #
+  # Valida que reconcile_row funciona com o shape REAL de jogo FT —
+  # confirma suposição de prediction_reconciler.rb:
+  #   widget.dig('fixture')['status'] == 'FT'
+  #   widget.dig('fixture')['homeGoalsFt']  (Integer)
+  #   widget.dig('fixture')['awayGoalsFt']  (Integer)
+  describe 'contrato de shape com payload real (recent-results-played.json)' do
+    let(:real_widget) do
+      fixture_path = File.expand_path(
+        '../../spec/scraper/fixtures/widgets/recent-results-played.json',
+        __dir__
+      )
+      JSON.parse(File.read(fixture_path))
+    end
+
+    it 'fixture.status é "FT" no payload real' do
+      expect(real_widget.dig('fixture', 'status')).to eq('FT')
+    end
+
+    it 'fixture.homeGoalsFt é Integer no payload real' do
+      val = real_widget.dig('fixture', 'homeGoalsFt')
+      expect(val).to be_a(Integer)
+      expect(val).to eq(3)
+    end
+
+    it 'fixture.awayGoalsFt é Integer no payload real' do
+      val = real_widget.dig('fixture', 'awayGoalsFt')
+      expect(val).to be_a(Integer)
+      expect(val).to eq(2)
+    end
+
+    it 'reconcile_row resolve para status=resolved com payload real (Man Utd 3-2 Forest)' do
+      # pred: home vence (✓), over 2.5 (✓ — 3+2=5>2.5)
+      row = pending_row(
+        id:             10,
+        home:           'Manchester United',
+        away:           'Nottingham Forest',
+        kickoff_iso:    (Time.now.utc - 3600).iso8601,
+        fixture_api_id: 19427233
+      )
+
+      updates_captured = []
+      db_conn = double('db_conn')
+      allow(db_conn).to receive(:exec_params)
+        .with(a_string_matching(/SELECT.*status.*=.*'pending'/im), anything)
+        .and_return(double('r', to_a: [row]))
+      allow(db_conn).to receive(:exec_params)
+        .with(a_string_matching(/UPDATE.*ai_predictions/im), anything) do |_sql, params|
+          updates_captured << params
+          double('r', cmd_tuples: 1)
+        end
+
+      client = double('client')
+      allow(client).to receive(:fetch_widget)
+        .with(:recent_results, fixture_id: 19427233)
+        .and_return(real_widget)
+
+      reconciler = described_class.new(db_conn: db_conn, client: client, logger: logger)
+      result = reconciler.run
+
+      expect(result[:resolved]).to eq(1), "esperava resolved=1, shape real pode ter mudado — verificar recent-results-played.json"
+      params = updates_captured.first
+      expect(params).to include(3, 2)        # home_goals=3, away_goals=2
+      expect(params).to include(true)         # correct_winner (pred=home, Man Utd venceu 3-2)
+      expect(params).to include('resolved')
     end
   end
 end
