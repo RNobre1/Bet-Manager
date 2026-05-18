@@ -266,8 +266,124 @@ function makeDetail(): DetailJson & Record<string, unknown> {
   };
 }
 
+/**
+ * GOLDEN simulation result — the COMPUTED fields below are a verbatim
+ * snapshot of REAL producer output, obtained by running
+ * `Runner.simulate(WidgetMerger.merge(...))` over the same widget fixtures
+ * the producer's `runner_spec.rb` uses
+ * (`scripts/scraper/spec/scraper/fixtures/widgets/{recent-results,players,odds,team-records}.json`).
+ *
+ * It is NOT hand-fabricated. This is the cross-wave anti-drift guarantee:
+ * the consumer test now exercises the EXACT contract the Ruby Monte Carlo
+ * engine emits — `sim_stats` is side→metric with a `goals` metric per side,
+ * `goals` is full-match only (no honest half split from the score model),
+ * `corners` carry per-half percentiles when per_half_available. If the
+ * producer's shape ever drifts, the producer spec breaks AND this golden
+ * must be re-derived — the mock can no longer silently encode the wrong
+ * contract. To regenerate: run Runner.simulate over those widget fixtures
+ * and JSON.generate(sim) (throwaway dumper, never committed).
+ */
+const GOLDEN_SIM = {
+  model_version: "sim-v1-poisson-dc-nb-mc10k",
+  status: "pending",
+  p_home: 0.4839,
+  p_draw: 0.2622,
+  p_away: 0.2539,
+  p_btts: 0.6084,
+  p_over_25: 0.5831,
+  top_scorelines: [
+    { score: "1-1", prob: 0.1204 },
+    { score: "2-1", prob: 0.0966 },
+    { score: "2-0", prob: 0.078 },
+    { score: "1-0", prob: 0.0742 },
+    { score: "1-2", prob: 0.0674 },
+    { score: "2-2", prob: 0.0625 },
+  ],
+  sim_stats: {
+    home: {
+      corners: {
+        p10: 1,
+        p50: 5,
+        p90: 11,
+        p10_1h: 0,
+        p50_1h: 2,
+        p90_1h: 6,
+        p10_2h: 0,
+        p50_2h: 2,
+        p90_2h: 6,
+      },
+      cards: { p10: 0, p50: 2, p90: 7 },
+      sot: { p10: 2, p50: 4, p90: 7 },
+      goals: { p10: 0, p50: 2, p90: 4 },
+    },
+    away: {
+      corners: {
+        p10: 1,
+        p50: 3,
+        p90: 6,
+        p10_1h: 0,
+        p50_1h: 1,
+        p90_1h: 3,
+        p10_2h: 0,
+        p50_2h: 1,
+        p90_2h: 3,
+      },
+      cards: { p10: 0, p50: 1, p90: 4 },
+      sot: { p10: 1, p50: 3, p90: 6 },
+      goals: { p10: 0, p50: 1, p90: 3 },
+    },
+  },
+  per_half_available: true,
+  market_anchor: {
+    Result: {
+      "Tottenham Hotspur": 0.548948,
+      Draw: 0.238792,
+      "Leeds United": 0.21226,
+    },
+  },
+  player_events: [
+    {
+      name: "Micky van de Ven",
+      p_goal: 0.204,
+      expected_goals: 0.2292,
+      p_card: 0.1588,
+      p_sot: 0.0727,
+      provavel_titular: true,
+      confidence: "low",
+    },
+    {
+      name: "João Palhinha",
+      p_goal: 0.2867,
+      expected_goals: 0.3344,
+      p_card: 0.1567,
+      p_sot: 0.1378,
+      provavel_titular: true,
+      confidence: "low",
+    },
+    {
+      name: "Richarlison",
+      p_goal: 0.6194,
+      expected_goals: 0.969,
+      p_card: 0.1512,
+      p_sot: 0.4502,
+      provavel_titular: true,
+      confidence: "low",
+    },
+    {
+      name: "Dominic Calvert-Lewin",
+      p_goal: 0.3875,
+      expected_goals: 0.4884,
+      p_card: 0.0427,
+      p_sot: 0.2989,
+      provavel_titular: true,
+      confidence: "low",
+    },
+  ],
+} as const;
+
 function simRow(over: Record<string, unknown> = {}) {
   return {
+    // ── DB-row metadata (kept aligned with the mocked FixtureRow) ──
     id: 5,
     created_at: "2026-05-18T10:00:00Z",
     fixture_id: 42,
@@ -275,61 +391,8 @@ function simRow(over: Record<string, unknown> = {}) {
     away_team: "Tottenham",
     league: "Premier League",
     kickoff_utc: SAMPLE_KICKOFF,
-    model_version: "dc-poisson-1",
-    p_home: 0.52,
-    p_draw: 0.26,
-    p_away: 0.22,
-    p_btts: 0.58,
-    p_over_25: 0.61,
-    top_scorelines: [
-      { score: "1-0", prob: 0.14 },
-      { score: "2-1", prob: 0.11 },
-    ],
-    sim_stats: {
-      home: {
-        goals: { p50: 1.6 },
-        corners: { p50: 6 },
-        sot: { p50: 5 },
-        cards: { p50: 2 },
-      },
-      away: {
-        goals: { p50: 1.1 },
-        corners: { p50: 4 },
-        sot: { p50: 3 },
-        cards: { p50: 3 },
-      },
-    },
-    per_half_available: false,
-    market_anchor: { p_home: 0.5, p_draw: 0.27, p_away: 0.23 },
-    player_events: [
-      {
-        name: "Cole Palmer",
-        p_goal: 0.41,
-        expected_goals: 0.58,
-        p_card: 0.14,
-        p_sot: 0.62,
-        provavel_titular: true,
-        confidence: "alto",
-      },
-      {
-        name: "Enzo Fernández",
-        p_goal: 0.12,
-        expected_goals: 0.15,
-        p_card: 0.31,
-        p_sot: 0.22,
-        provavel_titular: true,
-        confidence: "médio",
-      },
-      {
-        name: "Heung-min Son",
-        p_goal: 0.34,
-        expected_goals: 0.41,
-        p_card: 0.1,
-        p_sot: 0.5,
-        provavel_titular: true,
-        confidence: "alto",
-      },
-    ],
+    // ── COMPUTED fields: verbatim REAL producer output (golden) ──
+    ...GOLDEN_SIM,
     status: "simulated",
     actual_home_goals: null,
     actual_away_goals: null,
@@ -364,15 +427,16 @@ describe("StatsPage — pre-game simulation panel", () => {
     expect(panel, "simulation panel SIM should mount").not.toBeNull();
     const scoped = within(panel as HTMLElement);
 
-    // Probable scoreline (top of top_scorelines).
-    expect(scoped.getByText(/1-0/)).toBeDefined();
+    // Probable scoreline (top of REAL top_scorelines: "1-1").
+    expect(scoped.getByText(/1-1/)).toBeDefined();
 
-    // 1X2 / over / BTTS probabilities are visible as TEXT (outside tooltips).
-    expect(scoped.getByText("52%")).toBeDefined(); // p_home
-    expect(scoped.getByText("26%")).toBeDefined(); // p_draw
-    expect(scoped.getByText("22%")).toBeDefined(); // p_away
-    expect(scoped.getByText("61%")).toBeDefined(); // p_over_25
-    expect(scoped.getByText("58%")).toBeDefined(); // p_btts
+    // 1X2 / over / BTTS probabilities are visible as TEXT (outside tooltips),
+    // rounded from the REAL producer probabilities.
+    expect(scoped.getByText("48%")).toBeDefined(); // p_home 0.4839
+    expect(scoped.getByText("26%")).toBeDefined(); // p_draw 0.2622
+    expect(scoped.getByText("25%")).toBeDefined(); // p_away 0.2539
+    expect(scoped.getByText("58%")).toBeDefined(); // p_over_25 0.5831
+    expect(scoped.getByText("61%")).toBeDefined(); // p_btts 0.6084
 
     // Bars are rendered (role meter or progressbar) not only on hover.
     expect(
@@ -393,9 +457,9 @@ describe("StatsPage — pre-game simulation panel", () => {
     }
     // No native <meter> element at all (the hidden-meter a11y smell is gone).
     expect(panel?.querySelectorAll("meter").length).toBe(0);
-    // p_home meter exposes the value (52 → aria-valuenow="52").
+    // p_home meter exposes the REAL value (0.4839 → aria-valuenow="48").
     expect(
-      meters.some((m) => m.getAttribute("aria-valuenow") === "52"),
+      meters.some((m) => m.getAttribute("aria-valuenow") === "48"),
     ).toBe(true);
   });
 
@@ -440,11 +504,12 @@ describe("StatsPage — pre-game simulation panel", () => {
     const text = (panel.textContent ?? "").toLowerCase();
 
     // confidence buckets are an intended UI signal (wired in [Minor] 6).
-    expect(text).toContain("alto"); // Palmer / Son confidence
-    expect(text).toContain("médio"); // Enzo confidence
+    // Real producer output for these widget fixtures yields "low" confidence.
+    expect(text).toContain("confiança");
+    expect(text).toContain("low");
   });
 
-  it("shows a stats tab/section with EXACT per-team numbers", async () => {
+  it("shows a stats tab/section with EXACT per-team numbers (real producer)", async () => {
     mockState.fixtureRow = makeRow({ detail_json: makeDetail() as unknown });
     mockState.simRow = simRow();
 
@@ -452,11 +517,55 @@ describe("StatsPage — pre-game simulation panel", () => {
     const panel = container.querySelector('[data-panel="SIM"]') as HTMLElement;
     const scoped = within(panel);
 
-    // Exact per-team numbers ("Chelsea: 6 escanteios, 1.6 gols, 5 SOT").
+    // The per-team projected-stats table renders the REAL p50 for EVERY
+    // metric/side from the side→metric+goals producer contract. With the
+    // pre-fix metric→side / no-goals shape these would all be "—".
+    const cellsFor = (key: string) =>
+      Array.from(
+        panel.querySelectorAll<HTMLElement>(
+          `tr[data-sim-stat="${key}"] td.num`,
+        ),
+      ).map((c) => c.textContent?.trim());
+
     expect(scoped.getAllByText(/escanteios/i).length).toBeGreaterThan(0);
-    expect(scoped.getByText("6")).toBeDefined(); // home corners p50
-    expect(scoped.getByText("4")).toBeDefined(); // away corners p50
-    expect(scoped.getByText("5")).toBeDefined(); // home SOT p50
+    expect(scoped.getAllByText(/gols/i).length).toBeGreaterThan(0);
+
+    // [home, away] p50 from the golden sim_stats.
+    expect(cellsFor("goals")).toEqual(["2", "1"]);
+    expect(cellsFor("corners")).toEqual(["5", "3"]);
+    expect(cellsFor("sot")).toEqual(["4", "3"]);
+    expect(cellsFor("cards")).toEqual(["2", "1"]);
+
+    // No "—" for any present metric (the original integration bug: every
+    // projected-stat cell was blank because the contracts disagreed).
+    for (const key of ["goals", "corners", "sot", "cards"]) {
+      expect(cellsFor(key)).not.toContain("—");
+    }
+  });
+
+  it("degrades a metric absent from the producer contract to '—' (honest)", async () => {
+    // Drop the away `goals` metric only — the consumer must show "—" for it
+    // while still rendering every present metric (honest degradation, never
+    // a crash, never a fabricated number).
+    const partial = JSON.parse(JSON.stringify(GOLDEN_SIM));
+    delete partial.sim_stats.away.goals;
+    mockState.fixtureRow = makeRow({ detail_json: makeDetail() as unknown });
+    mockState.simRow = simRow({ sim_stats: partial.sim_stats });
+
+    const { container } = await renderPage("42");
+    const panel = container.querySelector('[data-panel="SIM"]') as HTMLElement;
+
+    const goalsCells = Array.from(
+      panel.querySelectorAll<HTMLElement>('tr[data-sim-stat="goals"] td.num'),
+    ).map((c) => c.textContent?.trim());
+    expect(goalsCells).toEqual(["2", "—"]); // home present, away degraded
+    // Other metrics unaffected.
+    const cornerCells = Array.from(
+      panel.querySelectorAll<HTMLElement>(
+        'tr[data-sim-stat="corners"] td.num',
+      ),
+    ).map((c) => c.textContent?.trim());
+    expect(cornerCells).toEqual(["5", "3"]);
   });
 
   it("renders the probable XI labeled EXACTLY 'provável escalação' and never 'oficial'", async () => {
@@ -473,27 +582,50 @@ describe("StatsPage — pre-game simulation panel", () => {
     expect(text.toLowerCase()).not.toContain("xi oficial");
     expect(text.toLowerCase()).not.toContain("oficial");
 
-    // Pitch view present, players placed.
+    // Pitch view present, players placed (real producer player_events).
     expect(panel.querySelector("[data-pitch]")).not.toBeNull();
-    expect(within(panel).getByText(/Cole Palmer/)).toBeDefined();
+    expect(within(panel).getByText(/Richarlison/)).toBeDefined();
   });
 
-  it("renders goal/card icons per simulated player", async () => {
+  it("renders the goal icon for a real likely scorer (threshold honest)", async () => {
     mockState.fixtureRow = makeRow({ detail_json: makeDetail() as unknown });
     mockState.simRow = simRow();
 
     const { container } = await renderPage("42");
     const panel = container.querySelector('[data-panel="SIM"]') as HTMLElement;
 
-    // Palmer is a likely scorer (p_goal high) → goal icon.
+    // Richarlison's REAL p_goal is 0.6194 (≥ 0.25) → goal icon present.
     expect(
       panel.querySelector('[data-player-icon="goal"]'),
       "expected a goal icon for a likely scorer",
     ).not.toBeNull();
-    // Enzo is card-prone (p_card high) → card icon.
+
+    // Honest: the REAL producer output for this fixture has no player with
+    // p_card ≥ 0.25 (max ≈ 0.196), so NO card icon is rendered. Fabricating
+    // a card-prone player here would re-introduce exactly the cross-wave
+    // drift this golden exists to prevent. With a synthetic card-prone
+    // player injected, the icon DOES appear (threshold logic still works).
+    expect(panel.querySelector('[data-player-icon="card"]')).toBeNull();
+
+    const cardProne = simRow({
+      player_events: [
+        {
+          name: "Tackler X",
+          p_goal: 0.05,
+          expected_goals: 0.05,
+          p_card: 0.42,
+          p_sot: 0.1,
+          provavel_titular: true,
+          confidence: "low",
+        },
+      ],
+    });
+    mockState.simRow = cardProne;
+    const { container: c2 } = await renderPage("42");
+    const panel2 = c2.querySelector('[data-panel="SIM"]') as HTMLElement;
     expect(
-      panel.querySelector('[data-player-icon="card"]'),
-      "expected a card icon for a card-prone player",
+      panel2.querySelector('[data-player-icon="card"]'),
+      "card-prone player (p_card ≥ 0.25) → card icon",
     ).not.toBeNull();
   });
 
