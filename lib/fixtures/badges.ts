@@ -21,6 +21,38 @@ export interface Badge {
   tone: BadgeTone;
 }
 
+/**
+ * Single source of truth for badge slug -> presentation metadata. The
+ * Postgres `fixture_badges_view` (migration 0017) emits only the slugs in
+ * a `text[]`; `badgesFromSlugs()` rehydrates them into Badge objects so the
+ * heavy detail_json never crosses into the Worker. Slugs and order MUST stay
+ * in lockstep with the SQL view and with computeBadges() below.
+ */
+export const BADGE_BY_SLUG: Record<string, Badge> = {
+  "cartao-alto": { id: "cartao-alto", label: "cartão alto", tone: "cards" },
+  "over-alto": { id: "over-alto", label: "over alto", tone: "over" },
+  "btts-alto": { id: "btts-alto", label: "btts alto", tone: "btts" },
+  "primeiro-tempo": {
+    id: "primeiro-tempo",
+    label: "1T quente",
+    tone: "first-half",
+  },
+};
+
+/**
+ * Rehydrates a slug array (as produced by `fixture_badges_view`) into Badge
+ * objects, preserving order and dropping unknown slugs defensively.
+ */
+export function badgesFromSlugs(slugs: unknown): Badge[] {
+  if (!Array.isArray(slugs)) return [];
+  const out: Badge[] = [];
+  for (const s of slugs) {
+    const b = typeof s === "string" ? BADGE_BY_SLUG[s] : undefined;
+    if (b) out.push(b);
+  }
+  return out;
+}
+
 const MAX_BADGES = 3;
 const STREAK_PERC_MIN = 70;
 const REFEREE_BOOKING_THRESHOLD = 45;
