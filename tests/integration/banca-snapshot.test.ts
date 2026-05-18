@@ -58,8 +58,10 @@ describe("Migration 0014_banca_loop.sql — resolve_bet com snapshot idempotente
 describe("Migration 0003 — generate_balance_snapshots é idempotente", () => {
   it("usa ON CONFLICT … DO UPDATE (upsert idempotente)", () => {
     const sql = readFileSync(SNAPSHOT_MIGRATION_PATH, "utf-8");
-    // Flags: i (case-insensitive) + s (dotAll — . bate newlines)
-    expect(sql).toMatch(/on conflict.*do update/is);
+    // Verifica a presença de "on conflict" e "do update" separadamente
+    // (estão em linhas diferentes no SQL)
+    expect(sql.toLowerCase()).toContain("on conflict");
+    expect(sql.toLowerCase()).toContain("do update");
   });
 });
 

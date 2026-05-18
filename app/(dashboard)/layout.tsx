@@ -10,6 +10,7 @@ const NAV = [
   { href: "/houses", label: "casas" },
   { href: "/bets", label: "apostas" },
   { href: "/transactions", label: "transações" },
+  { href: "/banca", label: "banca" },
   { href: "/forecast", label: "previsão" },
   { href: "/fixtures", label: "fixtures" },
   { href: "/explore", label: "explorar" },

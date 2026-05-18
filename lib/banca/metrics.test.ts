@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeRoi, computeYield, computeWinRate, computeMaxDrawdown, carryForwardSeries } from "./metrics";
+import { computeRoi, computeYield, computeWinRate, computeMaxDrawdown, carryForwardSeries, computeStreaks } from "./metrics";
 
 describe("computeRoi", () => {
   it("cumulativePl / netCapital", () => {
@@ -37,6 +37,38 @@ describe("computeMaxDrawdown", () => {
   });
   it("série vazia → 0", () => {
     expect(computeMaxDrawdown([])).toBe(0);
+  });
+});
+
+describe("computeStreaks", () => {
+  it("sequência corrente de vitórias (mais recente primeiro)", () => {
+    const result = computeStreaks(["W", "W", "L", "W"]);
+    expect(result.currentWinStreak).toBe(2);
+    expect(result.currentLoseStreak).toBe(0);
+  });
+
+  it("sequência corrente de derrotas (mais recente primeiro)", () => {
+    const result = computeStreaks(["L", "L", "W", "W"]);
+    expect(result.currentWinStreak).toBe(0);
+    expect(result.currentLoseStreak).toBe(2);
+  });
+
+  it("max win streak considera toda a série", () => {
+    const result = computeStreaks(["W", "L", "W", "W", "W", "L"]);
+    expect(result.maxWinStreak).toBe(3);
+  });
+
+  it("max lose streak considera toda a série", () => {
+    const result = computeStreaks(["W", "L", "L", "L", "W"]);
+    expect(result.maxLoseStreak).toBe(3);
+  });
+
+  it("série vazia → todos zeros", () => {
+    const result = computeStreaks([]);
+    expect(result.currentWinStreak).toBe(0);
+    expect(result.currentLoseStreak).toBe(0);
+    expect(result.maxWinStreak).toBe(0);
+    expect(result.maxLoseStreak).toBe(0);
   });
 });
 
