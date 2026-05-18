@@ -379,6 +379,69 @@ describe("StatsPage — pre-game simulation panel", () => {
       scoped.queryAllByRole("meter").length +
         scoped.queryAllByRole("progressbar").length,
     ).toBeGreaterThan(0);
+
+    // Design-system: each probability is conveyed by a SINGLE element
+    // carrying role="meter" + aria-valuenow/min/max — no native <meter>
+    // duplicating it behind an aria-hidden decorative div.
+    const meters = scoped.getAllByRole("meter");
+    expect(meters.length).toBe(5); // 1X2 (3) + over + BTTS
+    for (const m of meters) {
+      expect(m.tagName.toLowerCase()).not.toBe("meter");
+      expect(m).toHaveAttribute("aria-valuenow");
+      expect(m).toHaveAttribute("aria-valuemin", "0");
+      expect(m).toHaveAttribute("aria-valuemax", "100");
+    }
+    // No native <meter> element at all (the hidden-meter a11y smell is gone).
+    expect(panel?.querySelectorAll("meter").length).toBe(0);
+    // p_home meter exposes the value (52 → aria-valuenow="52").
+    expect(
+      meters.some((m) => m.getAttribute("aria-valuenow") === "52"),
+    ).toBe(true);
+  });
+
+  it("renders through the shared PanelShell card+header structure", async () => {
+    mockState.fixtureRow = makeRow({ detail_json: makeDetail() as unknown });
+    mockState.simRow = simRow();
+
+    const { container } = await renderPage("42");
+    const panel = container.querySelector('[data-panel="SIM"]') as HTMLElement;
+
+    // Standard panel card shell (same class contract as every server panel).
+    const card = panel.querySelector(".card.\\@container\\/card");
+    expect(card, "SIM must render through the shared card shell").not.toBeNull();
+
+    // Standard header: h3.font-display + a .label eyebrow.
+    const h3 = panel.querySelector("header h3.font-display");
+    expect(h3?.textContent).toContain("Simulação pré-jogo");
+    const eyebrow = panel.querySelector("header span.label");
+    expect(eyebrow, "PanelShell eyebrow span expected").not.toBeNull();
+    expect(eyebrow?.textContent?.toLowerCase()).toContain("monte carlo");
+  });
+
+  it("shows the TeamLegend above the per-team projected-stats table", async () => {
+    mockState.fixtureRow = makeRow({ detail_json: makeDetail() as unknown });
+    mockState.simRow = simRow();
+
+    const { container } = await renderPage("42");
+    const panel = container.querySelector('[data-panel="SIM"]') as HTMLElement;
+
+    const legend = panel.querySelector("[data-team-legend]");
+    expect(legend, "TeamLegend expected for team-keyed parity").not.toBeNull();
+    expect(legend?.textContent).toContain("Chelsea");
+    expect(legend?.textContent).toContain("Tottenham");
+  });
+
+  it("exposes the per-player confidence signal as visible text", async () => {
+    mockState.fixtureRow = makeRow({ detail_json: makeDetail() as unknown });
+    mockState.simRow = simRow();
+
+    const { container } = await renderPage("42");
+    const panel = container.querySelector('[data-panel="SIM"]') as HTMLElement;
+    const text = (panel.textContent ?? "").toLowerCase();
+
+    // confidence buckets are an intended UI signal (wired in [Minor] 6).
+    expect(text).toContain("alto"); // Palmer / Son confidence
+    expect(text).toContain("médio"); // Enzo confidence
   });
 
   it("shows a stats tab/section with EXACT per-team numbers", async () => {

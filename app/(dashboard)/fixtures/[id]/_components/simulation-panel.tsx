@@ -3,6 +3,11 @@ import type {
   SimPlayerEvent,
 } from "@/lib/fixtures/simulation-repository";
 import { InfoPopover } from "@/components/fixtures/stats/_primitives/info-popover";
+import { PanelShell } from "@/components/fixtures/stats/panels/_shell";
+import {
+  TeamLegend,
+  teamColor,
+} from "@/components/fixtures/stats/_primitives/team-legend";
 
 /**
  * Painel SIM · simulação pré-jogo.
@@ -22,6 +27,13 @@ import { InfoPopover } from "@/components/fixtures/stats/_primitives/info-popove
  *  - degradação honesta: stat sem split de tempo → "total do jogo";
  *    posse nunca é simulada (não renderiza número); `status: 'unsimulable'`
  *    ou ausência de simulação → estado "simulação indisponível".
+ *
+ * Adesão ao design system: renderiza via `PanelShell` (mesma casca card+
+ * header de todo painel server), usa `teamColor`/`TeamLegend` como fonte
+ * única de cor por time, tokens de raio válidos (`--radius-sm`) e a barra de
+ * proporção única com `role="meter"` + valor textual (convenção de
+ * `distributions.tsx`). Aba mobile dedicada (MOBILE_TABS em
+ * `stats-layout.tsx`) fica adiada para T6 — fora do escopo deste painel.
  */
 
 interface SimulationPanelProps {
@@ -42,7 +54,13 @@ function pctNum(v: number | null): number {
   return Math.max(0, Math.min(100, Math.round(v * 100)));
 }
 
-/** A single probability bar — value visible as text AND as a <meter>. */
+/**
+ * A single probability bar — exactly the dashboard convention used by
+ * `distributions.tsx`: ONE element carrying `role="meter"` +
+ * `aria-valuenow/min/max`, a VISIBLE numeric value (MetricCell typography:
+ * `num` + `text-sm font-semibold`) and an `aria-hidden` decorative track.
+ * No native `<meter>`, no second element duplicating the same value.
+ */
 function ProbBar({
   label,
   value,
@@ -54,23 +72,20 @@ function ProbBar({
 }) {
   const p = pctNum(value);
   return (
-    <div className="flex flex-col gap-1">
+    <div
+      role="meter"
+      aria-valuenow={p}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-label={`${label} ${pct(value)}`}
+      className="flex flex-col gap-1"
+    >
       <div className="flex items-baseline justify-between gap-2">
         <span className="label text-[var(--color-ink-muted)]">{label}</span>
-        <span
-          className="num text-sm font-semibold"
-          style={{ color: "var(--color-ink-display)" }}
-        >
+        <span className="num text-sm font-semibold text-[var(--color-ink-display)]">
           {pct(value)}
         </span>
       </div>
-      <meter
-        min={0}
-        max={100}
-        value={p}
-        aria-label={`${label} ${pct(value)}`}
-        className="h-2 w-full"
-      />
       <div
         aria-hidden
         className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--color-surface-3)]"
@@ -84,15 +99,19 @@ function ProbBar({
   );
 }
 
+/**
+ * Empty / unsimulable state — still a standard card with the standard
+ * header (rendered through `PanelShell`), so it reads as native dashboard
+ * furniture rather than a bolt-on placeholder.
+ */
 function Unavailable({ reason }: { reason: string }) {
   return (
-    <div className="card @container/card flex flex-col items-center justify-center gap-2 p-8">
-      <h3 className="font-display text-lg text-[var(--color-ink-display)]">
-        Simulação pré-jogo
-      </h3>
-      <p className="text-[var(--color-ink-muted)]">simulação indisponível</p>
-      <p className="label text-[var(--color-ink-faint)]">{reason}</p>
-    </div>
+    <PanelShell title="Simulação pré-jogo" eyebrow="Monte Carlo">
+      <div className="flex flex-col items-center justify-center gap-2 py-8">
+        <p className="text-[var(--color-ink-muted)]">simulação indisponível</p>
+        <p className="label text-[var(--color-ink-faint)]">{reason}</p>
+      </div>
+    </PanelShell>
   );
 }
 
@@ -148,12 +167,11 @@ export function SimulationPanel({
   const xiToShow = xi.length > 0 ? xi : sim.player_events;
 
   return (
-    <div className="card @container/card flex flex-col gap-5 p-4 lg:p-5">
-      <header className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="font-display text-lg text-[var(--color-ink-display)]">
-          Simulação pré-jogo
-        </h3>
-        <span className="label flex items-center gap-1.5 text-[var(--color-ink-faint)]">
+    <PanelShell
+      title="Simulação pré-jogo"
+      gap={4}
+      eyebrow={
+        <span className="inline-flex items-center gap-1.5">
           Monte Carlo
           <InfoPopover label="o que é a simulação pré-jogo">
             <p>
@@ -165,8 +183,8 @@ export function SimulationPanel({
             </p>
           </InfoPopover>
         </span>
-      </header>
-
+      }
+    >
       {/* ── Placar provável + barras de probabilidade ── */}
       <section className="flex flex-col gap-4">
         <div className="flex flex-wrap items-baseline gap-3">
@@ -191,7 +209,7 @@ export function SimulationPanel({
           <ProbBar
             label={`Vitória ${homeTeam}`}
             value={sim.p_home}
-            accent="var(--color-vermelho)"
+            accent={teamColor("home")}
           />
           <ProbBar
             label="Empate"
@@ -201,7 +219,7 @@ export function SimulationPanel({
           <ProbBar
             label={`Vitória ${awayTeam}`}
             value={sim.p_away}
-            accent="var(--color-depth)"
+            accent={teamColor("away")}
           />
         </div>
         <div className="grid grid-cols-1 gap-3 @md/card:grid-cols-2">
@@ -232,16 +250,23 @@ export function SimulationPanel({
             </p>
           </InfoPopover>
         </div>
+        <TeamLegend home={homeTeam} away={awayTeam} className="mb-1" />
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left">
               <th className="label py-1 font-normal text-[var(--color-ink-faint)]">
                 Métrica
               </th>
-              <th className="label py-1 text-right font-normal text-[var(--color-vermelho)]">
+              <th
+                className="label py-1 text-right font-normal"
+                style={{ color: teamColor("home") }}
+              >
                 {homeTeam}
               </th>
-              <th className="label py-1 text-right font-normal text-[var(--color-depth)]">
+              <th
+                className="label py-1 text-right font-normal"
+                style={{ color: teamColor("away") }}
+              >
                 {awayTeam}
               </th>
             </tr>
@@ -299,14 +324,14 @@ export function SimulationPanel({
         </p>
         <div
           data-pitch
-          className="grid grid-cols-2 gap-2 rounded-[var(--radius-md)] border border-[var(--color-line)] bg-[color-mix(in_srgb,var(--color-depth)_8%,transparent)] p-3 sm:grid-cols-3"
+          className="grid grid-cols-2 gap-2 rounded-[var(--radius-sm)] border border-[var(--color-line)] bg-[color-mix(in_srgb,var(--color-depth)_8%,transparent)] p-3 sm:grid-cols-3"
         >
           {xiToShow.map((p, idx) => (
             <PlayerChip key={`${p.name}-${idx}`} player={p} />
           ))}
         </div>
       </section>
-    </div>
+    </PanelShell>
   );
 }
 
@@ -335,14 +360,25 @@ function PlayerChip({ player }: { player: SimPlayerEvent }) {
               aria-label="propenso a cartão"
               title="propenso a cartão"
               className="inline-block h-3 w-2 rounded-[1px]"
-              style={{ background: "var(--color-amarelo, #d8b231)" }}
+              style={{ background: "var(--color-warning)" }}
             />
           ) : null}
         </span>
       </div>
       <span className="num label text-[var(--color-ink-faint)]">
         gol {pct(player.p_goal)} · cartão {pct(player.p_card)}
+        {Number.isFinite(player.expected_goals)
+          ? ` · xG ${Number(player.expected_goals.toFixed(2))}`
+          : null}
       </span>
+      {player.confidence ? (
+        <span
+          data-player-confidence={player.confidence}
+          className="label text-[var(--color-ink-faint)]"
+        >
+          confiança {player.confidence}
+        </span>
+      ) : null}
     </div>
   );
 }
