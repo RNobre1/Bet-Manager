@@ -216,6 +216,348 @@ RSpec.describe AdamStats::Scraper::WidgetMerger do
     end
   end
 
+  # ─────────────────────────────────────────────────────────────────────────────
+  # NEW KEYS — Fundação Simulação (item 1-6)
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  # Item 1 — avgs: 4 *Avgs blocks from recent-results widget fixture object
+  describe 'avgs (item 1)' do
+    it 'exposes all 4 Avgs blocks keyed as home_home / home_overall / away_away / away_overall' do
+      avgs = merged.avgs
+      expect(avgs).to be_a(Hash)
+      expect(avgs).to have_key(:home_home)
+      expect(avgs).to have_key(:home_overall)
+      expect(avgs).to have_key(:away_away)
+      expect(avgs).to have_key(:away_overall)
+    end
+
+    it 'home_home has num_matches=17 and avgGoalsTotal=2.9 (from fixture)' do
+      hh = merged.avgs[:home_home]
+      expect(hh[:num_matches]).to eq(17)
+      expect(hh[:avgGoalsTotal]).to eq(2.9)
+    end
+
+    it 'home_overall has num_matches=35' do
+      expect(merged.avgs[:home_overall][:num_matches]).to eq(35)
+    end
+
+    it 'away_away has num_matches=17 and avgGoalsTotal=2.9' do
+      aa = merged.avgs[:away_away]
+      expect(aa[:num_matches]).to eq(17)
+      expect(aa[:avgGoalsTotal]).to eq(2.9)
+    end
+
+    it 'away_overall has num_matches=35' do
+      expect(merged.avgs[:away_overall][:num_matches]).to eq(35)
+    end
+
+    it 'each block exposes all 43 metric keys (num_matches + 42 avg metrics)' do
+      %i[home_home home_overall away_away away_overall].each do |key|
+        block = merged.avgs[key]
+        expect(block.keys.length).to eq(43), "expected 43 keys in avgs[:#{key}], got #{block.keys.length}"
+      end
+    end
+
+    it 'includes goalKicks and throwIns metrics inside each avg block' do
+      hh = merged.avgs[:home_home]
+      %i[goalKicksTotal goalKicksFor goalKicksAg throwInsTotal throwInsFor throwInsAg].each do |k|
+        expect(hh).to have_key(k), "expected avgs[:home_home] to have key #{k.inspect}"
+      end
+    end
+
+    it 'returns empty hashes for all 4 blocks when recent_results is nil' do
+      result = described_class.merge(base, widgets.except(:recent_results))
+      expect(result.avgs).to eq(home_home: {}, home_overall: {}, away_away: {}, away_overall: {})
+    end
+  end
+
+  # Item 2 — recent_all: home+away results (all venues)
+  describe 'recent_all (item 2)' do
+    it 'exposes home and away arrays from recentHomeAllResults / recentAwayAllResults' do
+      ra = merged.recent_all
+      expect(ra).to be_a(Hash)
+      expect(ra[:home]).to be_an(Array)
+      expect(ra[:away]).to be_an(Array)
+    end
+
+    it 'has 10 entries each (from fixture data)' do
+      expect(merged.recent_all[:home].length).to eq(10)
+      expect(merged.recent_all[:away].length).to eq(10)
+    end
+
+    it 'each entry carries the full match fields including date_iso, teams, goals and goal_kicks' do
+      entry = merged.recent_all[:home].first
+      expect(entry['date_iso']).to match(/\A\d{4}-\d{2}-\d{2}\z/)
+      expect(entry['home_team']).to be_a(String)
+      expect(entry['away_team']).to be_a(String)
+      expect(entry['homeGoalsFt']).to be_a(Integer)
+      expect(entry).to have_key('homeGoalKicks')
+      expect(entry).to have_key('homeThrowIns')
+    end
+
+    it 'returns empty arrays when recent_results is absent' do
+      result = described_class.merge(base, widgets.except(:recent_results))
+      expect(result.recent_all).to eq(home: [], away: [])
+    end
+  end
+
+  # Item 3 — standings: current league table position for both teams
+  describe 'standings (item 3)' do
+    it 'exposes home and away sub-hashes' do
+      st = merged.standings
+      expect(st).to be_a(Hash)
+      expect(st).to have_key(:home)
+      expect(st).to have_key(:away)
+    end
+
+    it 'includes stage name from fixtureWithoutStats' do
+      expect(merged.standings[:home][:stage_name]).to eq('Regular Season')
+      expect(merged.standings[:away][:stage_name]).to eq('Regular Season')
+    end
+
+    it 'includes fixture-level position from fixtureWithoutStats' do
+      expect(merged.standings[:home][:fixture_position]).to eq('17th')
+      expect(merged.standings[:away][:fixture_position]).to eq('16th')
+    end
+
+    it 'home team has position=17th, played=35, points=37 from ResultsWithStandings' do
+      home_st = merged.standings[:home]
+      expect(home_st[:position]).to eq('17th')
+      expect(home_st[:played]).to eq(35)
+      expect(home_st[:points]).to eq(37)
+      expect(home_st[:goal_diff]).to eq(-9)
+    end
+
+    it 'away team has position=16th, played=35, points=43' do
+      away_st = merged.standings[:away]
+      expect(away_st[:position]).to eq('16th')
+      expect(away_st[:played]).to eq(35)
+      expect(away_st[:points]).to eq(43)
+    end
+
+    it 'includes fixtureWithoutStats slug' do
+      expect(merged.standings[:home]).to have_key(:fixture_slug)
+      expect(merged.standings[:home][:fixture_slug]).to be_a(String)
+    end
+
+    it 'returns empty hashes when team_records is absent' do
+      result = described_class.merge(base, widgets.except(:team_records))
+      expect(result.standings).to eq(home: {}, away: {})
+    end
+  end
+
+  # Item 4 — goal_kicks and throw_ins in recent_matches and h2h
+  describe 'goal_kicks / throw_ins in recent_matches and h2h (item 4)' do
+    it 'each recent_matches[:home] item carries homeGoalKicks, awayGoalKicks, homeThrowIns, awayThrowIns' do
+      match = merged.recent_matches[:home].first
+      %w[homeGoalKicks awayGoalKicks homeThrowIns awayThrowIns].each do |key|
+        expect(match).to have_key(key), "expected #{key.inspect} in recent_matches[:home].first"
+      end
+    end
+
+    it 'each recent_matches[:away] item carries goal_kicks and throw_ins' do
+      match = merged.recent_matches[:away].first
+      %w[homeGoalKicks awayGoalKicks homeThrowIns awayThrowIns].each do |key|
+        expect(match).to have_key(key), "expected #{key.inspect} in recent_matches[:away].first"
+      end
+    end
+
+    it 'first recent_matches[:home] item has homeGoalKicks=7, awayGoalKicks=6, homeThrowIns=15, awayThrowIns=20' do
+      m = merged.recent_matches[:home].first
+      expect(m['homeGoalKicks']).to eq(7)
+      expect(m['awayGoalKicks']).to eq(6)
+      expect(m['homeThrowIns']).to eq(15)
+      expect(m['awayThrowIns']).to eq(20)
+    end
+
+    it 'each h2h item carries homeGoalKicks and homeThrowIns' do
+      h2h_match = merged.h2h.first
+      %w[homeGoalKicks awayGoalKicks homeThrowIns awayThrowIns].each do |key|
+        expect(h2h_match).to have_key(key), "expected #{key.inspect} in h2h.first"
+      end
+    end
+
+    it 'first h2h item has homeGoalKicks=9, awayGoalKicks=18' do
+      expect(merged.h2h.first['homeGoalKicks']).to eq(9)
+      expect(merged.h2h.first['awayGoalKicks']).to eq(18)
+    end
+  end
+
+  # Item 5 — odds_devigged: multiplicative devig across all 52 markets
+  describe 'odds_devigged (item 5)' do
+    it 'is a Hash with at least one market' do
+      expect(merged.odds_devigged).to be_a(Hash)
+      expect(merged.odds_devigged).not_to be_empty
+    end
+
+    it 'covers all 52 markets (or at least those with valid non-zero odds)' do
+      expect(merged.odds_devigged.length).to be >= 50
+    end
+
+    it 'each market maps outcome names to probabilities (Floats in 0..1)' do
+      merged.odds_devigged.each do |market_name, outcomes|
+        outcomes.each do |outcome_name, prob|
+          expect(prob).to be_a(Float), "expected Float for #{market_name}/#{outcome_name}, got #{prob.class}"
+          expect(prob).to be_between(0.0, 1.0), "prob #{prob} out of range for #{market_name}/#{outcome_name}"
+        end
+      end
+    end
+
+    it 'probabilities sum to ≈1.0 for the Result market' do
+      result_probs = merged.odds_devigged['Result']
+      expect(result_probs).to be_a(Hash)
+      expect(result_probs.values.sum).to be_within(0.001).of(1.0)
+    end
+
+    it 'probabilities sum to ≈1.0 for the BTTS market' do
+      btts_probs = merged.odds_devigged['BTTS']
+      expect(btts_probs).to be_a(Hash)
+      expect(btts_probs.values.sum).to be_within(0.001).of(1.0)
+    end
+
+    it 'Result market has 3 outcomes (home win, draw, away win)' do
+      expect(merged.odds_devigged['Result'].keys.length).to eq(3)
+    end
+
+    it 'devigged Result home-win probability is between 0.4 and 0.7 (sensible range for 1.74 odds)' do
+      home_prob = merged.odds_devigged['Result']['Tottenham Hotspur']
+      expect(home_prob).to be_between(0.40, 0.70)
+    end
+
+    it 'returns empty hash when odds widget is absent' do
+      result = described_class.merge(base, widgets.except(:odds))
+      expect(result.odds_devigged).to eq({})
+    end
+  end
+
+  # Item 6 — player_extra: form, seasons, outcome_odds_by_player
+  describe 'player_extra (item 6)' do
+    it 'exposes form, home_seasons, away_seasons, outcome_odds_by_player' do
+      pe = merged.player_extra
+      expect(pe).to be_a(Hash)
+      expect(pe).to have_key(:form)
+      expect(pe).to have_key(:home_seasons)
+      expect(pe).to have_key(:away_seasons)
+      expect(pe).to have_key(:outcome_odds_by_player)
+    end
+
+    it 'form is the raw playerStatsForm array with 85 entries' do
+      expect(merged.player_extra[:form]).to be_an(Array)
+      expect(merged.player_extra[:form].length).to eq(85)
+    end
+
+    it 'first form entry has expected shape (player, statName, fixtureOdds)' do
+      entry = merged.player_extra[:form].first
+      expect(entry).to have_key('player')
+      expect(entry).to have_key('statName')
+      expect(entry).to have_key('fixtureOdds')
+    end
+
+    it 'home_seasons has 3 entries for Tottenham' do
+      expect(merged.player_extra[:home_seasons]).to be_an(Array)
+      expect(merged.player_extra[:home_seasons].length).to eq(3)
+    end
+
+    it 'away_seasons has 3 entries for Leeds' do
+      expect(merged.player_extra[:away_seasons]).to be_an(Array)
+      expect(merged.player_extra[:away_seasons].length).to eq(3)
+    end
+
+    it 'outcome_odds_by_player is keyed by player name with outcome odds hash' do
+      odds_by_player = merged.player_extra[:outcome_odds_by_player]
+      expect(odds_by_player).to be_a(Hash)
+      expect(odds_by_player).not_to be_empty
+    end
+
+    it 'outcome_odds_by_player includes at least ANYTIME_SCORER and TO_BE_CARDED outcomes' do
+      odds_by_player = merged.player_extra[:outcome_odds_by_player]
+      # At least one player should have ANYTIME_SCORER
+      players_with_scorer = odds_by_player.select { |_, v| v.key?('ANYTIME_SCORER') }
+      expect(players_with_scorer).not_to be_empty
+
+      players_with_carded = odds_by_player.select { |_, v| v.key?('TO_BE_CARDED') }
+      expect(players_with_carded).not_to be_empty
+    end
+
+    it 'Micky van de Ven has ANYTIME_SCORER odds of 7.0 in outcome_odds_by_player' do
+      # key matches "Micky van de Ven" name (may have trailing spaces — strip)
+      player_key = merged.player_extra[:outcome_odds_by_player].keys.find { |k| k.strip == 'Micky van de Ven' }
+      expect(player_key).not_to be_nil, 'Micky van de Ven not found in outcome_odds_by_player'
+      expect(merged.player_extra[:outcome_odds_by_player][player_key]['ANYTIME_SCORER']).to eq(7.0)
+    end
+
+    it 'tolerates missing players widget gracefully' do
+      result = described_class.merge(base, widgets.except(:players))
+      pe = result.player_extra
+      expect(pe[:form]).to eq([])
+      expect(pe[:home_seasons]).to eq([])
+      expect(pe[:away_seasons]).to eq([])
+      expect(pe[:outcome_odds_by_player]).to eq({})
+    end
+  end
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # REGRESSION — old keys unchanged in shape
+  # ─────────────────────────────────────────────────────────────────────────────
+  describe 'regression — existing keys shape unchanged' do
+    it 'team_record has home/away with overall+home/away sub-keys' do
+      tr = merged.team_record
+      expect(tr).to have_key(:home)
+      expect(tr).to have_key(:away)
+      expect(tr[:home]).to have_key(:overall)
+      expect(tr[:home]).to have_key(:home)
+      expect(tr[:away]).to have_key(:overall)
+      expect(tr[:away]).to have_key(:away)
+    end
+
+    it 'recent_matches still has the pre-existing fields (not overwritten by recent_all)' do
+      rm = merged.recent_matches
+      expect(rm).to have_key(:home)
+      expect(rm).to have_key(:away)
+      match = rm[:home].first
+      expect(match['homeGoalsFt']).to be_a(Integer)
+      expect(match['date_iso']).to match(/\A\d{4}-\d{2}-\d{2}\z/)
+    end
+
+    it 'h2h is still an Array with home_team / away_team / homeGoalsFt' do
+      expect(merged.h2h).to be_an(Array)
+      expect(merged.h2h.first).to include('home_team', 'away_team', 'homeGoalsFt')
+    end
+
+    it 'streaks still has home/away arrays with stat_type entries' do
+      expect(merged.streaks[:home]).to be_an(Array)
+      expect(merged.streaks[:home].first).to include(:stat_type, :group)
+    end
+
+    it 'predictions still returns an array with stat_type and chance' do
+      expect(merged.predictions).to be_an(Array)
+      expect(merged.predictions.first).to include(:stat_type, :chance)
+    end
+
+    it 'odds_summary still maps market names to decimal_odds hashes' do
+      os = merged.odds_summary
+      expect(os).to be_a(Hash)
+      expect(os).not_to be_empty
+      first_outcome = os.values.first.values.first
+      expect(first_outcome).to have_key(:decimal_odds)
+    end
+
+    it 'player_stats still has home/away aggregates + top_players with canonical keys' do
+      ps = merged.player_stats
+      expect(ps[:home]).to have_key(:aggregates)
+      expect(ps[:home]).to have_key(:top_players)
+      expect(ps[:home][:aggregates]).to have_key(:total_shots)
+      expect(ps[:home][:aggregates]).to have_key(:players_count)
+    end
+
+    it 'no existing key is removed or renamed by the new additions' do
+      h = merged.to_h
+      %i[trends team_record recent_matches h2h streaks predictions odds_summary player_stats referee_record].each do |k|
+        expect(h).to have_key(k), "expected existing key #{k.inspect} to still be present in merged hash"
+      end
+    end
+  end
+
   describe 'edge cases' do
     it 'returns the base detail unchanged when widgets is empty' do
       result = described_class.merge(base, {})

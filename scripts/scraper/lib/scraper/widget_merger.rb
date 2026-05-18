@@ -15,6 +15,7 @@ module AdamStats
         homeBookingPoints awayBookingPoints
         homeTotalShots awayTotalShots homeShotsOnTarget awayShotsOnTarget
         homeFouls awayFouls homeOffsides awayOffsides homeTackles awayTackles
+        homeGoalKicks awayGoalKicks homeThrowIns awayThrowIns
       ].freeze
 
       module_function
@@ -42,7 +43,7 @@ module AdamStats
 
       def merge(detail, widgets)
         widgets ||= {}
-        team_record = build_team_record(widgets[:team_records] || widgets['team_records'])
+        team_records_data = widgets[:team_records] || widgets['team_records']
         recents = widgets[:recent_results] || widgets['recent_results']
         chances = widgets[:chances] || widgets['chances']
         odds = widgets[:odds] || widgets['odds']
@@ -50,14 +51,20 @@ module AdamStats
         referee_fixtures = widgets[:referee_fixtures] || widgets['referee_fixtures']
 
         detail.with(
-          team_record: team_record,
+          team_record: build_team_record(team_records_data),
           recent_matches: build_recent_matches(recents),
           h2h: build_h2h(recents),
           streaks: build_streaks(recents),
           predictions: build_predictions(chances),
           odds_summary: build_odds_summary(odds),
           player_stats: build_player_stats(players),
-          referee_record: build_referee_record(referee_fixtures)
+          referee_record: build_referee_record(referee_fixtures),
+          # Fundação Simulação — novos campos (itens 1-6)
+          avgs: build_avgs(recents),
+          recent_all: build_recent_all(recents),
+          standings: build_standings(team_records_data),
+          odds_devigged: build_odds_devigged(odds),
+          player_extra: build_player_extra(players)
         )
       end
 
@@ -293,6 +300,141 @@ module AdamStats
           end
         end
         summary
+      end
+
+      # ─────────────────────────────────────────────────────────────────────────
+      # Fundação Simulação — novos helpers (itens 1-6)
+      # ─────────────────────────────────────────────────────────────────────────
+
+      # Item 1 — 4 *Avgs blocks from recent-results widget fixture sub-object
+      def build_avgs(data)
+        empty = { home_home: {}, home_overall: {}, away_away: {}, away_overall: {} }
+        return empty unless data.is_a?(Hash) && data['fixture'].is_a?(Hash)
+
+        fixture = data['fixture']
+        {
+          home_home:    extract_avgs_block(fixture['homeTeamHomeAvgs']),
+          home_overall: extract_avgs_block(fixture['homeTeamOverallAvgs']),
+          away_away:    extract_avgs_block(fixture['awayTeamAwayAvgs']),
+          away_overall: extract_avgs_block(fixture['awayTeamOverallAvgs'])
+        }
+      end
+
+      def extract_avgs_block(raw)
+        return {} unless raw.is_a?(Hash)
+
+        # Persist all metrics; rename numMatches → num_matches for Ruby convention;
+        # also keep the camelCase metrics as-is (43 keys total preserved).
+        block = raw.each_with_object({}) { |(k, v), acc| acc[k.to_sym] = v }
+        block[:num_matches] = raw['numMatches']
+        block.delete(:numMatches)
+        block
+      end
+
+      # Item 2 — recent_all: home+away results from all venues
+      def build_recent_all(data)
+        empty = { home: [], away: [] }
+        return empty unless data.is_a?(Hash)
+
+        {
+          home: extract_matches(data['recentHomeAllResults']),
+          away: extract_matches(data['recentAwayAllResults'])
+        }
+      end
+
+      # Item 3 — standings: current league table position + stage + fixture slug
+      def build_standings(data)
+        empty = { home: {}, away: {} }
+        return empty unless data.is_a?(Hash)
+
+        fws = data['fixtureWithoutStats']
+        return empty unless fws.is_a?(Hash)
+
+        home_id = fws.dig('homeTeam', 'id')
+        away_id = fws.dig('awayTeam', 'id')
+        stage_name = fws.dig('stage', 'name')
+        fixture_slug = fws['slug']
+
+        home_entry = find_team_standing(data['homeTeamResultsWithStandings'], home_id)
+        away_entry = find_team_standing(data['awayTeamResultsWithStandings'], away_id)
+
+        {
+          home: build_standing_entry(home_entry, fws['homeTeamPosition'], stage_name, fixture_slug),
+          away: build_standing_entry(away_entry, fws['awayTeamPosition'], stage_name, fixture_slug)
+        }
+      end
+
+      def find_team_standing(standings, team_id)
+        return nil unless standings.is_a?(Array) && team_id
+
+        standings.find { |r| r.dig('team', 'id') == team_id }
+      end
+
+      def build_standing_entry(entry, fixture_position, stage_name, fixture_slug)
+        return {} unless entry.is_a?(Hash)
+
+        {
+          position: entry['position'],
+          played: entry['played'],
+          points: entry['points'],
+          goal_diff: entry['goalDiff'],
+          position_type: entry['positionType'],
+          fixture_position: fixture_position,
+          stage_name: stage_name,
+          fixture_slug: fixture_slug
+        }
+      end
+
+      # Item 5 — odds_devigged: multiplicative devig across all markets
+      # Skips any market where any outcome has decimalOdds == 0 (undefined/missing)
+      def build_odds_devigged(data)
+        return {} unless data.is_a?(Array)
+
+        result = {}
+        data.each do |market|
+          name = market.dig('market', 'name')
+          next unless name && market['outcomes'].is_a?(Hash)
+
+          outcomes = market['outcomes']
+          odds_values = outcomes.values.map { |o| o['decimalOdds'].to_f }
+          # Skip market if any odds are zero (avoid division by zero)
+          next if odds_values.any? { |o| o <= 0 }
+
+          sum_inv = odds_values.sum { |o| 1.0 / o }
+          next if sum_inv <= 0
+
+          result[name] = outcomes.each_with_object({}) do |(outcome_name, outcome), acc|
+            acc[outcome_name] = ((1.0 / outcome['decimalOdds'].to_f) / sum_inv).round(6)
+          end
+        end
+        result
+      end
+
+      # Item 6 — player_extra: form, seasons, outcome_odds_by_player
+      def build_player_extra(data)
+        empty = { form: [], home_seasons: [], away_seasons: [], outcome_odds_by_player: {} }
+        return empty unless data.is_a?(Hash)
+
+        {
+          form: data['playerStatsForm'].is_a?(Array) ? data['playerStatsForm'] : [],
+          home_seasons: data['homeTeamSeasons'].is_a?(Array) ? data['homeTeamSeasons'] : [],
+          away_seasons: data['awayTeamSeasons'].is_a?(Array) ? data['awayTeamSeasons'] : [],
+          outcome_odds_by_player: build_outcome_odds_by_player(data)
+        }
+      end
+
+      def build_outcome_odds_by_player(data)
+        return {} unless data.is_a?(Hash)
+
+        all_players = (Array(data['homePlayers']) + Array(data['awayPlayers']))
+        all_players.each_with_object({}) do |player, acc|
+          next unless player.is_a?(Hash) && player['outcomeOdds'].is_a?(Hash) && !player['outcomeOdds'].empty?
+
+          name = player['name'].to_s
+          acc[name] = player['outcomeOdds'].each_with_object({}) do |(outcome_type, odd_data), inner|
+            inner[outcome_type] = odd_data['decimalOdds']
+          end
+        end
       end
     end
   end

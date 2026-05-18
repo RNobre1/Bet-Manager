@@ -19,7 +19,13 @@ module AdamStats
       :predictions,
       :odds_summary,
       :player_stats,
-      :referee_record
+      :referee_record,
+      # Fundação Simulação — novos campos (itens 1-6)
+      :avgs,
+      :recent_all,
+      :standings,
+      :odds_devigged,
+      :player_extra
     ) do
       def self.empty
         new(
@@ -34,7 +40,12 @@ module AdamStats
             home: { aggregates: EMPTY_PLAYER_AGGREGATES.dup, top_players: [] },
             away: { aggregates: EMPTY_PLAYER_AGGREGATES.dup, top_players: [] }
           },
-          referee_record: nil
+          referee_record: nil,
+          avgs: { home_home: {}, home_overall: {}, away_away: {}, away_overall: {} },
+          recent_all: { home: [], away: [] },
+          standings: { home: {}, away: {} },
+          odds_devigged: {},
+          player_extra: { form: [], home_seasons: [], away_seasons: [], outcome_odds_by_player: {} }
         )
       end
     end
