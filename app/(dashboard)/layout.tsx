@@ -15,6 +15,7 @@ const NAV = [
   { href: "/explore", label: "explorar" },
   { href: "/audit", label: "auditoria" },
   { href: "/logs", label: "logs IA" },
+  { href: "/calibracao", label: "calibração" },
 ];
 
 export default async function DashboardLayout({
