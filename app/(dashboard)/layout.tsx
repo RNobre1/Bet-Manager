@@ -22,16 +22,23 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // O middleware (`lib/supabase/middleware.ts`) já chamou `getUser()` (round-trip
+  // de rede canônico) e redirecionou não-autenticados antes de o layout rodar.
+  // Aqui usamos `getClaims()`, que verifica a assinatura do JWT criptograficamente
+  // via JWKS do projeto (sem round-trip de rede após o fetch inicial cacheado),
+  // apenas para obter os metadados de exibição (display_name / email).
+  // O `redirect` abaixo é um gate defensivo para o caso improvável de o
+  // middleware não cobrir a rota — não é a validação primária de autenticação.
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data } = await supabase.auth.getClaims();
 
-  if (!user) redirect("/login");
+  const claims = data?.claims ?? null;
+
+  if (!claims) redirect("/login");
 
   const display =
-    (user.user_metadata?.display_name as string | undefined) ??
-    user.email?.split("@")[0] ??
+    (claims.user_metadata?.display_name as string | undefined) ??
+    (claims.email as string | undefined)?.split("@")[0] ??
     "you";
 
   return (
