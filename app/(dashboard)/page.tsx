@@ -3,6 +3,12 @@ import { createClient } from "@/lib/supabase/server";
 import { fmt } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Sparkline } from "@/components/sparkline";
+import {
+  computeRoi,
+  computeYield,
+  computeWinRate,
+  computeMaxDrawdown,
+} from "@/lib/banca/metrics";
 
 export default async function OverviewPage() {
   const supabase = await createClient();
@@ -50,21 +56,18 @@ export default async function OverviewPage() {
   );
 
   // ROI = lucro acumulado / capital líquido depositado
-  const roi = netCapital > 0 ? cumulativePl / netCapital : 0;
+  const roi = computeRoi({ cumulativePl, netCapital }) ?? 0;
 
   // Yield = lucro / total apostado (resolvido)
   const resolvedStaked = Number(summary?.resolved_staked ?? 0);
   const resolvedReturned = Number(summary?.resolved_returned ?? 0);
   const yieldPct =
-    resolvedStaked > 0
-      ? (resolvedReturned - resolvedStaked) / resolvedStaked
-      : 0;
+    computeYield({ resolvedReturned, resolvedStaked }) ?? 0;
 
   const totalBets = Number(summary?.total_bets ?? 0);
   const wonCount = Number(summary?.won_count ?? 0);
   const lostCount = Number(summary?.lost_count ?? 0);
-  const winRate =
-    wonCount + lostCount > 0 ? wonCount / (wonCount + lostCount) : 0;
+  const winRate = computeWinRate({ won: wonCount, lost: lostCount }) ?? 0;
 
   const dailyPl = (dailyPlQuery.data ?? []).map((d) => ({
     date: d.snapshot_date as string,
@@ -72,13 +75,7 @@ export default async function OverviewPage() {
   }));
 
   // Max drawdown from cumulative P&L: largest peak-to-trough drop in BRL.
-  let peak = -Infinity;
-  let maxDrawdown = 0;
-  for (const point of dailyPl) {
-    if (point.pl > peak) peak = point.pl;
-    const dd = peak - point.pl;
-    if (dd > maxDrawdown) maxDrawdown = dd;
-  }
+  const maxDrawdown = computeMaxDrawdown(dailyPl.map((d) => d.pl));
 
   const isEmpty = houses.length === 0;
 
