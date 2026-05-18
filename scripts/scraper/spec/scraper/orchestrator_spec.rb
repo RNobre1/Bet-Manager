@@ -1,4 +1,5 @@
 require 'date'
+require_relative 'db_helper'
 require_relative '../../lib/scraper/orchestrator'
 require_relative '../../lib/scraper/choistats_api_fetcher'
 require_relative '../../lib/scraper/fixture'
@@ -48,6 +49,7 @@ RSpec.describe AdamStats::Scraper::Orchestrator do
     detail_parser = double('detail_parser')
     allow(detail_parser).to receive(:parse_detail) { |_html, **_kwargs| double('detail', to_h: { stats: 1 }) }
     persister = double('persister', persist: persist_stats)
+    simulation_hook = double('simulation_hook', run: nil)
     repo = double('repo', purge_older_than: purge_count)
 
     {
@@ -56,6 +58,7 @@ RSpec.describe AdamStats::Scraper::Orchestrator do
       parser: parser,
       detail_parser: detail_parser,
       persister: persister,
+      simulation_hook: simulation_hook,
       repo: repo,
       baseline: baseline,
       healthcheck: healthcheck,
@@ -565,6 +568,190 @@ RSpec.describe AdamStats::Scraper::Orchestrator do
       )
       # Logger registra a falha citando a URL alvo
       expect(captured.any? { |m| m.include?('c-vs-d') && m.match?(/fail|error|timeout/i) }).to be(true)
+    end
+  end
+
+  describe '.run (simulation hook — post-persist, additive, failure-isolated)' do
+    it 'invokes the simulation hook AFTER persist with parsed fixtures + details' do
+      deps = build_deps
+      ordered = []
+      allow(deps[:persister]).to receive(:persist) do |*_a, **_k|
+        ordered << :persist
+        AdamStats::Scraper::Stats.new(inserted: 2, updated: 0, failed: 0)
+      end
+      expect(deps[:simulation_hook]).to receive(:run) do |fixtures_arg, details_arg, **kw|
+        ordered << :sim
+        expect(fixtures_arg).to eq([fixture_a, fixture_b])
+        expect(details_arg).to be_a(Hash)
+        expect(kw).to have_key(:logger)
+      end
+      described_class.run(**deps)
+      expect(ordered).to eq(%i[persist sim])
+    end
+
+    it 'does NOT invoke the hook when there are no parsed fixtures' do
+      deps = build_deps(parsed_list: [])
+      expect(deps[:simulation_hook]).not_to receive(:run)
+      described_class.run(**deps)
+    end
+
+    it 'passes a callable logger so the hook can warn (Lição #11 boundary)' do
+      deps = build_deps
+      seen_logger = nil
+      allow(deps[:simulation_hook]).to receive(:run) do |_fx, _det, logger:|
+        seen_logger = logger
+      end
+      described_class.run(**deps)
+      expect(seen_logger).to respond_to(:call)
+    end
+  end
+
+  describe AdamStats::Scraper::SimulationHook do
+    let(:fixture) do
+      AdamStats::Scraper::Fixture.new(
+        match_date: Date.today, ko_time: '20:00',
+        home_team: 'A', away_team: 'B', league: 'L',
+        source_url: '/fixture/999/l-a-vs-b', country: nil
+      )
+    end
+
+    it 'isolates a per-fixture failure: one bad detail does not stop the others' do
+      logged = []
+      logger = ->(m) { logged << m }
+      conn = double('conn')
+      allow(conn).to receive(:exec_params)
+      allow(conn).to receive(:transaction) { |&blk| blk.call }
+      allow(AdamStats::Scraper::DB).to receive(:with_connection).and_yield(conn)
+
+      # First fixture detail makes Runner.simulate raise; second is fine.
+      allow(AdamStats::Scraper::Simulation::Runner).to receive(:simulate) do |detail|
+        raise StandardError, 'sim explode' if detail == { 'bad' => true }
+
+        { status: 'pending', model_version: 'v', p_home: 0.5, p_draw: 0.3, p_away: 0.2,
+          p_btts: 0.5, p_over_25: 0.5, top_scorelines: [], sim_stats: {},
+          per_half_available: false, market_anchor: {}, player_events: [] }
+      end
+
+      fx2 = AdamStats::Scraper::Fixture.new(
+        match_date: Date.today, ko_time: '21:00',
+        home_team: 'C', away_team: 'D', league: 'L',
+        source_url: '/fixture/1000/l-c-vs-d', country: nil
+      )
+
+      expect do
+        described_class.run(
+          [fixture, fx2],
+          { fixture.source_url => { 'bad' => true }, fx2.source_url => { 'ok' => true } },
+          logger: logger
+        )
+      end.not_to raise_error
+
+      expect(logged.any? { |m| m.include?(fixture.source_url) && m.match?(/fail|error|explode/i) }).to be(true)
+      # The good fixture still got upserted — idempotent design issues a
+      # DELETE-prior + INSERT per fixture (2 exec_params for the 1 good row).
+      expect(conn).to have_received(:exec_params).twice
+      expect(conn).to have_received(:transaction).once
+    end
+
+    it 'skips upsert for unsimulable results (no raise)' do
+      conn = double('conn')
+      allow(conn).to receive(:exec_params)
+      allow(conn).to receive(:transaction) { |&blk| blk.call }
+      allow(AdamStats::Scraper::DB).to receive(:with_connection).and_yield(conn)
+      allow(AdamStats::Scraper::Simulation::Runner).to receive(:simulate)
+        .and_return(status: 'unsimulable', model_version: 'v')
+
+      described_class.run([fixture], { fixture.source_url => { 'x' => 1 } }, logger: ->(_) {})
+      expect(conn).not_to have_received(:exec_params)
+    end
+
+    it 'is a no-op when there are no details' do
+      expect(AdamStats::Scraper::DB).not_to receive(:with_connection)
+      described_class.run([fixture], {}, logger: ->(_) {})
+    end
+
+    it 'a global DB failure is non-fatal (logged, never raised)' do
+      logged = []
+      allow(AdamStats::Scraper::DB).to receive(:with_connection).and_raise(StandardError, 'db down')
+      allow(AdamStats::Scraper::Simulation::Runner).to receive(:simulate)
+        .and_return(status: 'pending', model_version: 'v')
+      expect do
+        described_class.run([fixture], { fixture.source_url => { 'x' => 1 } }, logger: ->(m) { logged << m })
+      end.not_to raise_error
+      expect(logged.any? { |m| m.include?('non-fatal') }).to be(true)
+    end
+  end
+
+  describe "#{described_class}'s upsert idempotence (real test DB)" do
+    let(:described_hook) { AdamStats::Scraper::SimulationHook }
+
+    before(:all) do
+      ENV['DATABASE_URL'] = DBHelper.test_url
+      ScraperDBHelper.ensure_schema!
+      # 0018 ships in the migration set; reapply explicitly (idempotent
+      # `create ... if not exists`) so the partial unique indexes exist even
+      # if the test DB was provisioned before this migration was added.
+      DBHelper.apply_migration!('0018_fixture_simulations.sql')
+    end
+
+    before(:each) do
+      conn = DBHelper.connect
+      conn.query('TRUNCATE TABLE fixture_simulations RESTART IDENTITY')
+      conn.close
+    end
+
+    def count_sims
+      conn = DBHelper.connect
+      rows = conn.query('SELECT * FROM fixture_simulations ORDER BY id').to_a
+      conn.close
+      rows
+    end
+
+    def sim_result(p_home)
+      { status: 'pending', model_version: 'v', p_home: p_home, p_draw: 0.3,
+        p_away: (0.7 - p_home).round(4), p_btts: 0.5, p_over_25: 0.5,
+        top_scorelines: [], sim_stats: {}, per_half_available: false,
+        market_anchor: {}, player_events: [] }
+    end
+
+    it 're-running the hook for the SAME keyed fixture REPLACES the row (1 row, latest values)' do
+      fx = AdamStats::Scraper::Fixture.new(
+        match_date: Date.new(2026, 5, 18), ko_time: '20:00',
+        home_team: 'A', away_team: 'B', league: 'L',
+        source_url: '/fixture/424242/l-a-vs-b', country: nil
+      )
+
+      allow(AdamStats::Scraper::Simulation::Runner).to receive(:simulate).and_return(sim_result(0.10))
+      described_hook.run([fx], { fx.source_url => { 'x' => 1 } }, logger: ->(_) {})
+
+      allow(AdamStats::Scraper::Simulation::Runner).to receive(:simulate).and_return(sim_result(0.55))
+      described_hook.run([fx], { fx.source_url => { 'x' => 2 } }, logger: ->(_) {})
+
+      rows = count_sims
+      expect(rows.length).to eq(1)
+      expect(rows.first['p_home'].to_f).to be_within(1e-6).of(0.55)
+      expect(rows.first['fixture_id'].to_i).to eq(424_242)
+    end
+
+    it 're-running the hook for the SAME null-fixture_id fixture REPLACES the row (1 row, latest values)' do
+      # No numeric id in source_url ⇒ fixture_id resolves to nil ⇒
+      # dedup falls to (home_team, away_team, kickoff_utc).
+      fx = AdamStats::Scraper::Fixture.new(
+        match_date: Date.new(2026, 5, 18), ko_time: '20:00',
+        home_team: 'NoIdHome', away_team: 'NoIdAway', league: 'L',
+        source_url: '/fixture/l-noidhome-vs-noidaway', country: nil
+      )
+
+      allow(AdamStats::Scraper::Simulation::Runner).to receive(:simulate).and_return(sim_result(0.20))
+      described_hook.run([fx], { fx.source_url => { 'x' => 1 } }, logger: ->(_) {})
+
+      allow(AdamStats::Scraper::Simulation::Runner).to receive(:simulate).and_return(sim_result(0.61))
+      described_hook.run([fx], { fx.source_url => { 'x' => 2 } }, logger: ->(_) {})
+
+      rows = count_sims
+      expect(rows.length).to eq(1)
+      expect(rows.first['p_home'].to_f).to be_within(1e-6).of(0.61)
+      expect(rows.first['fixture_id']).to be_nil
     end
   end
 end

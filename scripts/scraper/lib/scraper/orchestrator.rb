@@ -11,6 +11,8 @@ require_relative 'detail_parser'
 require_relative 'league_baseline'
 require_relative 'playwright_session'
 require_relative 'prediction_reconciler'
+require_relative 'simulation/runner'
+require_relative 'uk_time_helper'
 
 module AdamStats
   module Scraper
@@ -32,6 +34,135 @@ module AdamStats
           ).cmd_tuples
         end
       end
+    end
+
+    # Post-persist hook: computa a simulação pré-jogo (Runner.simulate) para
+    # cada fixture com detail e faz upsert em fixture_simulations. CADA fixture
+    # é isolada num rescue StandardError que só loga warning — uma fixture
+    # problemática NUNCA derruba o scrape (Lição #11). O Runner já degrada sem
+    # raise; este rescue cobre falha de DB/serialização por linha.
+    module SimulationHook
+      # Idempotência: o scraper re-simula a MESMA fixture todo dia. Há DUAS
+      # partial unique indexes em fixture_simulations (0018) — uma para linhas
+      # com fixture_id, outra para linhas sem. Um único `ON CONFLICT (cols)`
+      # não consegue mirar as duas de forma limpa.
+      #
+      # Design escolhido (o mais simples CORRETO): DELETE-then-INSERT da
+      # identidade da fixture, ambos na MESMA conexão/transação por fixture.
+      # O DELETE cobre os dois caminhos (com e sem fixture_id) com um único
+      # predicado, sem ramificar SQL nem precisar de dois statements
+      # ON CONFLICT distintos. Garantia líquida: re-rodar o scraper para a
+      # mesma fixture SUBSTITUI a linha (idempotente), nunca empilha — e fecha
+      # de quebra o risco de linha meio-escrita (DELETE+INSERT atômico).
+      #
+      # Predicado de identidade espelha exatamente as duas unique indexes:
+      #   - fixture_id presente → casa por (fixture_id, kickoff_utc)
+      #   - fixture_id nil      → casa por (home_team, away_team, kickoff_utc)
+      # kickoff_utc nil é comparado via IS NOT DISTINCT FROM (NULL = NULL).
+      #
+      # Params (posicional): $1 fixture_id, $2 home_team, $3 away_team,
+      # $4 kickoff_utc. `league` NÃO é bound aqui (não faz parte de nenhuma
+      # das duas chaves de dedup) — ver #delete_params.
+      DELETE_PRIOR_SQL = <<~SQL.freeze
+        DELETE FROM fixture_simulations
+        WHERE (
+          $1::bigint IS NOT NULL
+          AND fixture_id = $1::bigint
+          AND kickoff_utc IS NOT DISTINCT FROM $4::timestamptz
+        ) OR (
+          $1::bigint IS NULL
+          AND fixture_id IS NULL
+          AND home_team = $2
+          AND away_team = $3
+          AND kickoff_utc IS NOT DISTINCT FROM $4::timestamptz
+        )
+      SQL
+
+      INSERT_SQL = <<~SQL.freeze
+        INSERT INTO fixture_simulations
+          (fixture_id, home_team, away_team, league, kickoff_utc, model_version,
+           p_home, p_draw, p_away, p_btts, p_over_25,
+           top_scorelines, sim_stats, per_half_available, market_anchor,
+           player_events, status, created_at)
+        VALUES ($1, $2, $3, $4, $5::timestamptz, $6,
+                $7, $8, $9, $10, $11,
+                $12::jsonb, $13::jsonb, $14, $15::jsonb, $16::jsonb, $17, now())
+      SQL
+
+      module_function
+
+      # fixtures               — Array<Fixture> (parsed list)
+      # detail_json_by_source_url — { source_url => detail hash }
+      def run(fixtures, detail_json_by_source_url, logger:)
+        return if detail_json_by_source_url.nil? || detail_json_by_source_url.empty?
+
+        by_source = {}
+        fixtures.each { |fx| by_source[fx.source_url] = fx }
+
+        AdamStats::Scraper::DB.with_connection do |conn|
+          detail_json_by_source_url.each do |source_url, detail|
+            fixture = by_source[source_url]
+            next if fixture.nil?
+
+            begin
+              sim = Simulation::Runner.simulate(detail)
+              next if sim.nil? || sim[:status] == 'unsimulable'
+
+              params = build_params(fixture, sim)
+              # DELETE+INSERT atômico por fixture: re-rodar substitui a linha
+              # (idempotente), nunca empilha. Lição #11: o rescue abaixo isola
+              # a fixture; ROLLBACK garante que uma falha não deixa a linha
+              # antiga apagada sem a nova no lugar.
+              conn.transaction do
+                conn.exec_params(DELETE_PRIOR_SQL, delete_params(params))
+                conn.exec_params(INSERT_SQL, params)
+              end
+            rescue StandardError => e
+              logger.call("[scrape] simulation failed for #{source_url}: #{e.class}: #{e.message}")
+            end
+          end
+        end
+      rescue StandardError => e
+        # Falha global do hook (ex.: DB indisponível) — non-fatal, igual ao
+        # reconciler/baseline. O scrape em si já persistiu as fixtures.
+        logger.call("[scrape] simulation hook failed (non-fatal): #{e.class}: #{e.message}")
+      end
+
+      # Extrai os 4 params da identidade de dedup a partir do array completo
+      # de build_params ([fixture_id, home, away, league, kickoff, ...]).
+      # Ordem casa com DELETE_PRIOR_SQL: $1 fixture_id, $2 home, $3 away,
+      # $4 kickoff (league/idx 3 é descartado — não é chave).
+      def delete_params(params)
+        [params[0], params[1], params[2], params[4]]
+      end
+      private_class_method :delete_params
+
+      def build_params(fixture, sim)
+        kickoff = UkTimeHelper.to_utc_or_noon(fixture.match_date, fixture.ko_time)
+        [
+          fixture_api_id(fixture),
+          fixture.home_team,
+          fixture.away_team,
+          fixture.league,
+          kickoff&.strftime('%Y-%m-%d %H:%M:%S UTC'),
+          sim[:model_version],
+          sim[:p_home], sim[:p_draw], sim[:p_away], sim[:p_btts], sim[:p_over_25],
+          JSON.generate(sim[:top_scorelines] || []),
+          JSON.generate(sim[:sim_stats] || {}),
+          sim[:per_half_available],
+          JSON.generate(sim[:market_anchor] || {}),
+          JSON.generate(sim[:player_events] || []),
+          sim[:status] || 'pending'
+        ]
+      end
+      private_class_method :build_params
+
+      # source_url shape: /fixture/<id>/<slug> — extrai o id numérico se houver.
+      def fixture_api_id(fixture)
+        m = fixture.source_url.to_s.match(%r{/fixture/(\d+)})
+        m && m[1].to_i
+      end
+      private_class_method :fixture_api_id
     end
 
     module Orchestrator
@@ -75,6 +206,7 @@ module AdamStats
         parser: Parser,
         detail_parser: DetailParser,
         persister: Persister,
+        simulation_hook: SimulationHook,
         repo: DefaultRepo,
         baseline: LeagueBaseline,
         healthcheck: Healthcheck,
@@ -129,6 +261,11 @@ module AdamStats
           # metadata (home/away/league/ko_time/source_url) e detail_json=nil,
           # podendo ter o detail puxado on-demand via POST /api/fixtures/:id/refresh-detail.
           stats = persister.persist(parsed, detail_json_by_source_url: details_by_url)
+
+          # Hook aditivo pós-persist: simulação pré-jogo → fixture_simulations.
+          # Failure-isolated por fixture E globalmente (Lição #11) — não altera
+          # o comportamento existente do scrape.
+          simulation_hook.run(parsed, details_by_url, logger: logger)
         else
           stats = Stats.new(inserted: 0, updated: 0, failed: 0)
         end
