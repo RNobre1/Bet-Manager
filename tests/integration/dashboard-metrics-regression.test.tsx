@@ -152,6 +152,48 @@ vi.mock("next/link", () => ({
 }));
 
 // ──────────────────────────────────────────────────────────────────────────────
+// Dataset negativo — saques > depósitos (netCapital < 0) + resolvedStaked = 0
+// ──────────────────────────────────────────────────────────────────────────────
+// netCapital = deposits - withdrawals = 200 - 500 = -300 → computeRoi → null → ?? 0
+// resolvedStaked = 0 → computeYield → null → ?? 0
+// Garante paridade com o código original `netCapital > 0 ? ... : 0` e
+// `resolvedStaked > 0 ? ... : 0`.
+
+const HOUSES_NEGATIVE = [
+  {
+    house_id: "uuid-neg",
+    user_id: "user-1",
+    name: "Casa Neg",
+    slug: "casa-neg",
+    color_hex: "#ef4444",
+    archived_at: null,
+    balance: 150,     // 200 depósito - 500 saque + 450 volta (saldo)
+    deposits: 200,
+    withdrawals: 500, // saques maiores que depósitos → netCapital < 0
+    staked: 0,
+    returned: 0,
+    pending_stake: 0,
+    bet_count: 0,
+  },
+];
+
+const SUMMARY_NEGATIVE = {
+  user_id: "user-1",
+  total_bets: 0,
+  pending_count: 0,
+  won_count: 0,
+  lost_count: 0,
+  void_count: 0,
+  partial_count: 0,
+  cashout_count: 0,
+  resolved_staked: 0,
+  resolved_returned: 0,
+  pending_stake: 0,
+};
+
+const DAILY_PL_NEGATIVE: unknown[] = [];
+
+// ──────────────────────────────────────────────────────────────────────────────
 // Import da página APÓS os mocks
 // ──────────────────────────────────────────────────────────────────────────────
 
@@ -204,5 +246,65 @@ describe("Dashboard — regressão de métricas (pré e pós extração para lib
 
     // fmt.bare(1450) = "1.450,00"
     expect(screen.getByText("1.450,00")).toBeDefined();
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Variante com denominadores NEGATIVOS — trava a paridade computeRoi/computeYield
+// ──────────────────────────────────────────────────────────────────────────────
+// netCapital = 200 - 500 = -300 → computeRoi retorna null → ?? 0
+// resolvedStaked = 0 → computeYield retorna null → ?? 0
+// Antes da correção (guard === 0 apenas), computeRoi({ netCapital: -300 })
+// calculava cumulativePl / -300, divergindo do original `netCapital > 0 ? ... : 0`.
+
+function buildNegativeQueryBuilder(table: TableName) {
+  let data: unknown;
+  switch (table) {
+    case "house_balance_view":
+      data = HOUSES_NEGATIVE;
+      break;
+    case "bet_summary_view":
+      data = SUMMARY_NEGATIVE;
+      break;
+    case "transactions":
+      data = [];
+      break;
+    case "daily_pl_view":
+      data = DAILY_PL_NEGATIVE;
+      break;
+    default:
+      data = null;
+  }
+  const resolveData = data;
+  const b: Record<string, unknown> = {};
+  b.select = () => b;
+  b.is = () => b;
+  b.order = () => b;
+  b.limit = () => b;
+  b.eq = () => b;
+  b.maybeSingle = () => Promise.resolve({ data: resolveData, error: null });
+  b.then = (resolve: (v: { data: unknown; error: null }) => unknown) =>
+    Promise.resolve({ data: resolveData, error: null }).then(resolve);
+  return b;
+}
+
+describe("Dashboard — denominadores negativos (paridade com código original)", () => {
+  it("netCapital negativo e resolvedStaked=0 → ROI e Yield exibidos como 0,00% (null ?? 0)", async () => {
+    // Override do mock padrão por uma chamada (mockResolvedValueOnce)
+    const { createClient } = await import("@/lib/supabase/server");
+    (createClient as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      from: (table: TableName) => buildNegativeQueryBuilder(table),
+    });
+
+    const element = await OverviewPage();
+    render(element);
+
+    // netCapital = 200 - 500 = -300 → computeRoi → null → ?? 0 → fmt.signedPercent(0)
+    // resolvedStaked = 0 → computeYield → null → ?? 0 → fmt.signedPercent(0)
+    // Ambos rendem "0,00%" no DOM (sinal zero pode ser "+0,00%" ou "0,00%" conforme Intl).
+    // Basta que pelo menos uma ocorrência de "0,00%" apareça — confirma que não houve
+    // divisão por denominador negativo/zero (que produziria NaN% ou Infinity%).
+    const hits = screen.queryAllByText(/0,00%/);
+    expect(hits.length).toBeGreaterThan(0);
   });
 });

@@ -8,6 +8,11 @@ describe("computeRoi", () => {
   it("netCapital 0 → null (sem divisão por zero)", () => {
     expect(computeRoi({ cumulativePl: 10, netCapital: 0 })).toBeNull();
   });
+  it("netCapital negativo (saques > depósitos) → null, paridade com `> 0` original (consumidor ?? 0 → exibe 0)", () => {
+    // Dashboard original: `roi = netCapital > 0 ? cumulativePl/netCapital : 0`
+    // computeRoi retorna null; consumidor usa `?? 0` → mesmo resultado.
+    expect(computeRoi({ cumulativePl: 50, netCapital: -200 })).toBeNull();
+  });
 });
 
 describe("computeYield", () => {
@@ -16,6 +21,11 @@ describe("computeYield", () => {
   });
   it("staked 0 → null", () => {
     expect(computeYield({ resolvedReturned: 0, resolvedStaked: 0 })).toBeNull();
+  });
+  it("resolvedStaked negativo → null, paridade com `> 0` original (consumidor ?? 0 → exibe 0)", () => {
+    // Dashboard original: `yield = resolvedStaked > 0 ? ... : 0`
+    // computeYield retorna null; consumidor usa `?? 0` → mesmo resultado.
+    expect(computeYield({ resolvedReturned: 0, resolvedStaked: -50 })).toBeNull();
   });
 });
 

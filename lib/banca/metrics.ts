@@ -5,7 +5,10 @@
 // ---------------------------------------------------------------------------
 // computeRoi
 // ROI = lucro acumulado / capital líquido depositado
-// Retorna null quando netCapital = 0 (sem divisão por zero).
+// Retorna null quando netCapital <= 0 (sem divisão por zero ou denominador
+// negativo — replica exatamente o `netCapital > 0 ? ... : 0` original do
+// dashboard, onde `?? 0` no consumidor produz o mesmo valor 0 que o código
+// inline produzia com `: 0`).
 // ---------------------------------------------------------------------------
 export function computeRoi({
   cumulativePl,
@@ -14,14 +17,15 @@ export function computeRoi({
   cumulativePl: number;
   netCapital: number;
 }): number | null {
-  if (netCapital === 0) return null;
+  if (netCapital <= 0) return null;
   return cumulativePl / netCapital;
 }
 
 // ---------------------------------------------------------------------------
 // computeYield
 // Yield = (retorno - apostado) / apostado (apostas resolvidas)
-// Retorna null quando resolvedStaked = 0.
+// Retorna null quando resolvedStaked <= 0 (replica o `resolvedStaked > 0 ?
+// ... : 0` original do dashboard — o `?? 0` no consumidor produz o mesmo 0).
 // ---------------------------------------------------------------------------
 export function computeYield({
   resolvedReturned,
@@ -30,7 +34,7 @@ export function computeYield({
   resolvedReturned: number;
   resolvedStaked: number;
 }): number | null {
-  if (resolvedStaked === 0) return null;
+  if (resolvedStaked <= 0) return null;
   return (resolvedReturned - resolvedStaked) / resolvedStaked;
 }
 
