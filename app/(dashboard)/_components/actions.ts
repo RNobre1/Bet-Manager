@@ -21,10 +21,15 @@ export async function dismissAlert(fixtureId: number): Promise<void> {
     return;
   }
 
-  await supabase.from("alert_dismissals").insert({
-    user_id: user.id,
-    fixture_id: fixtureId,
-  });
+  // Idempotente: equivalente PostgREST de ON CONFLICT (user_id, fixture_id)
+  // DO NOTHING. Clique duplo / replay de Server Action não estoura 23505.
+  await supabase.from("alert_dismissals").upsert(
+    {
+      user_id: user.id,
+      fixture_id: fixtureId,
+    },
+    { onConflict: "user_id,fixture_id", ignoreDuplicates: true },
+  );
 
   revalidatePath("/");
 }
