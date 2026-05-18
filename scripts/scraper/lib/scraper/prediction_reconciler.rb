@@ -74,10 +74,26 @@ module AdamStats
 
       def reconcile_row(conn, row, stats)
         fixture_api_id = row['fixture_id']&.to_i
-        return if fixture_api_id.nil? || fixture_api_id.zero?
+        no_api_id      = fixture_api_id.nil? || fixture_api_id.zero?
 
         kickoff = Time.parse(row['kickoff_utc'])
         stale   = (Time.now.utc - kickoff) > MAX_ATTEMPTS_DAYS * 86_400
+
+        # Rows sem fixture_id não podem ser resolvidas via API choistats.
+        # Aplicamos apenas o branch de envelhecimento: stale → unresolvable,
+        # caso contrário mantemos pending para tentativas futuras.
+        if no_api_id
+          if stale
+            conn.exec_params(
+              "UPDATE ai_predictions SET status = $1 WHERE id = $2",
+              ['unresolvable', row['id'].to_i]
+            )
+            stats[:unresolvable] += 1
+          else
+            stats[:pending] += 1
+          end
+          return
+        end
 
         widget = @client.fetch_widget(:recent_results, fixture_id: fixture_api_id)
         fixture_data = widget&.dig('fixture') || {}

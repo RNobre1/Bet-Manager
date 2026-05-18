@@ -215,6 +215,108 @@ RSpec.describe AdamStats::Scraper::PredictionReconciler do
       expect(params_flat).to include('unresolvable')
     end
 
+    context 'quando fixture_id é NULL' do
+      it 'row recente → mantém pending (não tenta API, não marca unresolvable)' do
+        recent_kickoff = (Time.now.utc - 3600).iso8601
+        row = pending_row(kickoff_iso: recent_kickoff, fixture_api_id: nil)
+
+        updates_captured = []
+        db_conn = double('db_conn')
+        allow(db_conn).to receive(:exec_params)
+          .with(a_string_matching(/SELECT.*status.*=.*'pending'/im), anything)
+          .and_return(double('r', to_a: [row]))
+        allow(db_conn).to receive(:exec_params)
+          .with(a_string_matching(/UPDATE.*ai_predictions/im), anything) do |_sql, params|
+            updates_captured << params
+            double('r', cmd_tuples: 1)
+          end
+
+        client = double('client')
+        expect(client).not_to receive(:fetch_widget)
+
+        reconciler = described_class.new(db_conn: db_conn, client: client, logger: logger)
+        result = reconciler.run
+
+        expect(result[:pending]).to eq(1)
+        expect(result[:unresolvable]).to eq(0)
+        expect(updates_captured).to be_empty
+      end
+
+      it 'row com fixture_id=0 recente → mantém pending (não tenta API)' do
+        recent_kickoff = (Time.now.utc - 3600).iso8601
+        row = pending_row(kickoff_iso: recent_kickoff, fixture_api_id: 0)
+
+        db_conn = double('db_conn')
+        allow(db_conn).to receive(:exec_params)
+          .with(a_string_matching(/SELECT.*status.*=.*'pending'/im), anything)
+          .and_return(double('r', to_a: [row]))
+        allow(db_conn).to receive(:exec_params)
+          .with(a_string_matching(/UPDATE.*ai_predictions/im), anything)
+          .and_return(double('r', cmd_tuples: 1))
+
+        client = double('client')
+        expect(client).not_to receive(:fetch_widget)
+
+        reconciler = described_class.new(db_conn: db_conn, client: client, logger: logger)
+        result = reconciler.run
+
+        expect(result[:pending]).to eq(1)
+      end
+
+      it 'row com fixture_id NULL e stale (>MAX_ATTEMPTS_DAYS) → marca unresolvable, não fica presa em pending' do
+        old_kickoff = (Time.now.utc - (described_class::MAX_ATTEMPTS_DAYS + 1) * 86_400).iso8601
+        row = pending_row(kickoff_iso: old_kickoff, fixture_api_id: nil)
+
+        updates_captured = []
+        db_conn = double('db_conn')
+        allow(db_conn).to receive(:exec_params)
+          .with(a_string_matching(/SELECT.*status.*=.*'pending'/im), anything)
+          .and_return(double('r', to_a: [row]))
+        allow(db_conn).to receive(:exec_params)
+          .with(a_string_matching(/UPDATE.*ai_predictions/im), anything) do |_sql, params|
+            updates_captured << params
+            double('r', cmd_tuples: 1)
+          end
+
+        client = double('client')
+        expect(client).not_to receive(:fetch_widget)
+
+        reconciler = described_class.new(db_conn: db_conn, client: client, logger: logger)
+        result = reconciler.run
+
+        expect(result[:unresolvable]).to eq(1)
+        expect(result[:pending]).to eq(0)
+        params_flat = updates_captured.flatten
+        expect(params_flat).to include('unresolvable')
+      end
+
+      it 'row com fixture_id=0 stale → marca unresolvable' do
+        old_kickoff = (Time.now.utc - (described_class::MAX_ATTEMPTS_DAYS + 1) * 86_400).iso8601
+        row = pending_row(kickoff_iso: old_kickoff, fixture_api_id: 0)
+
+        updates_captured = []
+        db_conn = double('db_conn')
+        allow(db_conn).to receive(:exec_params)
+          .with(a_string_matching(/SELECT.*status.*=.*'pending'/im), anything)
+          .and_return(double('r', to_a: [row]))
+        allow(db_conn).to receive(:exec_params)
+          .with(a_string_matching(/UPDATE.*ai_predictions/im), anything) do |_sql, params|
+            updates_captured << params
+            double('r', cmd_tuples: 1)
+          end
+
+        client = double('client')
+        expect(client).not_to receive(:fetch_widget)
+
+        reconciler = described_class.new(db_conn: db_conn, client: client, logger: logger)
+        result = reconciler.run
+
+        expect(result[:unresolvable]).to eq(1)
+        params_flat = updates_captured.flatten
+        expect(params_flat).to include('unresolvable')
+      end
+    end
+
     it 'erro de rede em um jogo → warning + skip; não derruba o batch' do
       rows = [
         pending_row(id: 1, fixture_api_id: 111),
