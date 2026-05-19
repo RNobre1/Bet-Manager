@@ -174,14 +174,16 @@ module AdamStats
         # (WidgetMerger#flatten_player) builds players with SYMBOL keys, while
         # the spec/JSON shape uses STRING keys. This MUST yield the IDENTICAL
         # string as PlayerAllocation.allocate_event's name
-        # (PlayerAllocation.get(p,'name').to_s ⇒ p['name'] || p[:name] || p['name'])
+        # (PlayerAllocation.get(p,'name').to_s ⇒ p['name'] || p[:name])
         # so the accumulator built by init_player_acc, the keys
         # allocate_players accumulates under, and the keys aggregate_players
-        # reads all AGREE for a given player. Symbol-first then string fallback
-        # produces the same value as `get` for both shapes (a player "Saka"
-        # keys as "Saka" everywhere).
+        # reads all AGREE for a given player. This helper mirrors
+        # PlayerAllocation.get(p,'name').to_s precedence EXACTLY (string-first,
+        # symbol fallback), so it is provably identical for ALL inputs —
+        # including the (today unreachable) dual-key hash where both 'name' and
+        # :name are present.
         def player_name(p)
-          (p[:name] || p['name']).to_s
+          (p['name'] || p[:name]).to_s
         end
         private_class_method :player_name
 
