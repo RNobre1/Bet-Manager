@@ -61,16 +61,59 @@ function buildFixturesBuilder() {
   return builder;
 }
 
+/**
+ * Sim builder that ENFORCES the id-space contract: the row is only served
+ * when the query filtered `fixture_id` by the choistats id parsed from
+ * `source_url` (the PRODUCER's key), OR via the teams/kickoff fallback.
+ *
+ * This is what makes the integration test catch the prod bug: before the
+ * fix the page filtered `fixture_id = row.id` (route/table id, e.g. 42),
+ * which never matched the producer-keyed `fixture_id` (e.g. 19427226) → the
+ * builder returns `null` → "simulação indisponível", exactly as in prod.
+ */
 function buildSimBuilder() {
+  const filters: Array<{ column: string; value: unknown }> = [];
   const builder: Record<string, unknown> = {};
   builder.select = () => builder;
-  builder.eq = () => builder;
-  builder.maybeSingle = () =>
-    Promise.resolve(
-      mockState.simError
-        ? { data: null, error: mockState.simError }
-        : { data: mockState.simRow, error: null },
-    );
+  builder.eq = (column: string, value: unknown) => {
+    filters.push({ column, value });
+    return builder;
+  };
+  builder.gte = (column: string, value: unknown) => {
+    filters.push({ column: `${column}>=`, value });
+    return builder;
+  };
+  builder.lt = (column: string, value: unknown) => {
+    filters.push({ column: `${column}<`, value });
+    return builder;
+  };
+  builder.order = () => builder;
+  builder.limit = () => builder;
+  builder.maybeSingle = () => {
+    if (mockState.simError) {
+      return Promise.resolve({ data: null, error: mockState.simError });
+    }
+    if (!mockState.simRow) {
+      return Promise.resolve({ data: null, error: null });
+    }
+    const row = mockState.simRow;
+    const fidEq = filters.find((f) => f.column === "fixture_id");
+    const homeEq = filters.find((f) => f.column === "home_team");
+    const awayEq = filters.find((f) => f.column === "away_team");
+    // Faithful filter semantics: a query path resolves the row only when
+    // its filters actually MATCH the row's values (like real Postgres).
+    const idMatch = fidEq != null && fidEq.value === row.fixture_id;
+    const teamsMatch =
+      fidEq == null &&
+      homeEq != null &&
+      awayEq != null &&
+      homeEq.value === row.home_team &&
+      awayEq.value === row.away_team;
+    if (idMatch || teamsMatch) {
+      return Promise.resolve({ data: row, error: null });
+    }
+    return Promise.resolve({ data: null, error: null });
+  };
   return builder;
 }
 
@@ -111,6 +154,14 @@ import StatsPage from "@/app/(dashboard)/fixtures/[id]/page";
 
 const SAMPLE_KICKOFF = "2026-05-19T19:00:00+00:00";
 
+/**
+ * The `fixtures` PK (`id`) and the choistats id parsed from `source_url` are
+ * DELIBERATELY different here (42 vs 19427226) — that divergence IS the prod
+ * bug. The producer keys `fixture_simulations.fixture_id` by the parsed id;
+ * the fixed page must look up by the parsed id, never by `row.id` (42).
+ */
+const CHOISTATS_ID = 19427226;
+
 function makeRow(overrides: Partial<FixtureRow> = {}): FixtureRow {
   return {
     id: 42,
@@ -120,7 +171,7 @@ function makeRow(overrides: Partial<FixtureRow> = {}): FixtureRow {
     away_team: "Tottenham",
     league: "Premier League",
     country: "england",
-    source_url: "https://www.adamchoi.co.uk/fixture/42",
+    source_url: `https://www.adamchoi.co.uk/fixture/${CHOISTATS_ID}/england-premier-league-chelsea-vs-tottenham`,
     detail_json: null,
     kickoff_utc: SAMPLE_KICKOFF,
     ...overrides,
@@ -383,10 +434,12 @@ const GOLDEN_SIM = {
 
 function simRow(over: Record<string, unknown> = {}) {
   return {
-    // ── DB-row metadata (kept aligned with the mocked FixtureRow) ──
+    // ── DB-row metadata: fixture_id is the PRODUCER key (choistats id
+    // parsed from source_url), NOT the fixtures PK (42). The pre-fix page
+    // queried by 42 → never matched this row → prod showed "indisponível".
     id: 5,
     created_at: "2026-05-18T10:00:00Z",
-    fixture_id: 42,
+    fixture_id: CHOISTATS_ID,
     home_team: "Chelsea",
     away_team: "Tottenham",
     league: "Premier League",
@@ -414,6 +467,47 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+});
+
+describe("StatsPage — id-space mismatch regression (the prod bug)", () => {
+  /**
+   * Reproduces the confirmed prod incident: 594 fixture_simulations rows
+   * existed yet EVERY fixture showed "simulação indisponível" because the
+   * page looked up by `row.id` (fixtures PK, 42) while the producer keyed
+   * `fixture_id` by the choistats id from source_url (19427226).
+   *
+   * Here the sim row's team names are DELIBERATELY the producer's long
+   * names ("Chelsea FC"/"Tottenham Hotspur") which do NOT equal the
+   * fixture's short names — so the teams/kickoff fallback CANNOT rescue
+   * this. The panel can only render real numbers if the page resolves the
+   * row via the choistats id parsed from source_url. Against the old
+   * route-id lookup this renders "indisponível" (RED); after the fix it
+   * renders the real probabilities (GREEN).
+   */
+  it("resolves the simulation via the choistats id parsed from source_url (fallback cannot mask it)", async () => {
+    mockState.fixtureRow = makeRow({ detail_json: makeDetail() as unknown });
+    mockState.simRow = simRow({
+      // Producer long names — the teams fallback will NOT match these,
+      // forcing the parsed-id primary path to be the only way in.
+      home_team: "Chelsea FC",
+      away_team: "Tottenham Hotspur",
+    });
+
+    const { container } = await renderPage("42");
+    const panel = container.querySelector('[data-panel="SIM"]') as HTMLElement;
+    expect(panel, "SIM panel should mount").not.toBeNull();
+    const scoped = within(panel);
+
+    // Real producer probabilities are rendered → the row WAS found by the
+    // parsed choistats id (19427226), not the route id (42).
+    expect(scoped.getByText("48%")).toBeDefined(); // p_home 0.4839
+    expect(scoped.getByText("26%")).toBeDefined(); // p_draw 0.2622
+    expect(scoped.getByText(/1-1/)).toBeDefined(); // top scoreline
+    // The bug symptom must be ABSENT.
+    expect((panel.textContent ?? "").toLowerCase()).not.toContain(
+      "simulação indisponível",
+    );
+  });
 });
 
 describe("StatsPage — pre-game simulation panel", () => {

@@ -137,16 +137,77 @@ function mapRow(row: Record<string, unknown>): FixtureSimulationDTO {
 }
 
 /**
+ * The fixture identity needed to locate its pre-computed simulation.
+ *
+ * Why not the `fixtures` table PK? The Ruby scrape hook
+ * (`scripts/scraper/lib/scraper/orchestrator.rb#fixture_api_id`) stores
+ * `fixture_simulations.fixture_id` = the **choistats numeric id** parsed from
+ * `source_url` (`/fixture/<id>`), NOT the `fixtures` row id. Passing the route
+ * id here matched 0 rows → every fixture showed "simulação indisponível"
+ * despite a fully-populated table (id-space mismatch). Both producer and
+ * consumer now derive the SAME id from the SAME `source_url`.
+ */
+export interface FixtureSimulationKey {
+  sourceUrl: string | null;
+  homeTeam: string;
+  awayTeam: string;
+  kickoffUtc: string | null;
+}
+
+/**
+ * Parses the choistats numeric id from a fixture `source_url`.
+ *
+ * Mirrors the Ruby producer verbatim: `%r{/fixture/(\d+)}` matches
+ * `/fixture/<digits>` anywhere in the string and ignores any trailing slug.
+ * Returns `null` when absent so the caller can fall back to teams/kickoff.
+ */
+function parseChoistatsId(sourceUrl: string | null): number | null {
+  if (!sourceUrl) return null;
+  const m = sourceUrl.match(/\/fixture\/(\d+)/);
+  return m ? Number(m[1]) : null;
+}
+
+/**
  * Fetches the pre-computed simulation for a fixture. Returns `null` (never
  * throws) when there is no row, the query errors, or the table/migration is
  * not yet applied — the dashboard treats `null` as "simulação indisponível".
+ *
+ * Lookup strategy:
+ *   1. PRIMARY — when `source_url` yields a choistats id, filter
+ *      `fixture_id = <parsedId>`. Exact: producer and consumer derive it
+ *      from the identical `source_url`, so this matches ~100% of rows.
+ *   2. FALLBACK — no parsed id OR primary miss: match by `home_team` +
+ *      `away_team`, constrained to the same `kickoff_utc` calendar day (the
+ *      same teams can recur within retention, so this DOES constrain by
+ *      kickoff), newest `created_at` first, `limit 1`. The day-bucket avoids
+ *      timestamptz equality fragility between the Ruby
+ *      `strftime('%Y-%m-%d %H:%M:%S UTC')` write and the column.
  */
 export async function getFixtureSimulation(
-  fixtureId: number,
+  key: FixtureSimulationKey,
   supabase: AnySupabase,
 ): Promise<FixtureSimulationDTO | null> {
   try {
-    const { data, error } = await supabase
+    const apiId = parseChoistatsId(key.sourceUrl);
+
+    if (apiId != null) {
+      const { data, error } = await supabase
+        .from("fixture_simulations")
+        .select(
+          "id, created_at, fixture_id, home_team, away_team, league, " +
+            "kickoff_utc, model_version, p_home, p_draw, p_away, p_btts, " +
+            "p_over_25, top_scorelines, sim_stats, per_half_available, " +
+            "market_anchor, player_events, status, actual_home_goals, " +
+            "actual_away_goals, correct_winner, correct_over_under, " +
+            "actual_resolved_at",
+        )
+        .eq("fixture_id", apiId)
+        .maybeSingle();
+      if (!error && data) return mapRow(data as Record<string, unknown>);
+      // No exact id hit → fall through to the teams/kickoff fallback.
+    }
+
+    let q = supabase
       .from("fixture_simulations")
       .select(
         "id, created_at, fixture_id, home_team, away_team, league, " +
@@ -156,7 +217,23 @@ export async function getFixtureSimulation(
           "actual_away_goals, correct_winner, correct_over_under, " +
           "actual_resolved_at",
       )
-      .eq("fixture_id", fixtureId)
+      .eq("home_team", key.homeTeam)
+      .eq("away_team", key.awayTeam);
+
+    if (key.kickoffUtc) {
+      const day = key.kickoffUtc.slice(0, 10); // YYYY-MM-DD
+      if (/^\d{4}-\d{2}-\d{2}$/.test(day)) {
+        // Match on the kickoff calendar day (UTC) — robust against the Ruby
+        // write format vs the timestamptz column.
+        q = q
+          .gte("kickoff_utc", `${day}T00:00:00Z`)
+          .lt("kickoff_utc", `${day}T23:59:59.999Z`);
+      }
+    }
+
+    const { data, error } = await q
+      .order("created_at", { ascending: false, nullsFirst: false })
+      .limit(1)
       .maybeSingle();
 
     if (error || !data) return null;
