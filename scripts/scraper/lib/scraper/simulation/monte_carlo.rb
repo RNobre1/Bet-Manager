@@ -170,10 +170,30 @@ module AdamStats
         private_class_method :percentile
 
         # ── player events ─────────────────────────────────────────────────
+        # Tolerant, CONSISTENT player-name keying. The real in-memory producer
+        # (WidgetMerger#flatten_player) builds players with SYMBOL keys, while
+        # the spec/JSON shape uses STRING keys. This MUST yield the IDENTICAL
+        # string as PlayerAllocation.allocate_event's name
+        # (PlayerAllocation.get(p,'name').to_s ⇒ p['name'] || p[:name])
+        # so the accumulator built by init_player_acc, the keys
+        # allocate_players accumulates under, and the keys aggregate_players
+        # reads all AGREE for a given player. This helper mirrors
+        # PlayerAllocation.get(p,'name').to_s precedence EXACTLY (string-first,
+        # symbol fallback), so it is provably identical for ALL inputs —
+        # including the (today unreachable) dual-key hash where both 'name' and
+        # :name are present.
+        def player_name(p)
+          (p['name'] || p[:name]).to_s
+        end
+        private_class_method :player_name
+
         def init_player_acc(players)
           acc = {}
           each_player(players) do |_side, p|
-            acc[p['name'].to_s] = { goals: 0, scored_iter: 0, cards: 0, sot: 0 }
+            name = player_name(p)
+            next if name.empty?
+
+            acc[name] = { goals: 0, scored_iter: 0, cards: 0, sot: 0 }
           end
           acc
         end
@@ -210,8 +230,11 @@ module AdamStats
           conf = {}
           each_side(players) do |_side, cfg|
             (cfg[:xi] || cfg['xi'] || []).each do |p|
-              titular[p['name'].to_s] = true
-              conf[p['name'].to_s] = cfg[:confidence] || cfg['confidence'] || :low
+              name = player_name(p)
+              next if name.empty?
+
+              titular[name] = true
+              conf[name] = cfg[:confidence] || cfg['confidence'] || :low
             end
           end
 

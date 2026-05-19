@@ -123,6 +123,69 @@ RSpec.describe AdamStats::Scraper::Simulation::MonteCarlo do
     end
   end
 
+  describe 'symbol-keyed players (real WidgetMerger#flatten_player shape)' do
+    # The in-memory producer (WidgetMerger#flatten_player) builds players with
+    # SYMBOL keys. Regression for the prod bug where player_events collapsed
+    # into a SINGLE empty `name:""` all-zero entry because init/aggregate read
+    # string-only `p['name']` while allocate used the tolerant accessor.
+    def symbol_keyed_args(n: 6000)
+      base_args(n: n).merge(
+        players: {
+          home: {
+            xi: [
+              { name: 'Saka', started: 30, minutes: 2400, goals: 18, yellows: 2, reds: 0, shots_on_target: 60, injured: false },
+              { name: 'Ødegaard', started: 28, minutes: 2300, goals: 12, yellows: 3, reds: 0, shots_on_target: 45, injured: false },
+              { name: 'Saliba', started: 29, minutes: 2500, goals: 3, yellows: 4, reds: 0, shots_on_target: 15, injured: false }
+            ],
+            confidence: :high
+          },
+          away: {
+            xi: [
+              { name: 'Foden', started: 27, minutes: 2200, goals: 14, yellows: 2, reds: 0, shots_on_target: 50, injured: false },
+              { name: 'Haaland', started: 30, minutes: 2600, goals: 28, yellows: 1, reds: 0, shots_on_target: 80, injured: false }
+            ],
+            confidence: :med
+          }
+        }
+      )
+    end
+
+    let(:out) { described_class.run(**symbol_keyed_args) }
+    let(:events) { out[:player_events] }
+
+    it 'emits one entry per distinct XI player (NOT a single empty entry)' do
+      expect(events.length).to eq(5)
+      names = events.map { |e| e[:name] }
+      expect(names).to match_array(%w[Saka Ødegaard Saliba Foden Haaland])
+      expect(names).not_to include('')
+    end
+
+    it 'keys every entry by the real player name (non-empty)' do
+      events.each do |e|
+        expect(e[:name]).to be_a(String)
+        expect(e[:name]).not_to be_empty
+      end
+    end
+
+    it 'actually allocates/accumulates goals (acc keys agree across init/allocate/aggregate)' do
+      scorers = events.select { |e| e[:expected_goals].positive? && e[:p_goal].positive? }
+      expect(scorers).not_to be_empty
+      haaland = events.find { |e| e[:name] == 'Haaland' }
+      expect(haaland[:expected_goals]).to be > 0.0
+      expect(haaland[:p_goal]).to be > 0.0
+    end
+
+    it 'populates provavel_titular and confidence per player' do
+      events.each do |e|
+        expect([true, false]).to include(e[:provavel_titular])
+        expect(%i[low med high]).to include(e[:confidence])
+      end
+      expect(events.find { |e| e[:name] == 'Saka' }[:provavel_titular]).to be(true)
+      expect(events.find { |e| e[:name] == 'Saka' }[:confidence]).to eq(:high)
+      expect(events.find { |e| e[:name] == 'Foden' }[:confidence]).to eq(:med)
+    end
+  end
+
   describe 'degradation' do
     it 'omits per-half keys when per_half_available is false' do
       out = described_class.run(**base_args.merge(per_half_available: false))
