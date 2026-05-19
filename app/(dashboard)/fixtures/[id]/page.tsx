@@ -224,7 +224,15 @@ export default async function StatsPage({ params }: StatsPageProps) {
   // Pre-game simulation (separate scalar-only table). Degrades to null when
   // the migration/table is absent — the SIM panel shows a graceful
   // "simulação indisponível" state instead of crashing the page.
-  const sim = await getFixtureSimulation(row.id, untyped);
+  const sim = await getFixtureSimulation(
+    {
+      sourceUrl: row.source_url,
+      homeTeam: row.home_team,
+      awayTeam: row.away_team,
+      kickoffUtc: row.kickoff_utc,
+    },
+    untyped,
+  );
 
   const kpis = deriveHeroKpis(detail, row.home_team, row.away_team);
   const panels = buildPanels(
