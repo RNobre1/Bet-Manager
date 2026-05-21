@@ -68,6 +68,29 @@ interface CalibrationRow {
 }
 
 /**
+ * Linha de `league_parameters` (migration 0020) — parâmetro ativo por
+ * (liga, param). Exibido agrupado por liga em formato tabular. Ajustado
+ * offline via `scripts/calibracao/fit-league-parameters.ts`.
+ */
+interface LeagueParamRow {
+  league: string;
+  param: string;
+  value: number;
+  n: number;
+  created_at: string;
+  model_version: string;
+}
+
+/** Agrupamento em memória para renderização da tabela por liga. */
+interface CalibratedLeague {
+  league: string;
+  params: Record<string, number>;
+  n: number;
+  updated_at: string;
+  model_version: string;
+}
+
+/**
  * Agrega o Brier sobre simulações resolvidas. Puro; degrada para null quando
  * não há linhas resolvidas com probabilidades/placar válidos.
  */
@@ -171,6 +194,48 @@ export default async function CalibracaoPage() {
   } catch (err) {
     calQueryError = err instanceof Error ? err.message : "erro desconhecido";
   }
+
+  // Parâmetros calibrados POR LIGA (migration 0020). Display somente —
+  // motor Ruby já lê via `Simulation::LeagueCalibration.load` no scrape.
+  // Ajuste offline via `scripts/calibracao/fit-league-parameters.ts`.
+  let leagueRows: LeagueParamRow[] = [];
+  let leagueQueryError: string | null = null;
+  try {
+    const { data, error } = await admin
+      .from("league_parameters")
+      .select("league, param, value, n, created_at, model_version")
+      .is("effective_until", null)
+      .order("league", { ascending: true });
+    if (error)
+      throw new Error(error.message ?? "failed to fetch league_parameters");
+    leagueRows = (data ?? []) as LeagueParamRow[];
+  } catch (err) {
+    leagueQueryError = err instanceof Error ? err.message : "erro desconhecido";
+  }
+
+  // Agrupa em memória: 1 linha por (liga, param) ⇒ 1 entrada por liga
+  // com `params` indexado pelo nome. `n` agregado pelo máximo (cada param
+  // foi fit com a mesma amostra, mas pode haver discrepância em re-fits
+  // parciais — pega o maior por garantia).
+  const groupedLeagues = new Map<string, CalibratedLeague>();
+  for (const r of leagueRows) {
+    const g = groupedLeagues.get(r.league) ?? {
+      league: r.league,
+      params: {},
+      n: 0,
+      updated_at: r.created_at,
+      model_version: r.model_version,
+    };
+    g.params[r.param] = Number(r.value);
+    g.n = Math.max(g.n, Number(r.n));
+    // Usa o created_at mais recente como "atualizada em".
+    if (r.created_at > g.updated_at) g.updated_at = r.created_at;
+    g.model_version = r.model_version;
+    groupedLeagues.set(r.league, g);
+  }
+  const calibratedLeagues: CalibratedLeague[] = Array.from(
+    groupedLeagues.values(),
+  ).sort((a, b) => b.n - a.n);
 
   const resolvedSims: ResolvedSimRow[] = simRows
     .filter((r) => r.status === "resolved")
@@ -378,6 +443,45 @@ export default async function CalibracaoPage() {
         ) : (
           <ActiveCurvesTable rows={calRows} />
         )}
+      </section>
+
+      {/* Parâmetros por liga ativos — display somente. Ajuste offline via
+          `scripts/calibracao/fit-league-parameters.ts`. Motor Ruby lê
+          esses valores no início de cada scrape via
+          Simulation::LeagueCalibration.load. */}
+      <section
+        className="mt-16 border-t border-[var(--color-line-subtle)] pt-10"
+        data-section="sim-league-calibration"
+      >
+        <header className="mb-6">
+          <span className="label">parâmetros por liga</span>
+          <h3 className="mt-2 text-base font-semibold">ligas calibradas (MoM)</h3>
+          <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
+            ρ (Dixon-Coles) e baselines de gols ajustados por liga via
+            Method of Moments. Substitui o NEUTRAL_BASELINE constante no
+            motor de simulação.
+          </p>
+        </header>
+
+        {leagueQueryError && (
+          <p
+            className="card mb-6 p-4 text-sm"
+            style={{ color: "var(--color-vermelho)" }}
+            role="alert"
+          >
+            falha ao ler parâmetros por liga: {leagueQueryError}
+          </p>
+        )}
+
+        {!leagueQueryError && calibratedLeagues.length === 0 ? (
+          <p className="card p-6 text-center text-sm italic text-[var(--color-ink-muted)]">
+            nenhuma liga calibrada ainda — rode{" "}
+            <code>scripts/calibracao/fit-league-parameters.ts</code> quando
+            houver ≥30 resolvidas por liga.
+          </p>
+        ) : !leagueQueryError && calibratedLeagues.length > 0 ? (
+          <CalibratedLeaguesTable rows={calibratedLeagues} />
+        ) : null}
       </section>
     </main>
   );
@@ -687,6 +791,59 @@ function ActiveCurvesTable({ rows }: { rows: CalibrationRow[] }) {
               </Td>
               <Td className="text-[var(--color-ink-muted)]">
                 {fmtDate(r.created_at)}
+              </Td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function CalibratedLeaguesTable({ rows }: { rows: CalibratedLeague[] }) {
+  function fmt(value: number | undefined, digits = 3): string {
+    if (value == null || !Number.isFinite(value)) return "—";
+    return value.toFixed(digits);
+  }
+  function fmtDate(iso: string): string {
+    try {
+      return new Date(iso).toISOString().replace("T", " ").slice(0, 16) + " UTC";
+    } catch {
+      return iso;
+    }
+  }
+  return (
+    <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--color-line-subtle)]">
+      <table className="w-full text-left text-sm">
+        <thead>
+          <tr className="border-b border-[var(--color-line-subtle)] text-[var(--color-ink-faint)]">
+            <Th>liga</Th>
+            <Th className="num text-right">n</Th>
+            <Th className="num text-right">ρ</Th>
+            <Th className="num text-right">avg gols mandante</Th>
+            <Th className="num text-right">avg gols visitante</Th>
+            <Th>atualizada em</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr
+              key={r.league}
+              className="border-b border-[var(--color-line-subtle)] last:border-0"
+            >
+              <Td>{r.league}</Td>
+              <Td className="num text-right tabular-nums">{r.n}</Td>
+              <Td className="num text-right tabular-nums">
+                {fmt(r.params.rho, 3)}
+              </Td>
+              <Td className="num text-right tabular-nums">
+                {fmt(r.params.avg_goals_home, 3)}
+              </Td>
+              <Td className="num text-right tabular-nums">
+                {fmt(r.params.avg_goals_away, 3)}
+              </Td>
+              <Td className="text-[var(--color-ink-muted)]">
+                {fmtDate(r.updated_at)}
               </Td>
             </tr>
           ))}
