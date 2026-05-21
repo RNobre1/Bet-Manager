@@ -884,13 +884,27 @@ describe("SimulationDisclosure", () => {
     );
 
     const toggle = container.querySelector(
-      'button[aria-expanded][aria-controls]',
+      'button[data-sim-toggle]',
     ) as HTMLButtonElement | null;
     expect(toggle, "toggle button deve existir").not.toBeNull();
     expect(toggle?.getAttribute("aria-expanded")).toBe("false");
     expect(toggle?.textContent?.toLowerCase()).toContain("ver");
 
     expect(container.querySelector('[data-testid="sim-body"]')).toBeNull();
+
+    // Garantia adicional: visualmente "Monte Carlo" vem ANTES do toggle no header.
+    const header = container.querySelector("header") as HTMLElement;
+    const mcSpan = Array.from(header.querySelectorAll("span")).find(
+      (s) => s.textContent?.includes("Monte Carlo"),
+    );
+    expect(mcSpan, "span Monte Carlo deve existir").not.toBeUndefined();
+    const toggleEl = header.querySelector(
+      "button[data-sim-toggle]",
+    ) as HTMLElement;
+    expect(
+      mcSpan!.compareDocumentPosition(toggleEl) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy(); // toggle vem DEPOIS de "Monte Carlo"
   });
 
   it("expande ao clicar no toggle (aria-expanded=true, body montado, label muda)", () => {
@@ -901,7 +915,7 @@ describe("SimulationDisclosure", () => {
     );
 
     const toggle = container.querySelector(
-      'button[aria-expanded]',
+      'button[data-sim-toggle]',
     ) as HTMLButtonElement;
     fireEvent.click(toggle);
 
@@ -917,7 +931,7 @@ describe("SimulationDisclosure", () => {
       </SimulationDisclosure>,
     );
     const toggle = container.querySelector(
-      "button[aria-controls]",
+      'button[data-sim-toggle]',
     ) as HTMLButtonElement;
     const id = toggle.getAttribute("aria-controls")!;
     expect(id.length).toBeGreaterThan(0);

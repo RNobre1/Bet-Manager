@@ -8,7 +8,7 @@ import { fireEvent } from "@testing-library/react";
  */
 export function expandSim(panel: HTMLElement): void {
   const toggle = panel.querySelector(
-    'button[aria-expanded]',
+    'button[data-sim-toggle]',
   ) as HTMLButtonElement | null;
   if (!toggle) return;
   if (toggle.getAttribute("aria-expanded") === "true") return;

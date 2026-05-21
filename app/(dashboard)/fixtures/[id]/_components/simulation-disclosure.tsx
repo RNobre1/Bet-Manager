@@ -86,8 +86,10 @@ export function SimulationDisclosure({ children }: { children: ReactNode }) {
       gap={4}
       eyebrow={
         <span className="inline-flex items-center gap-3">
+          <MonteCarloEyebrow />
           <button
             type="button"
+            data-sim-toggle
             aria-expanded={expanded}
             aria-controls={regionId}
             onClick={() => setExpanded((v) => !v)}
@@ -96,7 +98,6 @@ export function SimulationDisclosure({ children }: { children: ReactNode }) {
             <span aria-hidden>{expanded ? "▾" : "▸"}</span>
             {expanded ? "ocultar" : "ver"}
           </button>
-          <MonteCarloEyebrow />
         </span>
       }
     >
