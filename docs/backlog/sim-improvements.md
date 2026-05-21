@@ -85,6 +85,13 @@
   - Custo: ~7d (incluindo provisionamento ML)
   - Commits: _(a registrar)_
 
+### Wave 7 — UX cleanup (não-funcional, mas necessário)
+
+- [ ] **W7-UX** — Auditoria + reorganização: sidebar lateral está bagunçada; melhorar densidade/agrupamento mobile geral (não mudar design system, só organizar). Inclui: hierarquia visual, espaçamento, ordem de navegação, transições estado-vazio. Última wave da sessão autônoma — depois de tudo funcional estar verde.
+  - Status: pending
+  - Custo: ~2-3d
+  - Commits: _(a registrar)_
+
 ### Wave 6 — Cosmético + reavaliação final
 
 - [ ] **F12** — Estender Monte Carlo pra simular faltas/offsides/throw-ins (já no `detail_json`).
