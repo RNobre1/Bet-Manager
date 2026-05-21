@@ -5,18 +5,36 @@ import { logoutAction } from "@/app/(auth)/login/actions";
 import { CommandPalette } from "@/components/command-palette";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 
-const NAV = [
-  { href: "/", label: "overview" },
-  { href: "/houses", label: "casas" },
-  { href: "/bets", label: "apostas" },
-  { href: "/transactions", label: "transações" },
-  { href: "/banca", label: "banca" },
-  { href: "/forecast", label: "previsão" },
-  { href: "/fixtures", label: "fixtures" },
-  { href: "/explore", label: "explorar" },
-  { href: "/audit", label: "auditoria" },
-  { href: "/logs", label: "logs IA" },
-  { href: "/calibracao", label: "calibração" },
+const NAV_GROUPS: Array<{
+  label: string;
+  items: Array<{ href: string; label: string }>;
+}> = [
+  {
+    label: "operação",
+    items: [
+      { href: "/", label: "overview" },
+      { href: "/banca", label: "banca" },
+      { href: "/houses", label: "casas" },
+      { href: "/transactions", label: "transações" },
+      { href: "/bets", label: "apostas" },
+      { href: "/forecast", label: "previsão" },
+    ],
+  },
+  {
+    label: "análise",
+    items: [
+      { href: "/fixtures", label: "fixtures" },
+      { href: "/explore", label: "explorar" },
+      { href: "/calibracao", label: "calibração" },
+    ],
+  },
+  {
+    label: "sistema",
+    items: [
+      { href: "/audit", label: "auditoria" },
+      { href: "/logs", label: "logs IA" },
+    ],
+  },
 ];
 
 export default async function DashboardLayout({
@@ -57,15 +75,22 @@ export default async function DashboardLayout({
           </p>
         </Link>
 
-        <nav className="mt-12 flex flex-col gap-1">
-          {NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-[var(--radius-sm)] px-3 py-2 text-sm text-[var(--color-ink-muted)] transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-ink)]"
-            >
-              {item.label}
-            </Link>
+        <nav className="mt-12 flex flex-col gap-6">
+          {NAV_GROUPS.map((group) => (
+            <div key={group.label} className="flex flex-col gap-1">
+              <span className="label mb-1 text-[var(--color-ink-faint)]">
+                {group.label}
+              </span>
+              {group.items.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="rounded-[var(--radius-sm)] px-3 py-2 text-sm text-[var(--color-ink-muted)] transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-ink)]"
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
           ))}
         </nav>
 
