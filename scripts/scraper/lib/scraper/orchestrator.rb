@@ -12,6 +12,7 @@ require_relative 'league_baseline'
 require_relative 'playwright_session'
 require_relative 'prediction_reconciler'
 require_relative 'simulation/runner'
+require_relative 'simulation/league_calibration'
 require_relative 'uk_time_helper'
 
 module AdamStats
@@ -136,6 +137,13 @@ module AdamStats
         skipped = 0
 
         AdamStats::Scraper::DB.with_connection do |conn|
+          # F4a — carrega calibração por-liga UMA vez no início do scrape (1
+          # query index-backed); passa o dict por kwarg a cada Runner.simulate.
+          # LeagueCalibration.load já degrada para {} em qualquer erro, então
+          # falha transitória aqui só significa fallback ao NEUTRAL_BASELINE/
+          # DEFAULT_RHO — nunca derruba o hook.
+          calibration = Simulation::LeagueCalibration.load(conn)
+
           detail_json_by_source_url.each do |source_url, detail|
             fixture = by_source[source_url]
             next if fixture.nil?
@@ -150,7 +158,7 @@ module AdamStats
                 next
               end
 
-              sim = Simulation::Runner.simulate(detail)
+              sim = Simulation::Runner.simulate(detail, calibration: calibration)
               next if sim.nil? || sim[:status] == 'unsimulable'
 
               params = build_params(fixture, sim)

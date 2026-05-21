@@ -4,6 +4,7 @@ require_relative 'score_model'
 require_relative 'secondary_stats'
 require_relative 'player_allocation'
 require_relative 'monte_carlo'
+require_relative 'league_calibration'
 
 module AdamStats
   module Scraper
@@ -15,7 +16,7 @@ module AdamStats
       #   - no HT split ⇒ per_half_available: false
       #   - insufficient/garbage detail ⇒ { status: 'unsimulable' }, no raise.
       module Runner
-        MODEL_VERSION = 'sim-v1-poisson-dc-nb-mc10k-v4'.freeze
+        MODEL_VERSION = 'sim-v1-poisson-dc-nb-mc10k-v5'.freeze
         DEFAULT_N = 10_000
         # Baseline-day fallback threshold (POC: < 6 teams ⇒ noisy day slice).
         MIN_TEAMS_FOR_DAY_BASELINE = 6
@@ -46,18 +47,19 @@ module AdamStats
 
         module_function
 
-        def simulate(detail_json, n: DEFAULT_N)
+        def simulate(detail_json, n: DEFAULT_N, calibration: {})
           d = detail_json
           return unsimulable unless d.is_a?(Hash)
 
           avgs = fetch(d, 'avgs')
           return unsimulable unless usable_avgs?(avgs)
 
-          league_avgs = league_baseline(avgs)
+          league = (fetch(d, 'league') || '').to_s
+          league_avgs = league_baseline(league, calibration)
           lambdas = Rates.lambdas(d, league_avgs)
           return unsimulable if lambdas.nil?
 
-          rho = rho_for(d)
+          rho = rho_for(league, calibration)
           per_half = per_half_available?(avgs)
           secondary = build_secondary(avgs, d, per_half)
           players = build_players(d)
@@ -110,22 +112,24 @@ module AdamStats
         end
         private_class_method :usable_avgs?
 
-        # Day-slice league baseline. The current single-fixture invocation only
-        # ever sees the two teams in this fixture (< MIN_TEAMS_FOR_DAY_BASELINE
-        # distinct samples), so we always degrade to the neutral persisted
-        # baseline (spec §6.4 / POC §2). The multi-fixture aggregation branch
-        # (and the `mean` helper it used) was dead — no caller passes a wider
-        # day slice today — so it was removed (YAGNI). `avgs` is still accepted
-        # so a future day-slice caller can reintroduce aggregation here without
-        # changing the call site.
-        def league_baseline(_avgs)
-          NEUTRAL_BASELINE
+        # F4a — League baseline agora vem da tabela `league_parameters`
+        # (via LeagueCalibration); fallback transparente p/ NEUTRAL_BASELINE
+        # quando a liga ou param ausente.
+        #
+        # Histórico: pré-F4a era um day-slice degradado (sempre NEUTRAL_BASELINE
+        # porque single-fixture nunca atingia MIN_TEAMS_FOR_DAY_BASELINE).
+        # F4b carrega ρ + avg_goals_* por liga; aqui só fazemos lookup.
+        def league_baseline(league, calibration)
+          LeagueCalibration.baseline_for(league, calibration)
         end
         private_class_method :league_baseline
 
-        def rho_for(d)
-          league = (fetch(d, 'league') || '').to_s.downcase
-          RHO_BY_LEAGUE.fetch(league, DEFAULT_RHO)
+        # F4a — ρ Dixon-Coles agora vem da tabela `league_parameters`
+        # (via LeagueCalibration); fallback transparente p/ DEFAULT_RHO.
+        # Histórico: pré-F4a era `RHO_BY_LEAGUE.fetch(league.downcase, ...)`
+        # com RHO_BY_LEAGUE = {} (sempre caía no default).
+        def rho_for(league, calibration)
+          LeagueCalibration.rho_for(league, calibration)
         end
         private_class_method :rho_for
 

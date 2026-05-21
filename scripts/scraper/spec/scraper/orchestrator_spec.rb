@@ -622,6 +622,8 @@ RSpec.describe AdamStats::Scraper::Orchestrator do
       # Pre-check SELECT → no existing row ⇒ simula (comportamento original).
       allow(conn).to receive(:exec_params).with(/SELECT/i, anything).and_return([])
       allow(conn).to receive(:exec_params).with(/DELETE|INSERT/i, anything)
+      # F4a: LeagueCalibration.load(conn) faz UM query no início → tabela vazia.
+      allow(conn).to receive(:query).with(/league_parameters/i).and_return([])
       allow(conn).to receive(:transaction) { |&blk| blk.call }
       allow(AdamStats::Scraper::DB).to receive(:with_connection).and_yield(conn)
 
@@ -662,6 +664,8 @@ RSpec.describe AdamStats::Scraper::Orchestrator do
       # Pre-check SELECT → no existing row ⇒ prossegue para simular.
       allow(conn).to receive(:exec_params).with(/SELECT/i, anything).and_return([])
       allow(conn).to receive(:exec_params).with(/DELETE|INSERT/i, anything)
+      # F4a: LeagueCalibration.load(conn) faz UM query no início → tabela vazia.
+      allow(conn).to receive(:query).with(/league_parameters/i).and_return([])
       allow(conn).to receive(:transaction) { |&blk| blk.call }
       allow(AdamStats::Scraper::DB).to receive(:with_connection).and_yield(conn)
       allow(AdamStats::Scraper::Simulation::Runner).to receive(:simulate)

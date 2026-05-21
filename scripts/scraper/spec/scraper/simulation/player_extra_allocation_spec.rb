@@ -6,8 +6,10 @@ module AdamStats
   module Scraper
     module Simulation
       RSpec.describe 'F10 — player_extra outcome_odds_by_player blend' do
-        it 'MODEL_VERSION reflete bump para v4' do
-          expect(Runner::MODEL_VERSION).to eq('sim-v1-poisson-dc-nb-mc10k-v4')
+        it 'MODEL_VERSION reflete pelo menos v4 (F10 player_extra blend shipped)' do
+          # Relaxado para regex v[4-9] em F4a — bumps subsequentes não devem
+          # quebrar este spec, que valida o feature F10 (não a versão exata).
+          expect(Runner::MODEL_VERSION).to match(/\Asim-v1-poisson-dc-nb-mc10k-v[4-9]\z/)
         end
 
         describe PlayerAllocation, '.event_weight com :goals' do
@@ -100,7 +102,7 @@ module AdamStats
 
             res = Runner.simulate(d, n: 10) # n pequeno só pra exercitar caminho
             expect(res[:status]).to eq('pending')
-            expect(res[:model_version]).to eq('sim-v1-poisson-dc-nb-mc10k-v4')
+            expect(res[:model_version]).to match(/\Asim-v1-poisson-dc-nb-mc10k-v[4-9]\z/)
 
             # ao menos uma chamada com Foo no xi deve ter anytime_scorer_odd = 2.5
             foo_seen = captured.any? do |xi|
