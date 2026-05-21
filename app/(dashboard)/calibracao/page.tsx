@@ -54,6 +54,20 @@ interface SimBrierSummary {
 }
 
 /**
+ * Linha de `model_calibration` (migration 0019) — curva isotônica ativa.
+ * Esta task NÃO aplica a curva na leitura; só exibe metadados. Aplicação
+ * fica como follow-up F3-prod.
+ */
+interface CalibrationRow {
+  id: number;
+  metric: string;
+  model_version: string;
+  n: number;
+  pairs: unknown;
+  created_at: string;
+}
+
+/**
  * Agrega o Brier sobre simulações resolvidas. Puro; degrada para null quando
  * não há linhas resolvidas com probabilidades/placar válidos.
  */
@@ -137,6 +151,26 @@ export default async function CalibracaoPage() {
     simQueryError = err instanceof Error ? err.message : "erro desconhecido";
   }
   const simBrier = summarizeSimulationBrier(simRows);
+
+  // Curvas isotônicas ativas (effective_until IS NULL). Esta seção é
+  // somente leitura/display — a curva é ajustada offline por
+  // `scripts/calibracao/fit-isotonic.ts` e ainda não é aplicada na leitura
+  // (follow-up F3-prod).
+  let calRows: CalibrationRow[] = [];
+  let calQueryError: string | null = null;
+  try {
+    const { data, error } = await admin
+      .from("model_calibration")
+      .select("id, metric, model_version, n, pairs, created_at")
+      .is("effective_until", null)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (error)
+      throw new Error(error.message ?? "failed to fetch model_calibration");
+    calRows = (data ?? []) as CalibrationRow[];
+  } catch (err) {
+    calQueryError = err instanceof Error ? err.message : "erro desconhecido";
+  }
 
   const resolvedSims: ResolvedSimRow[] = simRows
     .filter((r) => r.status === "resolved")
@@ -306,6 +340,43 @@ export default async function CalibracaoPage() {
           <p className="card mt-6 p-6 text-center text-sm italic text-[var(--color-ink-muted)]">
             reliability · brier ao longo do tempo · desvio vs mercado: esperando primeiros jogos resolverem.
           </p>
+        )}
+      </section>
+
+      {/* Curvas isotônicas ativas — display somente. Ajuste offline via
+          `scripts/calibracao/fit-isotonic.ts`. Aplicação na leitura
+          fica como follow-up F3-prod. */}
+      <section
+        className="mt-16 border-t border-[var(--color-line-subtle)] pt-10"
+        data-section="sim-active-calibration"
+      >
+        <header className="mb-6">
+          <span className="label">calibração isotônica</span>
+          <h3 className="mt-2 text-base font-semibold">curvas ativas (pós-modelo)</h3>
+          <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
+            ajuste isotônico (PAV) das probabilidades por métrica. Ainda não
+            aplicado na leitura — só metadados aqui.
+          </p>
+        </header>
+
+        {calQueryError && (
+          <p
+            className="card mb-6 p-4 text-sm"
+            style={{ color: "var(--color-vermelho)" }}
+            role="alert"
+          >
+            falha ao ler curvas: {calQueryError}
+          </p>
+        )}
+
+        {calRows.length === 0 ? (
+          <p className="card p-6 text-center text-sm italic text-[var(--color-ink-muted)]">
+            nenhuma curva isotônica ajustada ainda — rode{" "}
+            <code>scripts/calibracao/fit-isotonic.ts</code> quando houver ≥30
+            resolvidas por métrica.
+          </p>
+        ) : (
+          <ActiveCurvesTable rows={calRows} />
         )}
       </section>
     </main>
@@ -570,6 +641,53 @@ function SimMarketDevTable({ rows }: { rows: Array<{ league: string; n: number; 
               <Td className="num text-right tabular-nums">{`${Math.round(r.modelMean * 100)}%`}</Td>
               <Td className="num text-right tabular-nums">{`${Math.round(r.marketMean * 100)}%`}</Td>
               <Td className="num text-right tabular-nums">{r.mad.toFixed(3)}</Td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function ActiveCurvesTable({ rows }: { rows: CalibrationRow[] }) {
+  function countPoints(pairs: unknown): number {
+    if (!Array.isArray(pairs)) return 0;
+    return pairs.length;
+  }
+  function fmtDate(iso: string): string {
+    try {
+      return new Date(iso).toISOString().replace("T", " ").slice(0, 16) + " UTC";
+    } catch {
+      return iso;
+    }
+  }
+  return (
+    <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--color-line-subtle)]">
+      <table className="w-full text-left text-sm">
+        <thead>
+          <tr className="border-b border-[var(--color-line-subtle)] text-[var(--color-ink-faint)]">
+            <Th>métrica</Th>
+            <Th>modelo</Th>
+            <Th className="num text-right">n (amostras)</Th>
+            <Th className="num text-right">pontos da curva</Th>
+            <Th>ajustada em</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr
+              key={r.id}
+              className="border-b border-[var(--color-line-subtle)] last:border-0"
+            >
+              <Td>{r.metric}</Td>
+              <Td>{r.model_version}</Td>
+              <Td className="num text-right tabular-nums">{r.n}</Td>
+              <Td className="num text-right tabular-nums">
+                {countPoints(r.pairs)}
+              </Td>
+              <Td className="text-[var(--color-ink-muted)]">
+                {fmtDate(r.created_at)}
+              </Td>
             </tr>
           ))}
         </tbody>
