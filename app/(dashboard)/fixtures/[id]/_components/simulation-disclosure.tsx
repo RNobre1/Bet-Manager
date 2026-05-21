@@ -63,9 +63,15 @@ function MonteCarloEyebrow() {
   );
 }
 
-export function SimulationDisclosure({ children }: { children: ReactNode }) {
+export function SimulationDisclosure({
+  children,
+  defaultExpanded = false,
+}: {
+  children: ReactNode;
+  defaultExpanded?: boolean;
+}) {
   const isMobile = useIsMobile();
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(defaultExpanded);
   const regionId = useId();
 
   if (isMobile) {

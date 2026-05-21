@@ -6,6 +6,7 @@ import type { DetailJson } from "@/lib/fixtures/stats/detail-json-types";
 import { MOBILE_TABS } from "@/components/fixtures/stats/stats-layout";
 import { SimulationPanel } from "@/app/(dashboard)/fixtures/[id]/_components/simulation-panel";
 import { SimulationDisclosure } from "@/app/(dashboard)/fixtures/[id]/_components/simulation-disclosure";
+import { expandSim } from "./__helpers/expand-sim";
 
 /**
  * Wave 2b / Task 3 — the stats page now also surfaces the pre-game
@@ -499,6 +500,7 @@ describe("StatsPage — id-space mismatch regression (the prod bug)", () => {
     const { container } = await renderPage("42");
     const panel = container.querySelector('[data-panel="SIM"]') as HTMLElement;
     expect(panel, "SIM panel should mount").not.toBeNull();
+    expandSim(panel);
     const scoped = within(panel);
 
     // Real producer probabilities are rendered → the row WAS found by the
@@ -514,15 +516,44 @@ describe("StatsPage — id-space mismatch regression (the prod bug)", () => {
 });
 
 describe("StatsPage — pre-game simulation panel", () => {
+  it("renderiza o painel de momentum (B) antes da simulação (SIM) no DOM", async () => {
+    mockState.fixtureRow = makeRow({ detail_json: makeDetail() as unknown });
+    mockState.simRow = simRow();
+
+    const { container } = await renderPage("42");
+
+    const momentum = container.querySelector('[data-panel="B"]');
+    const sim = container.querySelector('[data-panel="SIM"]');
+    expect(momentum, "momentum panel B deve existir").not.toBeNull();
+    expect(sim, "panel SIM deve existir").not.toBeNull();
+
+    const pos = momentum!.compareDocumentPosition(sim!);
+    expect(pos & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("renderiza SIM recolhido por default (toggle visível, body do conteúdo ausente)", async () => {
+    mockState.fixtureRow = makeRow({ detail_json: makeDetail() as unknown });
+    mockState.simRow = simRow();
+
+    const { container } = await renderPage("42");
+    const panel = container.querySelector('[data-panel="SIM"]') as HTMLElement;
+
+    const toggle = panel.querySelector('button[data-sim-toggle]');
+    expect(toggle?.getAttribute("aria-expanded")).toBe("false");
+    // Conteúdo do body (placar provável) NÃO está visível com SIM recolhido.
+    expect(panel.querySelector("[data-probable-score]")).toBeNull();
+  });
+
   it("renders the probable score and the 1X2/over/BTTS probability bars", async () => {
     mockState.fixtureRow = makeRow({ detail_json: makeDetail() as unknown });
     mockState.simRow = simRow();
 
     const { container } = await renderPage("42");
 
-    const panel = container.querySelector('[data-panel="SIM"]');
+    const panel = container.querySelector('[data-panel="SIM"]') as HTMLElement;
     expect(panel, "simulation panel SIM should mount").not.toBeNull();
-    const scoped = within(panel as HTMLElement);
+    expandSim(panel);
+    const scoped = within(panel);
 
     // Probable scoreline (top of REAL top_scorelines: "1-1").
     expect(scoped.getByText(/1-1/)).toBeDefined();
@@ -585,6 +616,7 @@ describe("StatsPage — pre-game simulation panel", () => {
 
     const { container } = await renderPage("42");
     const panel = container.querySelector('[data-panel="SIM"]') as HTMLElement;
+    expandSim(panel);
 
     const legend = panel.querySelector("[data-team-legend]");
     expect(legend, "TeamLegend expected for team-keyed parity").not.toBeNull();
@@ -598,6 +630,7 @@ describe("StatsPage — pre-game simulation panel", () => {
 
     const { container } = await renderPage("42");
     const panel = container.querySelector('[data-panel="SIM"]') as HTMLElement;
+    expandSim(panel);
     const text = (panel.textContent ?? "").toLowerCase();
 
     // confidence buckets are an intended UI signal (wired in [Minor] 6).
@@ -612,6 +645,7 @@ describe("StatsPage — pre-game simulation panel", () => {
 
     const { container } = await renderPage("42");
     const panel = container.querySelector('[data-panel="SIM"]') as HTMLElement;
+    expandSim(panel);
     const scoped = within(panel);
 
     // The per-team projected-stats table renders the REAL p50 for EVERY
@@ -651,6 +685,7 @@ describe("StatsPage — pre-game simulation panel", () => {
 
     const { container } = await renderPage("42");
     const panel = container.querySelector('[data-panel="SIM"]') as HTMLElement;
+    expandSim(panel);
 
     const goalsCells = Array.from(
       panel.querySelectorAll<HTMLElement>('tr[data-sim-stat="goals"] td.num'),
@@ -671,6 +706,7 @@ describe("StatsPage — pre-game simulation panel", () => {
 
     const { container } = await renderPage("42");
     const panel = container.querySelector('[data-panel="SIM"]') as HTMLElement;
+    expandSim(panel);
     const text = panel.textContent ?? "";
 
     expect(text.toLowerCase()).toContain("provável escalação");
@@ -690,6 +726,7 @@ describe("StatsPage — pre-game simulation panel", () => {
 
     const { container } = await renderPage("42");
     const panel = container.querySelector('[data-panel="SIM"]') as HTMLElement;
+    expandSim(panel);
 
     // Richarlison's REAL p_goal is 0.6194 (≥ 0.25) → goal icon present.
     expect(
@@ -720,6 +757,7 @@ describe("StatsPage — pre-game simulation panel", () => {
     mockState.simRow = cardProne;
     const { container: c2 } = await renderPage("42");
     const panel2 = c2.querySelector('[data-panel="SIM"]') as HTMLElement;
+    expandSim(panel2);
     expect(
       panel2.querySelector('[data-player-icon="card"]'),
       "card-prone player (p_card ≥ 0.25) → card icon",
@@ -732,6 +770,7 @@ describe("StatsPage — pre-game simulation panel", () => {
 
     const { container } = await renderPage("42");
     const panel = container.querySelector('[data-panel="SIM"]') as HTMLElement;
+    expandSim(panel);
 
     // Reuses the existing InfoPopover primitive (a Radix popover trigger).
     expect(panel.querySelectorAll("button[aria-label]").length).toBeGreaterThan(
@@ -745,6 +784,7 @@ describe("StatsPage — pre-game simulation panel", () => {
 
     const { container } = await renderPage("42");
     const panel = container.querySelector('[data-panel="SIM"]') as HTMLElement;
+    expandSim(panel);
     const text = (panel.textContent ?? "").toLowerCase();
 
     expect(text).toContain("total do jogo");
@@ -798,6 +838,7 @@ describe("StatsPage — pre-game simulation panel", () => {
 
     const { container } = await renderPage("42");
     const panel = container.querySelector('[data-panel="SIM"]') as HTMLElement;
+    expandSim(panel);
     const text = panel.textContent ?? "";
     // num_matches from avgs (sample size of the model input) shown for honesty.
     expect(text).toMatch(/22/);

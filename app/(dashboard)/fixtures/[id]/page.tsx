@@ -48,6 +48,7 @@ import { MarketsBrowser } from "@/components/fixtures/stats/panels/markets-brows
 import { FixtureCopilotDrawer } from "@/components/fixtures/fixture-copilot-drawer";
 import { getFixtureSimulation } from "@/lib/fixtures/simulation-repository";
 import { SimulationPanel } from "./_components/simulation-panel";
+import { SimulationDisclosure } from "./_components/simulation-disclosure";
 
 export const dynamic = "force-dynamic";
 
@@ -303,17 +304,21 @@ function buildPanels(
   awayTeam: string,
   sim: Awaited<ReturnType<typeof getFixtureSimulation>>,
 ): PanelSlot[] {
+  const simDegraded = !sim || sim.status === "unsimulable";
   const simSlot: PanelSlot = {
     id: "SIM",
     colSpan: "span 12 / span 12",
     label: "simulação pré-jogo",
     node: (
-      <SimulationPanel
-        sim={sim}
-        homeTeam={homeTeam}
-        awayTeam={awayTeam}
-        sampleSize={readAvgsSampleSize(detail)}
-      />
+      <SimulationDisclosure defaultExpanded={simDegraded}>
+        <SimulationPanel
+          sim={sim}
+          homeTeam={homeTeam}
+          awayTeam={awayTeam}
+          sampleSize={readAvgsSampleSize(detail)}
+          chrome="bare"
+        />
+      </SimulationDisclosure>
     ),
   };
 
@@ -367,7 +372,6 @@ function buildPanels(
   const insights = rankInsights(allInsights);
 
   return [
-    simSlot,
     {
       id: "B",
       colSpan: "span 12 / span 12",
@@ -382,6 +386,7 @@ function buildPanels(
         />
       ),
     },
+    simSlot,
     {
       id: "A-home",
       colSpan: "span 6 / span 6",
