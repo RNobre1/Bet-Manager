@@ -390,6 +390,53 @@ describe("getFixtureSimulation — teams/kickoff fallback", () => {
   });
 });
 
+/**
+ * F5 — multi model_version coexistência (migration 0021).
+ *
+ * Após o bump v4→v5, a MESMA fixture pode ter 2+ linhas em
+ * fixture_simulations distintas por `model_version`. O reader é o "display
+ * single-fixture" que SEMPRE retorna a versão mais recente. O agrupamento
+ * por versão (e o Brier comparativo) vivem em /calibracao, não aqui.
+ *
+ * O contrato verificado: PRIMARY path ordena por created_at desc + limit 1
+ * (mesmo padrão da FALLBACK), garantindo determinismo independente de qual
+ * row o PostgREST devolveria sem ORDER BY.
+ */
+describe("getFixtureSimulation — F5 multi model_version", () => {
+  it("PRIMARY path ordena por created_at desc + limit 1 (retorna a versão mais recente)", async () => {
+    // Mock devolve fullSimRow no path PRIMARY. O importante é o CONTRATO da
+    // query: a chain DEVE invocar .order("created_at", {ascending:false})
+    // e .limit(1) — assim o Postgres devolve sempre a versão mais recente
+    // quando 2+ linhas coexistem (v4 + v5).
+    const { client, queries } = buildMock({
+      primaryRow: fullSimRow({
+        fixture_id: 19427226,
+        model_version: "sim-v5",
+        created_at: "2026-05-20T10:00:00Z",
+      }),
+    });
+
+    const dto = await getFixtureSimulation(ROUTE_ID_FIXTURE, client);
+    expect(dto).not.toBeNull();
+    expect(dto!.model_version).toBe("sim-v5");
+
+    const primary = queries[0];
+    // Contrato F5: PRIMARY ordena por created_at desc.
+    const createdAtOrder = primary.orders.find(
+      (o) => o.column === "created_at",
+    );
+    expect(
+      createdAtOrder,
+      "PRIMARY path must order by created_at to pick the latest model_version",
+    ).toBeDefined();
+    expect(
+      (createdAtOrder!.opts as { ascending?: boolean } | undefined)?.ascending,
+    ).toBe(false);
+    // E limita a 1 (a mais recente).
+    expect(primary.limit).toBe(1);
+  });
+});
+
 describe("getFixtureSimulation — DTO mapping + graceful degradation", () => {
   it("maps the row into a typed DTO", async () => {
     const { client } = buildMock({

@@ -35,6 +35,7 @@ interface SimRow {
   id: number;
   status: "pending" | "resolved" | "unsimulable" | "unresolvable";
   league: string | null;
+  model_version: string | null;
   p_home: number | null;
   p_draw: number | null;
   p_away: number | null;
@@ -163,7 +164,7 @@ export default async function CalibracaoPage() {
     const { data, error } = await admin
       .from("fixture_simulations")
       .select(
-        "id, status, league, p_home, p_draw, p_away, p_over_25, market_anchor, correct_winner, correct_over_under, actual_home_goals, actual_away_goals, actual_resolved_at",
+        "id, status, league, model_version, p_home, p_draw, p_away, p_over_25, market_anchor, correct_winner, correct_over_under, actual_home_goals, actual_away_goals, actual_resolved_at",
       )
       .order("created_at", { ascending: false })
       .limit(500);
@@ -174,6 +175,27 @@ export default async function CalibracaoPage() {
     simQueryError = err instanceof Error ? err.message : "erro desconhecido";
   }
   const simBrier = summarizeSimulationBrier(simRows);
+
+  // F5 — Brier por model_version: agrupa as linhas resolvidas por
+  // `model_version` e reusa `summarizeSimulationBrier` (lib pura) em cada
+  // grupo. Permite comparar a qualidade probabilística entre versões do
+  // motor (ex. v4 vs v5) lado a lado quando o histórico está preservado
+  // (migration 0021).
+  const simBrierByVersion = (() => {
+    const groups = new Map<string, SimRow[]>();
+    for (const r of simRows) {
+      const mv = (r.model_version ?? "—").trim() || "—";
+      const arr = groups.get(mv) ?? [];
+      arr.push(r);
+      groups.set(mv, arr);
+    }
+    return Array.from(groups.entries())
+      .map(([mv, rows]) => ({
+        model_version: mv,
+        ...summarizeSimulationBrier(rows),
+      }))
+      .sort((a, b) => b.resolved - a.resolved);
+  })();
 
   // Curvas isotônicas ativas (effective_until IS NULL). Esta seção é
   // somente leitura/display — a curva é ajustada offline por
@@ -368,6 +390,15 @@ export default async function CalibracaoPage() {
           </p>
         ) : (
           <SimBrierCards summary={simBrier} />
+        )}
+
+        {simBrierByVersion.length > 0 && (
+          <section className="mt-10" data-section="sim-brier-by-version">
+            <h3 className="mb-4 text-base font-semibold">
+              brier por model_version (histórico A/B entre versões do motor)
+            </h3>
+            <SimBrierByVersionTable rows={simBrierByVersion} />
+          </section>
         )}
 
         {simBrier.resolved > 0 && (
@@ -671,6 +702,41 @@ function SimReliabilityTable({
               <Td className="num text-right tabular-nums">
                 {b.observedFreq == null ? "—" : `${Math.round(b.observedFreq * 100)}%`}
               </Td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function SimBrierByVersionTable({
+  rows,
+}: {
+  rows: Array<{ model_version: string } & SimBrierSummary>;
+}) {
+  const fmt = (v: number | null) => (v == null ? "—" : v.toFixed(3));
+  return (
+    <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--color-line-subtle)]">
+      <table className="w-full text-left text-sm">
+        <thead>
+          <tr className="border-b border-[var(--color-line-subtle)] text-[var(--color-ink-faint)]">
+            <Th>model_version</Th>
+            <Th className="num text-right">resolvidas</Th>
+            <Th className="num text-right">brier 1X2</Th>
+            <Th className="num text-right">brier over 2.5</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr
+              key={r.model_version}
+              className="border-b border-[var(--color-line-subtle)] last:border-0"
+            >
+              <Td>{r.model_version}</Td>
+              <Td className="num text-right tabular-nums">{r.resolved}</Td>
+              <Td className="num text-right tabular-nums">{fmt(r.brier1x2)}</Td>
+              <Td className="num text-right tabular-nums">{fmt(r.brierOver)}</Td>
             </tr>
           ))}
         </tbody>

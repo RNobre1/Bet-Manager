@@ -182,6 +182,13 @@ function parseChoistatsId(sourceUrl: string | null): number | null {
  *      kickoff), newest `created_at` first, `limit 1`. The day-bucket avoids
  *      timestamptz equality fragility between the Ruby
  *      `strftime('%Y-%m-%d %H:%M:%S UTC')` write and the column.
+ *
+ * F5 — multi model_version coexistência (migration 0021): a mesma fixture
+ * pode ter VÁRIAS linhas distintas por `model_version` (histórico ao longo
+ * de bumps do motor). Ambos os paths ordenam por `created_at desc` + limit 1
+ * para retornar SEMPRE a versão MAIS RECENTE. /calibracao continua agrupando
+ * por model_version separadamente; este reader é o "single-fixture display"
+ * que sempre mostra a versão corrente.
  */
 export async function getFixtureSimulation(
   key: FixtureSimulationKey,
@@ -191,6 +198,9 @@ export async function getFixtureSimulation(
     const apiId = parseChoistatsId(key.sourceUrl);
 
     if (apiId != null) {
+      // F5: pode haver N linhas (uma por model_version); ordenar e pegar a
+      // mais recente. .limit(1).maybeSingle() casa com o contrato do mock e
+      // do PostgREST (1 row → data; 0 rows → null; sem error).
       const { data, error } = await supabase
         .from("fixture_simulations")
         .select(
@@ -202,6 +212,8 @@ export async function getFixtureSimulation(
             "actual_resolved_at",
         )
         .eq("fixture_id", apiId)
+        .order("created_at", { ascending: false, nullsFirst: false })
+        .limit(1)
         .maybeSingle();
       if (!error && data) return mapRow(data as Record<string, unknown>);
       // No exact id hit → fall through to the teams/kickoff fallback.
