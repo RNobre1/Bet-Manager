@@ -6,6 +6,12 @@ import {
   brierScoreMulticlass,
   type ResolvedPrediction,
 } from "@/lib/ai/calibration-metrics";
+import {
+  reliabilityBins,
+  brierOverTime,
+  marketDeviation,
+  type ResolvedSimRow,
+} from "@/lib/calibracao/sim-reliability";
 
 // Sempre fresco — métricas de calibração mudam a cada scrape.
 export const dynamic = "force-dynamic";
@@ -28,14 +34,17 @@ interface PredRow {
 interface SimRow {
   id: number;
   status: "pending" | "resolved" | "unsimulable" | "unresolvable";
+  league: string | null;
   p_home: number | null;
   p_draw: number | null;
   p_away: number | null;
   p_over_25: number | null;
+  market_anchor: unknown;
   correct_winner: boolean | null;
   correct_over_under: boolean | null;
   actual_home_goals: number | null;
   actual_away_goals: number | null;
+  actual_resolved_at: string | null;
 }
 
 interface SimBrierSummary {
@@ -117,7 +126,7 @@ export default async function CalibracaoPage() {
     const { data, error } = await admin
       .from("fixture_simulations")
       .select(
-        "id, status, p_home, p_draw, p_away, p_over_25, correct_winner, correct_over_under, actual_home_goals, actual_away_goals",
+        "id, status, league, p_home, p_draw, p_away, p_over_25, market_anchor, correct_winner, correct_over_under, actual_home_goals, actual_away_goals, actual_resolved_at",
       )
       .order("created_at", { ascending: false })
       .limit(500);
@@ -128,6 +137,25 @@ export default async function CalibracaoPage() {
     simQueryError = err instanceof Error ? err.message : "erro desconhecido";
   }
   const simBrier = summarizeSimulationBrier(simRows);
+
+  const resolvedSims: ResolvedSimRow[] = simRows
+    .filter((r) => r.status === "resolved")
+    .map((r) => ({
+      league: r.league,
+      p_home: r.p_home == null ? null : Number(r.p_home),
+      p_draw: r.p_draw == null ? null : Number(r.p_draw),
+      p_away: r.p_away == null ? null : Number(r.p_away),
+      p_over_25: r.p_over_25 == null ? null : Number(r.p_over_25),
+      market_anchor: r.market_anchor,
+      actual_home_goals: r.actual_home_goals,
+      actual_away_goals: r.actual_away_goals,
+      actual_resolved_at: r.actual_resolved_at,
+    }));
+
+  const relHome = reliabilityBins(resolvedSims, "1x2-home");
+  const relOver = reliabilityBins(resolvedSims, "over25");
+  const brierTime = brierOverTime(resolvedSims, "week");
+  const marketDev = marketDeviation(resolvedSims);
 
   const resolved = rows.filter((r) => r.status === "resolved");
   const pending = rows.filter((r) => r.status === "pending");
@@ -241,6 +269,43 @@ export default async function CalibracaoPage() {
           </p>
         ) : (
           <SimBrierCards summary={simBrier} />
+        )}
+
+        {simBrier.resolved > 0 && (
+          <>
+            <section className="mt-10" data-section="sim-reliability">
+              <h3 className="mb-4 text-base font-semibold">
+                reliability (probabilidade prevista vs frequência observada)
+              </h3>
+              <SimReliabilityTable
+                bins={relHome}
+                labelMetric="vitória mandante"
+              />
+              <div className="mt-4">
+                <SimReliabilityTable
+                  bins={relOver}
+                  labelMetric="over 2.5 gols"
+                />
+              </div>
+            </section>
+            <section className="mt-10" data-section="sim-brier-time">
+              <h3 className="mb-4 text-base font-semibold">
+                brier ao longo do tempo (por semana ISO)
+              </h3>
+              <SimBrierTimeTable buckets={brierTime} />
+            </section>
+            <section className="mt-10" data-section="sim-market-deviation">
+              <h3 className="mb-4 text-base font-semibold">
+                desvio vs mercado (modelo p_home vs favorito mercado) por liga
+              </h3>
+              <SimMarketDevTable rows={marketDev} />
+            </section>
+          </>
+        )}
+        {simBrier.resolved === 0 && simRows.length > 0 && (
+          <p className="card mt-6 p-6 text-center text-sm italic text-[var(--color-ink-muted)]">
+            reliability · brier ao longo do tempo · desvio vs mercado: esperando primeiros jogos resolverem.
+          </p>
         )}
       </section>
     </main>
@@ -389,6 +454,122 @@ function CalibrationBucketsTable({
               <Td className="num text-right tabular-nums">
                 {b.n > 0 ? `${Math.round(b.realizedAccuracy * 100)}%` : "—"}
               </Td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function SimReliabilityTable({
+  bins,
+  labelMetric,
+}: {
+  bins: Array<{ range: [number, number]; n: number; predictedAvg: number | null; observedFreq: number | null }>;
+  labelMetric: string;
+}) {
+  return (
+    <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--color-line-subtle)]">
+      <table className="w-full text-left text-sm">
+        <caption className="px-3 py-2 text-left text-[11px] uppercase tracking-[0.12em] text-[var(--color-ink-faint)]">
+          {labelMetric}
+        </caption>
+        <thead>
+          <tr className="border-b border-[var(--color-line-subtle)] text-[var(--color-ink-faint)]">
+            <Th>faixa</Th>
+            <Th className="num text-right">n</Th>
+            <Th className="num text-right">previsto</Th>
+            <Th className="num text-right">observado</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {bins.map((b, i) => (
+            <tr key={i} className="border-b border-[var(--color-line-subtle)] last:border-0">
+              <Td className="text-[var(--color-ink-muted)]">
+                {Math.round(b.range[0] * 100)}%–{Math.round(b.range[1] * 100)}%
+              </Td>
+              <Td className="num text-right tabular-nums">{b.n > 0 ? b.n : "—"}</Td>
+              <Td className="num text-right tabular-nums">
+                {b.predictedAvg == null ? "—" : `${Math.round(b.predictedAvg * 100)}%`}
+              </Td>
+              <Td className="num text-right tabular-nums">
+                {b.observedFreq == null ? "—" : `${Math.round(b.observedFreq * 100)}%`}
+              </Td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function SimBrierTimeTable({ buckets }: { buckets: Array<{ bucket: string; n: number; brier1x2: number | null; brierOver: number | null }> }) {
+  if (buckets.length === 0) {
+    return (
+      <p className="card p-6 text-center text-sm italic text-[var(--color-ink-muted)]">
+        sem buckets temporais ainda.
+      </p>
+    );
+  }
+  return (
+    <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--color-line-subtle)]">
+      <table className="w-full text-left text-sm">
+        <thead>
+          <tr className="border-b border-[var(--color-line-subtle)] text-[var(--color-ink-faint)]">
+            <Th>semana</Th>
+            <Th className="num text-right">n</Th>
+            <Th className="num text-right">brier 1X2</Th>
+            <Th className="num text-right">brier over 2.5</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {buckets.map((b) => (
+            <tr key={b.bucket} className="border-b border-[var(--color-line-subtle)] last:border-0">
+              <Td className="text-[var(--color-ink-muted)]">{b.bucket}</Td>
+              <Td className="num text-right tabular-nums">{b.n}</Td>
+              <Td className="num text-right tabular-nums">
+                {b.brier1x2 == null ? "—" : b.brier1x2.toFixed(3)}
+              </Td>
+              <Td className="num text-right tabular-nums">
+                {b.brierOver == null ? "—" : b.brierOver.toFixed(3)}
+              </Td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function SimMarketDevTable({ rows }: { rows: Array<{ league: string; n: number; mad: number; modelMean: number; marketMean: number }> }) {
+  if (rows.length === 0) {
+    return (
+      <p className="card p-6 text-center text-sm italic text-[var(--color-ink-muted)]">
+        sem market_anchor em resoluções ainda.
+      </p>
+    );
+  }
+  return (
+    <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--color-line-subtle)]">
+      <table className="w-full text-left text-sm">
+        <thead>
+          <tr className="border-b border-[var(--color-line-subtle)] text-[var(--color-ink-faint)]">
+            <Th>liga</Th>
+            <Th className="num text-right">n</Th>
+            <Th className="num text-right">modelo (médio)</Th>
+            <Th className="num text-right">mercado (médio)</Th>
+            <Th className="num text-right">MAD</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.league} className="border-b border-[var(--color-line-subtle)] last:border-0">
+              <Td>{r.league}</Td>
+              <Td className="num text-right tabular-nums">{r.n}</Td>
+              <Td className="num text-right tabular-nums">{`${Math.round(r.modelMean * 100)}%`}</Td>
+              <Td className="num text-right tabular-nums">{`${Math.round(r.marketMean * 100)}%`}</Td>
+              <Td className="num text-right tabular-nums">{r.mad.toFixed(3)}</Td>
             </tr>
           ))}
         </tbody>
