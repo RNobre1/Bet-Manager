@@ -40,6 +40,11 @@ export const MOBILE_TABS: ReadonlyArray<{
     panels: ["B", "A-home", "A-away", "D", "E", "M", "K", "L", "N"],
   },
   {
+    id: "simulacao",
+    label: "simulação",
+    panels: ["SIM"],
+  },
+  {
     id: "streaks",
     label: "streaks",
     panels: ["F"],

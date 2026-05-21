@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { render, within } from "@testing-library/react";
 import type { FixtureRow } from "@/lib/fixtures/types";
 import type { DetailJson } from "@/lib/fixtures/stats/detail-json-types";
+import { MOBILE_TABS } from "@/components/fixtures/stats/stats-layout";
 
 /**
  * Wave 2b / Task 3 — the stats page now also surfaces the pre-game
@@ -798,5 +799,15 @@ describe("StatsPage — pre-game simulation panel", () => {
     const text = panel.textContent ?? "";
     // num_matches from avgs (sample size of the model input) shown for honesty.
     expect(text).toMatch(/22/);
+  });
+
+  it("declara aba mobile 'simulação' contendo o painel SIM (e SIM não cai no fallback 'visão')", () => {
+    const sim = MOBILE_TABS.find((t) => t.id === "simulacao");
+    expect(sim, "MOBILE_TABS precisa ter uma aba 'simulacao'").not.toBeUndefined();
+    expect(sim?.label).toBe("simulação");
+    expect(sim?.panels).toContain("SIM");
+
+    const visao = MOBILE_TABS.find((t) => t.id === "visao");
+    expect(visao?.panels).not.toContain("SIM");
   });
 });
