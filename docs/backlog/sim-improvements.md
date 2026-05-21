@@ -106,14 +106,27 @@ _Lista de captura de tudo que surgir como tarefa derivada durante a execução. 
 
 ## Estado de cada Wave
 
-- **Wave 0 (F1+F2)**: ✅ SHIPPED 2026-05-21 — 704/704 testes, deploy CF Workers, E2E ao vivo verificado.
-- **Wave 1 (F3+F6+F10)**: ✅ SHIPPED 2026-05-21 — 382 RSpec + 716 Vitest verdes.
-- **Wave 2 (F4 auto-tuning)**: ✅ SHIPPED 2026-05-21 — F4a (schema+lib Ruby) + F4b (script TS+display) + 728 Vitest.
-- **Wave 3 (F5 A/B infra)**: ✅ SHIPPED 2026-05-21 — migration 0021 + multi model_version dedup.
-- **Wave 4 (F7+F8)**: F7 SHIPPED (xG proxy opt-in); F8 ⏸ DEFERRED (depende de dados resolvidos).
-- **Wave 5 (F14 GNN)**: ⏸ DEFERRED (depende de dados resolvidos).
-- **Wave 6 (F12 cosmético + F11/F13)**: F12 próxima; F11/F13 ⏸ DEFERRED.
-- **Wave 7 (UX cleanup)**: pendente final.
+- **Wave 0 (F1+F2)**: ✅ SHIPPED 2026-05-21 — E2E ao vivo verificado.
+- **Wave 1 (F3+F6+F10)**: ✅ SHIPPED 2026-05-21.
+- **Wave 2 (F4 auto-tuning)**: ✅ SHIPPED 2026-05-21.
+- **Wave 3 (F5 A/B infra)**: ✅ SHIPPED 2026-05-21 — migration 0021.
+- **Wave 4 (F7)**: F7 ✅ SHIPPED (xG proxy opt-in); F8 ⏸ DEFERRED.
+- **Wave 5 (F14 GNN)**: ⏸ DEFERRED.
+- **Wave 6 (F12)**: F12 ✅ SHIPPED; F11/F13 ⏸ DEFERRED.
+- **Wave 7 (UX cleanup)**: ✅ SHIPPED — sidebar agrupada + drawer "mais" no mobile.
+
+## Bug fix crítico extra-roadmap
+
+- ✅ **SimulationReconciler wired** (`009b1b4`) — existia mas nunca era invocado. 665 sims `pending` for-ever. Próximo scrape diário começa a popular `resolved`. Destrava F8/F13/F14 + auto-tuning real (F4 hoje só roda na infra dormente).
+
+## Operacional adicional
+
+- ✅ **F4-cron** (`3ed4f9d`) — GitHub Action `calibracao-monthly.yml` dia 5 às 08:00 UTC.
+- ✅ **Lição B16 no CLAUDE.md** (`996fdd8`) — "Reconciler é obrigatório no pipeline".
+
+## MODEL_VERSION final
+
+- `sim-v1-poisson-dc-nb-mc10k-v7` (bumps acumulados: v2 → v3 [F6] → v4 [F10] → v5 [F4a] → v6 [F7] → v7 [F12]).
 
 ## Infra E2E criada nesta sessão
 
