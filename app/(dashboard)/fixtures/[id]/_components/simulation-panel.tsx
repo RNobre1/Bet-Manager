@@ -42,6 +42,13 @@ interface SimulationPanelProps {
   awayTeam: string;
   /** num_matches de avgs (T1) — tamanho de amostra do modelo, p/ honestidade. */
   sampleSize: { home: number | null; away: number | null };
+  /**
+   * "shell" (default): renderiza o conteúdo dentro do PanelShell padrão.
+   * "bare": entrega só o body — o pai (SimulationDisclosure) fornece a casca.
+   * Permite reusar este componente sob a casca da disclosure no desktop sem
+   * cair em card-in-card.
+   */
+  chrome?: "shell" | "bare";
 }
 
 function pct(v: number | null): string {
@@ -104,13 +111,26 @@ function ProbBar({
  * header (rendered through `PanelShell`), so it reads as native dashboard
  * furniture rather than a bolt-on placeholder.
  */
-function Unavailable({ reason }: { reason: string }) {
+function UnavailableBody({ reason }: { reason: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 py-8">
+      <p className="text-[var(--color-ink-muted)]">simulação indisponível</p>
+      <p className="label text-[var(--color-ink-faint)]">{reason}</p>
+    </div>
+  );
+}
+
+function Unavailable({
+  reason,
+  chrome,
+}: {
+  reason: string;
+  chrome: "shell" | "bare";
+}) {
+  if (chrome === "bare") return <UnavailableBody reason={reason} />;
   return (
     <PanelShell title="Simulação pré-jogo" eyebrow="Monte Carlo">
-      <div className="flex flex-col items-center justify-center gap-2 py-8">
-        <p className="text-[var(--color-ink-muted)]">simulação indisponível</p>
-        <p className="label text-[var(--color-ink-faint)]">{reason}</p>
-      </div>
+      <UnavailableBody reason={reason} />
     </PanelShell>
   );
 }
@@ -142,19 +162,19 @@ function statValue(
   return Number(v.toFixed(2)).toString();
 }
 
-export function SimulationPanel({
+interface SimulationBodyProps {
+  sim: FixtureSimulationDTO;
+  homeTeam: string;
+  awayTeam: string;
+  sampleSize: { home: number | null; away: number | null };
+}
+
+function SimulationBody({
   sim,
   homeTeam,
   awayTeam,
   sampleSize,
-}: SimulationPanelProps) {
-  if (!sim) {
-    return <Unavailable reason="scraper ainda não computou esta partida" />;
-  }
-  if (sim.status === "unsimulable") {
-    return <Unavailable reason="dados insuficientes para simular" />;
-  }
-
+}: SimulationBodyProps) {
   const top = sim.top_scorelines[0] ?? null;
   const homeStats = sim.sim_stats?.home as
     | Record<string, Record<string, number>>
@@ -167,24 +187,7 @@ export function SimulationPanel({
   const xiToShow = xi.length > 0 ? xi : sim.player_events;
 
   return (
-    <PanelShell
-      title="Simulação pré-jogo"
-      gap={4}
-      eyebrow={
-        <span className="inline-flex items-center gap-1.5">
-          Monte Carlo
-          <InfoPopover label="o que é a simulação pré-jogo">
-            <p>
-              Resultado de uma simulação Monte Carlo (10k iterações) computada
-              no scraper a partir das médias de temporada. Mostra o placar mais
-              provável, probabilidades de mercado e a alocação de eventos por
-              jogador. Não é palpite do mercado nem opinião — é a distribuição
-              do modelo.
-            </p>
-          </InfoPopover>
-        </span>
-      }
-    >
+    <>
       {/* ── Placar provável + barras de probabilidade ── */}
       <section className="flex flex-col gap-4">
         <div className="flex flex-wrap items-baseline gap-3">
@@ -331,6 +334,62 @@ export function SimulationPanel({
           ))}
         </div>
       </section>
+    </>
+  );
+}
+
+export function SimulationPanel({
+  sim,
+  homeTeam,
+  awayTeam,
+  sampleSize,
+  chrome = "shell",
+}: SimulationPanelProps) {
+  if (!sim) {
+    return (
+      <Unavailable
+        reason="scraper ainda não computou esta partida"
+        chrome={chrome}
+      />
+    );
+  }
+  if (sim.status === "unsimulable") {
+    return (
+      <Unavailable reason="dados insuficientes para simular" chrome={chrome} />
+    );
+  }
+
+  const body = (
+    <SimulationBody
+      sim={sim}
+      homeTeam={homeTeam}
+      awayTeam={awayTeam}
+      sampleSize={sampleSize}
+    />
+  );
+
+  if (chrome === "bare") return body;
+
+  return (
+    <PanelShell
+      title="Simulação pré-jogo"
+      gap={4}
+      eyebrow={
+        <span className="inline-flex items-center gap-1.5">
+          Monte Carlo
+          <InfoPopover label="o que é a simulação pré-jogo">
+            <p>
+              Resultado de uma simulação Monte Carlo (10k iterações) computada
+              no scraper a partir das médias de temporada. Mostra o placar mais
+              provável, probabilidades de mercado e a alocação de eventos por
+              jogador. Não é palpite do mercado nem opinião — é a distribuição
+              do modelo.
+            </p>
+          </InfoPopover>
+        </span>
+      }
+    >
+      {body}
     </PanelShell>
   );
 }

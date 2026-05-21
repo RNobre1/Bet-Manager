@@ -4,6 +4,7 @@ import { render, within } from "@testing-library/react";
 import type { FixtureRow } from "@/lib/fixtures/types";
 import type { DetailJson } from "@/lib/fixtures/stats/detail-json-types";
 import { MOBILE_TABS } from "@/components/fixtures/stats/stats-layout";
+import { SimulationPanel } from "@/app/(dashboard)/fixtures/[id]/_components/simulation-panel";
 
 /**
  * Wave 2b / Task 3 — the stats page now also surfaces the pre-game
@@ -809,5 +810,58 @@ describe("StatsPage — pre-game simulation panel", () => {
 
     const visao = MOBILE_TABS.find((t) => t.id === "visao");
     expect(visao?.panels).not.toContain("SIM");
+  });
+});
+
+describe("SimulationPanel — chrome prop", () => {
+  it("renderiza SEM a casca PanelShell quando chrome='bare'", () => {
+    const sim = simRow();
+    const { container } = render(
+      <SimulationPanel
+        sim={sim as unknown as Parameters<typeof SimulationPanel>[0]["sim"]}
+        homeTeam="Chelsea"
+        awayTeam="Tottenham"
+        sampleSize={{ home: 22, away: 21 }}
+        chrome="bare"
+      />,
+    );
+
+    // Sem .card no nó-raiz: o body precisa ser embedável dentro de outra casca.
+    expect(container.querySelector(".card.\\@container\\/card")).toBeNull();
+    // h3 "Simulação pré-jogo" também NÃO aparece (a casca é quem o emite).
+    expect(container.querySelector("header h3.font-display")).toBeNull();
+    // Conteúdo do body ainda está lá — placar provável e barras.
+    expect(container.querySelector("[data-probable-score]")).not.toBeNull();
+    expect(container.querySelectorAll('[role="meter"]').length).toBe(5);
+  });
+
+  it("default (chrome='shell') mantém a casca + título (retrocompat)", () => {
+    const sim = simRow();
+    const { container } = render(
+      <SimulationPanel
+        sim={sim as unknown as Parameters<typeof SimulationPanel>[0]["sim"]}
+        homeTeam="Chelsea"
+        awayTeam="Tottenham"
+        sampleSize={{ home: 22, away: 21 }}
+      />,
+    );
+    expect(container.querySelector(".card.\\@container\\/card")).not.toBeNull();
+    expect(container.querySelector("header h3.font-display")?.textContent).toContain(
+      "Simulação pré-jogo",
+    );
+  });
+
+  it("unsimulable em chrome='bare' renderiza apenas a mensagem (sem casca)", () => {
+    const { container } = render(
+      <SimulationPanel
+        sim={simRow({ status: "unsimulable" }) as unknown as Parameters<typeof SimulationPanel>[0]["sim"]}
+        homeTeam="Chelsea"
+        awayTeam="Tottenham"
+        sampleSize={{ home: 22, away: 21 }}
+        chrome="bare"
+      />,
+    );
+    expect(container.querySelector(".card.\\@container\\/card")).toBeNull();
+    expect(container.textContent?.toLowerCase()).toContain("simulação indisponível");
   });
 });
