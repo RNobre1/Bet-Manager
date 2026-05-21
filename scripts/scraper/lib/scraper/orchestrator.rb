@@ -56,26 +56,32 @@ module AdamStats
       # mesma fixture SUBSTITUI a linha (idempotente), nunca empilha — e fecha
       # de quebra o risco de linha meio-escrita (DELETE+INSERT atômico).
       #
-      # Predicado de identidade espelha exatamente as duas unique indexes:
-      #   - fixture_id presente → casa por (fixture_id, kickoff_utc)
-      #   - fixture_id nil      → casa por (home_team, away_team, kickoff_utc)
+      # Predicado de identidade espelha exatamente as duas unique indexes (após
+      # 0021 ambas incluem model_version):
+      #   - fixture_id presente → casa por (fixture_id, kickoff_utc, model_version)
+      #   - fixture_id nil      → casa por (home_team, away_team, kickoff_utc, model_version)
       # kickoff_utc nil é comparado via IS NOT DISTINCT FROM (NULL = NULL).
       #
+      # F5: model_version entra na chave para que A/B / histórico ao longo de
+      # bumps preserve linhas antigas — DELETE só toca a versão corrente.
+      #
       # Params (posicional): $1 fixture_id, $2 home_team, $3 away_team,
-      # $4 kickoff_utc. `league` NÃO é bound aqui (não faz parte de nenhuma
-      # das duas chaves de dedup) — ver #delete_params.
+      # $4 kickoff_utc, $5 model_version. `league` NÃO é bound aqui (não faz
+      # parte de nenhuma das duas chaves de dedup) — ver #delete_params.
       DELETE_PRIOR_SQL = <<~SQL.freeze
         DELETE FROM fixture_simulations
         WHERE (
           $1::bigint IS NOT NULL
           AND fixture_id = $1::bigint
           AND kickoff_utc IS NOT DISTINCT FROM $4::timestamptz
+          AND model_version = $5
         ) OR (
           $1::bigint IS NULL
           AND fixture_id IS NULL
           AND home_team = $2
           AND away_team = $3
           AND kickoff_utc IS NOT DISTINCT FROM $4::timestamptz
+          AND model_version = $5
         )
       SQL
 
@@ -85,9 +91,14 @@ module AdamStats
       # SELECT barato e index-backed decide se vale re-simular.
       #
       # Espelha EXATAMENTE a identidade de dedup do DELETE_PRIOR_SQL (mesmas
-      # duas partial unique indexes de 0018: fid_uidx p/ fixture_id presente,
-      # teams_uidx p/ fixture_id nil). Params posicionais idênticos a
-      # delete_params: $1 fixture_id, $2 home, $3 away, $4 kickoff_utc.
+      # duas partial unique indexes pós-0021: fid_uidx p/ fixture_id presente,
+      # teams_uidx p/ fixture_id nil — ambas (..., model_version)). Params
+      # posicionais idênticos a delete_params: $1 fixture_id, $2 home,
+      # $3 away, $4 kickoff_utc, $5 model_version.
+      #
+      # F5: como o predicado JÁ filtra por model_version, a query só casa a
+      # linha da MESMA versão corrente — versões anteriores (histórico) são
+      # invisíveis a esta pré-checagem e ficam preservadas em paralelo.
       # Retorna status + model_version da linha existente (0 ou 1 linha).
       PRECHECK_SQL = <<~SQL.freeze
         SELECT status, model_version
@@ -96,12 +107,14 @@ module AdamStats
           $1::bigint IS NOT NULL
           AND fixture_id = $1::bigint
           AND kickoff_utc IS NOT DISTINCT FROM $4::timestamptz
+          AND model_version = $5
         ) OR (
           $1::bigint IS NULL
           AND fixture_id IS NULL
           AND home_team = $2
           AND away_team = $3
           AND kickoff_utc IS NOT DISTINCT FROM $4::timestamptz
+          AND model_version = $5
         )
         LIMIT 1
       SQL
@@ -186,11 +199,14 @@ module AdamStats
       # Decide se PULA a simulação cara desta fixture (true = não simula nem
       # escreve; segue para a próxima). Faz UM SELECT barato e index-backed.
       #
-      # Tabela de decisão:
-      #   - linha inexistente                          → SIMULA  (false)
-      #   - status terminal (resolved|unresolvable)    → PULA    (true)
-      #   - status não-terminal E model_version igual  → PULA    (true)
-      #   - model_version diferente                    → SIMULA  (false)
+      # Tabela de decisão (F5 — model_version entra na chave do PRECHECK_SQL):
+      #   - linha inexistente nessa model_version       → SIMULA  (false)
+      #     (cobre fixture nova OU mesma fixture sob model_version diferente
+      #      — outra versão produz NOVA linha, preservando histórico)
+      #   - status terminal (resolved|unresolvable)     → PULA    (true)
+      #   - status não-terminal (mesma version)         → PULA    (true)
+      #     (re-simular sob mesma versão sobrescreveria com números quase
+      #      idênticos; ~2s/fixture × N fixtures estoura o timeout do cron)
       #
       # fail-open: qualquer erro no SELECT da pré-checagem ⇒ SIMULA (false).
       # Um erro transitório de DB numa fixture jamais pode dropar a sim;
@@ -201,28 +217,30 @@ module AdamStats
           fixture_api_id(fixture),
           fixture.home_team,
           fixture.away_team,
-          kickoff&.strftime('%Y-%m-%d %H:%M:%S UTC')
+          kickoff&.strftime('%Y-%m-%d %H:%M:%S UTC'),
+          Simulation::Runner::MODEL_VERSION
         ]
         row = conn.exec_params(PRECHECK_SQL, identity).first
-        return false if row.nil? # nova fixture → simula
+        return false if row.nil? # nova fixture (ou nova model_version) → simula
 
-        return true if TERMINAL_STATUSES.include?(row['status']) # nunca clobberar reconciliação
+        # Linha existente nessa MODEL_VERSION:
+        #   - terminal           → nunca clobberar reconciliação (calibração)
+        #   - não-terminal       → projeção season-level estável; ~igual ⇒ pula
+        # (predicado de model_version diferente é impossível aqui pelo $5).
+        return true if TERMINAL_STATUSES.include?(row['status'])
 
-        # Mesmo model_version sob status não-terminal → projeção barata-mente
-        # estável (deriva de *Avgs season-level); re-rodar MC só reescreveria
-        # números quase idênticos a 2s/fixture. Não vale.
-        row['model_version'] == Simulation::Runner::MODEL_VERSION
+        true
       rescue StandardError
         false # fail-open: erro na pré-checagem ⇒ simula mesmo assim
       end
       private_class_method :skip_simulation?
 
-      # Extrai os 4 params da identidade de dedup a partir do array completo
-      # de build_params ([fixture_id, home, away, league, kickoff, ...]).
+      # Extrai os 5 params da identidade de dedup a partir do array completo
+      # de build_params ([fixture_id, home, away, league, kickoff, mv, ...]).
       # Ordem casa com DELETE_PRIOR_SQL: $1 fixture_id, $2 home, $3 away,
-      # $4 kickoff (league/idx 3 é descartado — não é chave).
+      # $4 kickoff, $5 model_version (league/idx 3 é descartado — não é chave).
       def delete_params(params)
-        [params[0], params[1], params[2], params[4]]
+        [params[0], params[1], params[2], params[4], params[5]]
       end
       private_class_method :delete_params
 

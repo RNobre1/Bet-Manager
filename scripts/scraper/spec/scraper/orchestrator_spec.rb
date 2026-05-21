@@ -681,6 +681,18 @@ RSpec.describe AdamStats::Scraper::Orchestrator do
       described_class.run([fixture], {}, logger: ->(_) {})
     end
 
+    # F5: contrato literal das SQLs do hook — ambas devem filtrar por
+    # model_version (= $5). Travamento estático evita regressão silenciosa
+    # (se alguém remover o predicado, smoke real-DB ainda passaria por sorte
+    # quando histórico não existe ainda; este matcher quebra na hora).
+    it 'PRECHECK_SQL filters by model_version = $5 (F5)' do
+      expect(AdamStats::Scraper::SimulationHook::PRECHECK_SQL).to include('model_version = $5')
+    end
+
+    it 'DELETE_PRIOR_SQL filters by model_version = $5 (F5)' do
+      expect(AdamStats::Scraper::SimulationHook::DELETE_PRIOR_SQL).to include('model_version = $5')
+    end
+
     it 'a global DB failure is non-fatal (logged, never raised)' do
       logged = []
       allow(AdamStats::Scraper::DB).to receive(:with_connection).and_raise(StandardError, 'db down')
@@ -703,6 +715,11 @@ RSpec.describe AdamStats::Scraper::Orchestrator do
       # `create ... if not exists`) so the partial unique indexes exist even
       # if the test DB was provisioned before this migration was added.
       DBHelper.apply_migration!('0018_fixture_simulations.sql')
+      # 0021 (F5) amplia as duas partial unique indexes incluindo
+      # model_version. Reapply explícito porque o DROP + CREATE é necessário
+      # quando o test DB foi provisionado pré-0021 (índice antigo sem MV
+      # ainda existe — `create … if not exists` no 0018 não o substituiria).
+      DBHelper.apply_migration!('0021_fixture_simulations_model_version_dedup.sql')
     end
 
     before(:each) do
@@ -861,7 +878,11 @@ RSpec.describe AdamStats::Scraper::Orchestrator do
       expect(r['p_home'].to_f).to be_within(1e-6).of(0.42)
     end
 
-    it '4. existing row with DIFFERENT model_version → re-simulates and REPLACES it' do
+    # F5: model_version entra na chave de dedup (migration 0021). Quando a
+    # MODEL_VERSION bumpa (v4→v5), a row v4 antiga é PRESERVADA como histórico
+    # e uma NOVA row v5 é INSERIDA em paralelo — não há mais sobrescrita.
+    # /calibracao agora consegue comparar Brier entre versões.
+    it '4. existing row with DIFFERENT model_version → PRESERVA antiga e INSERE nova (F5 histórico)' do
       fx = AdamStats::Scraper::Fixture.new(
         match_date: Date.new(2026, 5, 18), ko_time: '20:00',
         home_team: 'A', away_team: 'B', league: 'L',
@@ -879,9 +900,49 @@ RSpec.describe AdamStats::Scraper::Orchestrator do
       described_hook.run([fx], { fx.source_url => { 'x' => 1 } }, logger: ->(_) {})
 
       rows = count_sims
-      expect(rows.length).to eq(1)
-      expect(rows.first['model_version']).to eq(current_mv)
-      expect(rows.first['p_home'].to_f).to be_within(1e-6).of(0.77)
+      # Histórico preservado: 2 linhas (v-OLD + v-current), uma por versão.
+      expect(rows.length).to eq(2)
+      by_mv = rows.group_by { |r| r['model_version'] }
+      expect(by_mv['sim-OLD'].length).to eq(1)
+      expect(by_mv[current_mv].length).to eq(1)
+      # Row antiga intacta; row nova com os números v-current.
+      expect(by_mv['sim-OLD'].first['p_home'].to_f).to be_within(1e-6).of(0.10)
+      expect(by_mv[current_mv].first['p_home'].to_f).to be_within(1e-6).of(0.77)
+    end
+
+    # F5: re-run sob a MESMA model_version corrente é idempotente para a row
+    # daquela versão E não toca uma row de versão diferente que coexista.
+    # (Smoke-cover dos predicados de model_version nos índices uniques de 0021.)
+    it '4b. F5 coexistência: re-run sob MV-corrente atualiza só a row da versão corrente; histórico intacto' do
+      fx = AdamStats::Scraper::Fixture.new(
+        match_date: Date.new(2026, 5, 18), ko_time: '20:00',
+        home_team: 'A', away_team: 'B', league: 'L',
+        source_url: '/fixture/424242/l-a-vs-b', country: nil
+      )
+      kickoff = AdamStats::Scraper::UkTimeHelper
+                .to_utc_or_noon(fx.match_date, fx.ko_time)
+                .strftime('%Y-%m-%d %H:%M:%S UTC')
+      # Histórico v-OLD permanece intocado.
+      insert_existing_row(fixture_id: 424_242, home: 'A', away: 'B',
+                          kickoff: kickoff, model_version: 'sim-OLD',
+                          status: 'pending', p_home: 0.10)
+      # Primeira rodada da v-current: nova linha em paralelo (esperado: 2 linhas).
+      allow(AdamStats::Scraper::Simulation::Runner).to receive(:simulate)
+        .and_return(sim_result_mv(0.55, model_version: current_mv))
+      described_hook.run([fx], { fx.source_url => { 'x' => 1 } }, logger: ->(_) {})
+      expect(count_sims.length).to eq(2)
+
+      # Segunda rodada na MESMA v-current: pré-check casa a row da v-current
+      # com status=pending ⇒ PULA (não re-simula). A linha v-current
+      # permanece com p_home=0.55. Histórico v-OLD intocado.
+      expect(AdamStats::Scraper::Simulation::Runner).not_to receive(:simulate)
+      described_hook.run([fx], { fx.source_url => { 'x' => 2 } }, logger: ->(_) {})
+
+      rows = count_sims
+      expect(rows.length).to eq(2)
+      by_mv = rows.group_by { |r| r['model_version'] }
+      expect(by_mv['sim-OLD'].first['p_home'].to_f).to be_within(1e-6).of(0.10)
+      expect(by_mv[current_mv].first['p_home'].to_f).to be_within(1e-6).of(0.55)
     end
 
     it '5. pre-check SELECT failure → fail-open (still simulates; one error never drops the sim)' do
