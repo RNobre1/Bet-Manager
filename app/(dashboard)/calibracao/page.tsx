@@ -166,8 +166,16 @@ export default async function CalibracaoPage() {
       .select(
         "id, status, league, model_version, p_home, p_draw, p_away, p_over_25, market_anchor, correct_winner, correct_over_under, actual_home_goals, actual_away_goals, actual_resolved_at",
       )
+      // Order by `status DESC` first so RESOLVED rows (the only ones that
+      // contribute to Brier/reliability/market-deviation) come before the
+      // PENDING majority. Without this, a fixed `.limit(N)` on
+      // `created_at DESC` only sees the freshest pending batch (typical
+      // when a re-sim just ran) and Brier/charts go empty even though
+      // resolved rows exist in the table.
+      .order("status", { ascending: false })
+      .order("actual_resolved_at", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
-      .limit(500);
+      .limit(2000);
     if (error)
       throw new Error(error.message ?? "failed to fetch fixture_simulations");
     simRows = (data ?? []) as SimRow[];
