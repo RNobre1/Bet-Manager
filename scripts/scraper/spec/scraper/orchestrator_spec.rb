@@ -7,6 +7,18 @@ require_relative '../../lib/scraper/page_pool'
 require_relative '../../lib/scraper/api_list_fetcher'
 
 RSpec.describe AdamStats::Scraper::Orchestrator do
+  # Stub global dos dois reconcilers: a maioria dos specs deste arquivo testa
+  # o pipeline central (fetch → parse → detail → persist → purge) e não quer
+  # bater no DB/HTTP real através dos reconcilers. Specs que TESTAM a integração
+  # do reconciler com o pipeline (block "SimulationReconciler — wired" abaixo)
+  # sobrescrevem este stub localmente via `expect(...).to receive(:new)`.
+  before(:each) do
+    safe_pred = double('pred_reconciler_default', run: { resolved: 0, pending: 0, unresolvable: 0 })
+    safe_sim  = double('sim_reconciler_default',  run: { resolved: 0, pending: 0, unresolvable: 0 })
+    allow(AdamStats::Scraper::PredictionReconciler).to receive(:new).and_return(safe_pred)
+    allow(AdamStats::Scraper::SimulationReconciler).to receive(:new).and_return(safe_sim)
+  end
+
   let(:list_html) { '<html>list</html>' }
   let(:detail_html) { '<html>detail</html>' }
   let(:fixture_a) do
@@ -974,6 +986,65 @@ RSpec.describe AdamStats::Scraper::Orchestrator do
       rows = count_sims
       expect(rows.length).to eq(1)
       expect(rows.first['p_home'].to_f).to be_within(1e-6).of(0.33)
+    end
+  end
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # SimulationReconciler — bug crítico documentado: o reconciler de simulações
+  # existia, tinha specs verdes isoladas, mas NUNCA era chamado pelo pipeline
+  # diário. Resultado: 665 fixture_simulations ficaram `pending` por dias,
+  # bloqueando calibração downstream. Padrão idêntico ao PredictionReconciler
+  # (rescue isolado, não-fatal, logger).
+  # ────────────────────────────────────────────────────────────────────────────
+  describe '.run (SimulationReconciler — wired no pipeline diário)' do
+    it 'invokes SimulationReconciler#run exactly once during the daily scrape' do
+      deps = build_deps
+      fake_recon = double('sim_reconciler')
+      expect(fake_recon).to receive(:run).once.and_return(resolved: 3, pending: 1, unresolvable: 0)
+      expect(AdamStats::Scraper::SimulationReconciler).to receive(:new)
+        .with(logger: kind_of(Proc))
+        .and_return(fake_recon)
+
+      described_class.run(**deps)
+    end
+
+    it 'invokes SimulationReconciler AFTER PredictionReconciler (ordering matters)' do
+      deps = build_deps
+      ordered = []
+
+      fake_pred_recon = double('pred_reconciler')
+      allow(fake_pred_recon).to receive(:run) do
+        ordered << :prediction_reconciler
+        { resolved: 0, pending: 0, unresolvable: 0 }
+      end
+      allow(AdamStats::Scraper::PredictionReconciler).to receive(:new).and_return(fake_pred_recon)
+
+      fake_sim_recon = double('sim_reconciler')
+      allow(fake_sim_recon).to receive(:run) do
+        ordered << :simulation_reconciler
+        { resolved: 0, pending: 0, unresolvable: 0 }
+      end
+      allow(AdamStats::Scraper::SimulationReconciler).to receive(:new).and_return(fake_sim_recon)
+
+      described_class.run(**deps)
+      expect(ordered).to eq(%i[prediction_reconciler simulation_reconciler])
+    end
+
+    it 'a SimulationReconciler failure is non-fatal (logged with "non-fatal", pipeline continues)' do
+      deps = build_deps
+      logged = []
+      deps[:logger] = ->(m) { logged << m }
+
+      fake_recon = double('sim_reconciler')
+      allow(fake_recon).to receive(:run).and_raise(StandardError, 'sim recon boom')
+      allow(AdamStats::Scraper::SimulationReconciler).to receive(:new).and_return(fake_recon)
+
+      # Pipeline finishes successfully and pings healthcheck success.
+      expect(deps[:healthcheck]).to receive(:ping_success)
+      expect { described_class.run(**deps) }.not_to raise_error
+
+      # Logger registers a non-fatal message mentioning the reconciler.
+      expect(logged.any? { |m| m.match?(/sim-reconciler/i) && m.include?('non-fatal') }).to be(true)
     end
   end
 end

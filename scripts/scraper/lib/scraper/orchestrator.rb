@@ -11,6 +11,7 @@ require_relative 'detail_parser'
 require_relative 'league_baseline'
 require_relative 'playwright_session'
 require_relative 'prediction_reconciler'
+require_relative 'simulation_reconciler'
 require_relative 'simulation/runner'
 require_relative 'simulation/league_calibration'
 require_relative 'uk_time_helper'
@@ -384,6 +385,17 @@ module AdamStats
           logger.call("[scrape] reconciler: #{recon_stats.inspect}")
         rescue StandardError => e
           logger.call("[scrape] reconciler failed (non-fatal): #{e.class}: #{e.message}")
+        end
+
+        # Reconcilia simulações pré-jogo pendentes pré-purga: busca placar final
+        # via choistats e atualiza fixture_simulations (idêntico em ergonomia ao
+        # PredictionReconciler — Lição #18 reconciler é OBRIGATÓRIO no pipeline,
+        # senão o histórico fica permanentemente pending e calibração quebra).
+        begin
+          sim_recon_stats = SimulationReconciler.new(logger: logger).run
+          logger.call("[scrape] sim-reconciler: #{sim_recon_stats.inspect}")
+        rescue StandardError => e
+          logger.call("[scrape] sim-reconciler failed (non-fatal): #{e.class}: #{e.message}")
         end
 
         deleted = repo.purge_older_than(retention_days)
