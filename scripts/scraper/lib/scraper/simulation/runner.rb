@@ -15,13 +15,26 @@ module AdamStats
       #   - no HT split ⇒ per_half_available: false
       #   - insufficient/garbage detail ⇒ { status: 'unsimulable' }, no raise.
       module Runner
-        MODEL_VERSION = 'sim-v1-poisson-dc-nb-mc10k-v2'.freeze
+        MODEL_VERSION = 'sim-v1-poisson-dc-nb-mc10k-v3'.freeze
         DEFAULT_N = 10_000
         # Baseline-day fallback threshold (POC: < 6 teams ⇒ noisy day slice).
         MIN_TEAMS_FOR_DAY_BASELINE = 6
         # Per-league Dixon-Coles ρ (default; overridable per league).
         DEFAULT_RHO = -0.10
         RHO_BY_LEAGUE = {}.freeze
+
+        # F6 — Referee coupling on cards.
+        # Baseline-PER-SIDE booking points: empirical median from prod sample
+        # (avg_total ≈ 45-50 ⇒ ≈ 22.5 per side). F4 will override per-league
+        # via model_calibration.
+        LEAGUE_AVG_BOOKING_POINTS_PER_SIDE = 22.5
+        # Blend weight: 60% team baseline / 40% referee (conservative — ref
+        # samples are 12-50 fixtures, signal-but-noisy).
+        REFEREE_WEIGHT = 0.4
+        # Clamp the raw multiplier so an outlier sample (tiny n, weird league)
+        # can never push card λ outside [0.5×, 2.0×] pre-blend.
+        REFEREE_MULT_MIN = 0.5
+        REFEREE_MULT_MAX = 2.0
 
         # Neutral persisted fallback baseline (spec §6.4 / POC N=6 fallback).
         NEUTRAL_BASELINE = {
@@ -131,14 +144,16 @@ module AdamStats
           rm = fetch(d, 'recent_matches') || {}
           home_rm = Array(fetch(rm, 'home'))
           away_rm = Array(fetch(rm, 'away'))
+          ref = fetch(d, 'referee_record')
 
           sec = {}
           corners_home = corner_cfg(hh, home_rm, 'homeCorners', per_half)
           corners_away = corner_cfg(aa, away_rm, 'awayCorners', per_half)
           sec[:corners] = { home: corners_home, away: corners_away } if corners_home && corners_away
 
-          cards_home = card_cfg(hh, home_rm, 'homeBookingPoints')
-          cards_away = card_cfg(aa, away_rm, 'awayBookingPoints')
+          # F6: cards take a per-side referee adjustment when available.
+          cards_home = card_cfg(hh, home_rm, 'homeBookingPoints', ref, 'avg_home_booking_points')
+          cards_away = card_cfg(aa, away_rm, 'awayBookingPoints', ref, 'avg_away_booking_points')
           sec[:cards] = { home: cards_home, away: cards_away } if cards_home && cards_away
 
           sot_home = simple_cfg(hh, 'shotsOnTargetFor', home_rm, 'homeShotsOnTarget')
@@ -169,13 +184,35 @@ module AdamStats
         end
         private_class_method :corner_cfg
 
-        def card_cfg(block, recent, field)
+        def card_cfg(block, recent, field, ref_record = nil, ref_side_key = nil)
           mean = val(block, 'cardsFor') || val(block, 'bookingPointsFor')
           return nil if mean.nil?
 
-          { mean: mean, dispersion: SecondaryStats.dispersion_from(recent.map { |m| m[field] }) }
+          adjusted = apply_referee_adjustment(mean, ref_record, ref_side_key)
+
+          { mean: adjusted, dispersion: SecondaryStats.dispersion_from(recent.map { |m| m[field] }) }
         end
         private_class_method :card_cfg
+
+        # F6 — Relative, clamped, blended referee adjustment on the team
+        # card-mean. Degrades gracefully (returns `mean` unchanged) when the
+        # referee record is missing or doesn't have the side-specific field
+        # populated. Never raises.
+        #
+        #   mult     = clamp(side_bp / BASELINE, MULT_MIN, MULT_MAX)
+        #   mean_adj = mean * (1 + (mult - 1) * REFEREE_WEIGHT)
+        def apply_referee_adjustment(mean, ref_record, ref_side_key)
+          return mean unless ref_record.is_a?(Hash)
+          return mean if ref_side_key.nil?
+
+          side_bp = val(ref_record, ref_side_key)
+          return mean if side_bp.nil? || side_bp <= 0
+
+          raw_mult = side_bp / LEAGUE_AVG_BOOKING_POINTS_PER_SIDE
+          mult = [[raw_mult, REFEREE_MULT_MIN].max, REFEREE_MULT_MAX].min
+          mean * (1 + ((mult - 1) * REFEREE_WEIGHT))
+        end
+        private_class_method :apply_referee_adjustment
 
         def simple_cfg(block, mean_key, recent, field)
           mean = val(block, mean_key)
