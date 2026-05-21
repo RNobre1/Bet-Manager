@@ -24,15 +24,11 @@
 
 ### Wave 0 — Observabilidade (sequencial, GATE pra tudo)
 
-- [ ] **F1** — Reliability diagram (probability bins vs frequência observada) + Brier-over-time no `/calibracao`.
-  - Status: EM CURSO
-  - Arquivos previstos: `app/(dashboard)/calibracao/...`, `lib/calibracao/...`, testes em `tests/integration/calibracao-*`.
-  - Commits: _(a registrar)_
+- [x] **F1** — Reliability diagram (probability bins vs frequência observada) + Brier-over-time no `/calibracao`. **SHIPPED 2026-05-21.**
+  - Commits: `d971191` (lib pura) + `ab6cebe` (page modificada) — 704/704 tests, deploy CF success, E2E ao vivo verificado em `https://abissal.rnobre.workers.dev/calibracao` com 3 linhas sintéticas inseridas/verificadas/deletadas em prod.
 
-- [ ] **F2** — Ground-truth do mercado: comparar `p_home` modelo vs `1/odd_devigada` por liga/janela, com detecção de viés sistemático no `/calibracao`.
-  - Status: pending
-  - Dependências: F1 (mesma página)
-  - Commits: _(a registrar)_
+- [x] **F2** — Ground-truth do mercado: comparar `p_home` modelo vs `1/odd_devigada` por liga, com detecção de viés sistemático no `/calibracao`. **SHIPPED 2026-05-21.**
+  - Commits: incluído em `ab6cebe` (mesma página); MAD modelo vs mercado renderizado por liga. Heurística "MAX-non-Draw como proxy do favorito" registrada inline; trabalho futuro: usar `home_team` exato após esquema permitir.
 
 ### Wave 1 — Calibrações baratas (paralelo via worktrees + subagent-driven)
 
@@ -115,5 +111,10 @@ _Lista de captura de tudo que surgir como tarefa derivada durante a execução. 
 
 ## Estado de cada Wave
 
-- **Wave 0**: EM CURSO (2026-05-21)
+- **Wave 0 (F1+F2)**: ✅ SHIPPED 2026-05-21 — 704/704 testes, deploy CF Workers, E2E ao vivo verificado.
+- **Wave 1 (F3+F6+F10 paralelo)**: pending (próxima)
 - demais: pending
+
+## Infra E2E criada nesta sessão
+
+- User `e2e-test@abissal.local` no Supabase Auth (id `c4f2a719-a496-4b8d-919d-5a3fb0a49280`) — mantido pra E2E de próximas waves. Senha em memória autônoma. Deletar no encerramento da sessão completa.
