@@ -64,22 +64,17 @@
 
 ### Wave 4 — Motores novos via A/B
 
-- [ ] **F7** — xG-derivado. POC de 1h primeiro pra confirmar se choistats tem sinal cru ou se cai pra proxy de chances/SOT. Decisão registrada após POC.
-  - Status: pending (POC pendente)
-  - Custo: 1h POC + 4d se confirmar
-  - Commits: _(a registrar)_
+- [x] **F7** — xG proxy via `0.10·shots + 0.30·SoT` (POC 2026-05-21 confirmou xG cru ausente no choistats). **SHIPPED 2026-05-21** como opt-in dormente (`Rates.lambdas(..., use_xg_proxy:)`).
+  - Commits: `0695711`. 9 specs novos, bump `MODEL_VERSION` v5→v6.
+  - Follow-up `F7-prod`: ativar no produtor após coleta de dados resolvidos.
 
-- [ ] **F8** — Bayesiano hierárquico (Baio-Blangiardo 2010) reescrevendo `Simulation::Rates`. Cada time = vetor latente (ataque/defesa/HA individual) com prior por liga; atualização incremental MCMC. **Fundi F9 aqui** (recent_matches como prior temporal nativo).
-  - Status: pending
-  - Custo: ~7d
-  - Commits: _(a registrar)_
+- [⏸] **F8** — Bayesiano hierárquico (Baio-Blangiardo 2010). **DEFERRED 2026-05-21.**
+  - Justificativa: requer dados RESOLVIDOS pra estimar priors hierárquicos via MCMC/MAP. Hoje prod tem **0/665 sims resolvidas** (reconciler nunca rodou). Implementar sem dados produziria modelo nominalmente idêntico ao Rates atual com shrinkage — trabalho falso. Re-abrir quando ≥100 resolvidas por liga existirem.
 
 ### Wave 5 — GNN (motor extra, offline pipeline Python)
 
-- [ ] **F14** — Graph Neural Network sobre histórico de jogos (times = nós, jogos = arestas). Pipeline offline Python (PyTorch Geometric ou DGL); script semanal/mensal que exporta `team_embeddings.json` por liga. Motor Ruby consome embeddings como features extras pro `Rates`. Roda como `model_version` novo via A/B contra Dixon-Coles e Bayesiano. Stanton et al. 2022.
-  - Status: pending
-  - Custo: ~7d (incluindo provisionamento ML)
-  - Commits: _(a registrar)_
+- [⏸] **F14** — Graph Neural Network sobre histórico de jogos. **DEFERRED 2026-05-21.**
+  - Justificativa: GNN supervisionado precisa de labels (resultados) pra treinar. 0 resolvidas em prod hoje. Re-abrir junto com F8 quando dados existirem.
 
 ### Wave 7 — UX cleanup (não-funcional, mas necessário)
 
@@ -99,22 +94,26 @@
   - Status: candidato pendente decisão
   - Commits: _(a registrar)_
 
-- [ ] **F13** — Stacking/ensemble dos modelos A/B (Dixon-Coles + Bayesiano + GNN + xG). **Decisão pós-medição** (só se modelos divergirem o suficiente em Brier).
-  - Status: candidato pendente decisão
-  - Commits: _(a registrar)_
+- [⏸] **F13** — Stacking/ensemble dos modelos A/B. **DEFERRED 2026-05-21.** Depende de F8/F14/dados resolvidos.
 
 ## Backlog rolling (capturar tudo que aparecer no caminho)
 
 _Lista de captura de tudo que surgir como tarefa derivada durante a execução. Tarefa estável ⇒ promover a feature numerada acima ou a backlog separado._
 
-- (nada ainda)
+- **F4-cron** — Automatizar `scripts/calibracao/fit-league-parameters.ts` + `scripts/calibracao/fit-isotonic.ts` via cron mensal (GitHub Actions). Destrava coleta inicial de calibração assim que reconciler começar a fechar partidas.
+- **F7-prod** — Ativar `use_xg_proxy: true` no produtor (`orchestrator.rb`) — opt-in atual fica dormente.
+- **Reconciler-status** — Investigar/garantir que o reconciler do scrape-daily está rodando e fechando partidas (hoje 0/665 resolvidas). Bloqueador de F8/F13/F14.
 
 ## Estado de cada Wave
 
 - **Wave 0 (F1+F2)**: ✅ SHIPPED 2026-05-21 — 704/704 testes, deploy CF Workers, E2E ao vivo verificado.
-- **Wave 1 (F3+F6+F10)**: ✅ SHIPPED 2026-05-21 — 382 RSpec + 716 Vitest verdes; `MODEL_VERSION` agora v4.
-- **Wave 2 (F4)**: pending (próxima)
-- demais: pending
+- **Wave 1 (F3+F6+F10)**: ✅ SHIPPED 2026-05-21 — 382 RSpec + 716 Vitest verdes.
+- **Wave 2 (F4 auto-tuning)**: ✅ SHIPPED 2026-05-21 — F4a (schema+lib Ruby) + F4b (script TS+display) + 728 Vitest.
+- **Wave 3 (F5 A/B infra)**: ✅ SHIPPED 2026-05-21 — migration 0021 + multi model_version dedup.
+- **Wave 4 (F7+F8)**: F7 SHIPPED (xG proxy opt-in); F8 ⏸ DEFERRED (depende de dados resolvidos).
+- **Wave 5 (F14 GNN)**: ⏸ DEFERRED (depende de dados resolvidos).
+- **Wave 6 (F12 cosmético + F11/F13)**: F12 próxima; F11/F13 ⏸ DEFERRED.
+- **Wave 7 (UX cleanup)**: pendente final.
 
 ## Infra E2E criada nesta sessão
 
