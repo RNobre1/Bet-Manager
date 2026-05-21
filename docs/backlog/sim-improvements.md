@@ -30,22 +30,22 @@
 - [x] **F2** — Ground-truth do mercado: comparar `p_home` modelo vs `1/odd_devigada` por liga, com detecção de viés sistemático no `/calibracao`. **SHIPPED 2026-05-21.**
   - Commits: incluído em `ab6cebe` (mesma página); MAD modelo vs mercado renderizado por liga. Heurística "MAX-non-Draw como proxy do favorito" registrada inline; trabalho futuro: usar `home_team` exato após esquema permitir.
 
-### Wave 1 — Calibrações baratas (paralelo via worktrees + subagent-driven)
+### Wave 1 — Calibrações baratas
 
-- [ ] **F3** — Calibração isotônica pós-modelo (cron mensal; persistir curve em `model_calibration` table).
-  - Status: pending
-  - Custo: ~1d
-  - Commits: _(a registrar)_
+- [x] **F3** — Calibração isotônica pós-modelo. **SHIPPED 2026-05-21.** Lib pura PAV + migration 0019 + script manual + display no `/calibracao`. Aplicação na leitura fica como follow-up **F3-prod**.
+  - Commits: `ab8cd98`, `a0f63bd` (migration aplicada em prod), `ea2708a`, `46b3c53`. E2E ao vivo verificado.
 
-- [ ] **F6** — Acoplar `detail_json.referee_record.avg_total_booking_points` ao modelo de cartões em `Simulation::Rates`/`MonteCarlo`.
-  - Status: pending
-  - Custo: ~1d
-  - Commits: _(a registrar)_
+- [x] **F6** — Árbitro no λ de cards. **SHIPPED 2026-05-21.** Blend 60% time + 40% árbitro, clamp [0.5, 2.0]. Bump `MODEL_VERSION` v2→v3.
+  - Commits: `08d46ef`. 14 specs novos, 373 RSpec verdes.
 
-- [ ] **F10** — Acoplar `detail_json.player_extra` (form + `outcome_odds_by_player.ANYTIME_SCORER`) na alocação de eventos por jogador.
-  - Status: pending
-  - Custo: ~2d
-  - Commits: _(a registrar)_
+- [x] **F10** — `outcome_odds_by_player.ANYTIME_SCORER` blend (α=0.3) na alocação de gols. **SHIPPED 2026-05-21.** Bump `MODEL_VERSION` v3→v4. `form` array fica como follow-up F10b.
+  - Commits: `10c83be`. 9 specs novos, 382 RSpec verdes.
+
+### Follow-ups derivados da Wave 1
+
+- [ ] **F3-prod** — Aplicar curva isotônica ativa na leitura (`getFixtureSimulation`). Pré-condição: ter ≥1 curva treinada em prod via `scripts/calibracao/fit-isotonic.ts`.
+- [ ] **F10b** — Tratar `player_extra.form` (parsing de `statName` + mapping → goals/cards/sot).
+- [ ] **MV-floor** — Mover assertion de `MODEL_VERSION` pra constante "floor" centralizada (lição do bump v3→v4 quebrar spec do F6).
 
 ### Wave 2 — Auto-tuning por liga (sozinho)
 
@@ -112,7 +112,8 @@ _Lista de captura de tudo que surgir como tarefa derivada durante a execução. 
 ## Estado de cada Wave
 
 - **Wave 0 (F1+F2)**: ✅ SHIPPED 2026-05-21 — 704/704 testes, deploy CF Workers, E2E ao vivo verificado.
-- **Wave 1 (F3+F6+F10 paralelo)**: pending (próxima)
+- **Wave 1 (F3+F6+F10)**: ✅ SHIPPED 2026-05-21 — 382 RSpec + 716 Vitest verdes; `MODEL_VERSION` agora v4.
+- **Wave 2 (F4)**: pending (próxima)
 - demais: pending
 
 ## Infra E2E criada nesta sessão
