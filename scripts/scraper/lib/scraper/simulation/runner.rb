@@ -16,7 +16,7 @@ module AdamStats
       #   - no HT split ⇒ per_half_available: false
       #   - insufficient/garbage detail ⇒ { status: 'unsimulable' }, no raise.
       module Runner
-        MODEL_VERSION = 'sim-v1-poisson-dc-nb-mc10k-v6'.freeze
+        MODEL_VERSION = 'sim-v1-poisson-dc-nb-mc10k-v7'.freeze
         DEFAULT_N = 10_000
         # Baseline-day fallback threshold (POC: < 6 teams ⇒ noisy day slice).
         MIN_TEAMS_FOR_DAY_BASELINE = 6
@@ -164,6 +164,23 @@ module AdamStats
           sot_away = simple_cfg(aa, 'shotsOnTargetFor', away_rm, 'awayShotsOnTarget')
           sec[:sot] = { home: sot_home, away: sot_away } if sot_home && sot_away
 
+          # F12 — categorias sem season-avg em `avgs.*`: deriva mean+dispersão
+          # da própria série recent_matches. Cada lado lê o field correspondente
+          # (home → homeXxx, away → awayXxx). Quando QUALQUER lado não tem ≥2
+          # valores válidos, a categoria é OMITIDA do sim_stats (degradação
+          # graciosa — nunca zera).
+          fouls_home = series_mean_cfg(home_rm, 'homeFouls')
+          fouls_away = series_mean_cfg(away_rm, 'awayFouls')
+          sec[:fouls] = { home: fouls_home, away: fouls_away } if fouls_home && fouls_away
+
+          offsides_home = series_mean_cfg(home_rm, 'homeOffsides')
+          offsides_away = series_mean_cfg(away_rm, 'awayOffsides')
+          sec[:offsides] = { home: offsides_home, away: offsides_away } if offsides_home && offsides_away
+
+          tackles_home = series_mean_cfg(home_rm, 'homeTackles')
+          tackles_away = series_mean_cfg(away_rm, 'awayTackles')
+          sec[:tackles] = { home: tackles_home, away: tackles_away } if tackles_home && tackles_away
+
           sec
         end
         private_class_method :build_secondary
@@ -225,6 +242,22 @@ module AdamStats
           { mean: mean, dispersion: SecondaryStats.dispersion_from(recent.map { |m| m[field] }) }
         end
         private_class_method :simple_cfg
+
+        # F12 — para categorias sem season-avg em `avgs.*` (fouls, offsides,
+        # tackles): deriva o mean da própria série `recent_matches` e a
+        # dispersão NB do mesmo conjunto. Retorna nil quando a série não tem
+        # ≥2 valores válidos OU quando o mean ≤ 0 — nesses casos a categoria
+        # é OMITIDA do sim_stats em vez de zerada (degradação honesta).
+        def series_mean_cfg(recent, field)
+          vals = Array(recent).map { |m| m && m[field] }.compact.map { |v| Float(v) rescue nil }.compact
+          return nil if vals.size < 2
+
+          mean = vals.sum.to_f / vals.size
+          return nil if mean <= 0
+
+          { mean: mean, dispersion: SecondaryStats.dispersion_from(vals) }
+        end
+        private_class_method :series_mean_cfg
 
         def build_players(d)
           ps = fetch(d, 'player_stats')

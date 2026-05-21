@@ -370,6 +370,9 @@ const GOLDEN_SIM = {
       cards: { p10: 0, p50: 2, p90: 7 },
       sot: { p10: 2, p50: 4, p90: 7 },
       goals: { p10: 0, p50: 2, p90: 4 },
+      fouls: { p10: 8, p50: 11, p90: 14 },
+      offsides: { p10: 0, p50: 1, p90: 3 },
+      tackles: { p10: 6, p50: 9, p90: 13 },
     },
     away: {
       corners: {
@@ -386,6 +389,9 @@ const GOLDEN_SIM = {
       cards: { p10: 0, p50: 1, p90: 4 },
       sot: { p10: 1, p50: 3, p90: 6 },
       goals: { p10: 0, p50: 1, p90: 3 },
+      fouls: { p10: 8, p50: 11, p90: 14 },
+      offsides: { p10: 0, p50: 1, p90: 3 },
+      tackles: { p10: 6, p50: 9, p90: 13 },
     },
   },
   per_half_available: true,
@@ -672,6 +678,27 @@ describe("StatsPage — pre-game simulation panel", () => {
     for (const key of ["goals", "corners", "sot", "cards"]) {
       expect(cellsFor(key)).not.toContain("—");
     }
+  });
+
+  it("renderiza linhas de fouls/offsides/tackles quando sim_stats expõe (F12)", async () => {
+    mockState.fixtureRow = makeRow({ detail_json: makeDetail() as unknown });
+    mockState.simRow = simRow();
+    const { container } = await renderPage("42");
+    const panel = container.querySelector('[data-panel="SIM"]') as HTMLElement;
+    expandSim(panel);
+    expect(panel.querySelector('tr[data-sim-stat="fouls"]')).not.toBeNull();
+    expect(panel.querySelector('tr[data-sim-stat="offsides"]')).not.toBeNull();
+    expect(panel.querySelector('tr[data-sim-stat="tackles"]')).not.toBeNull();
+
+    const cellsFor = (key: string) =>
+      Array.from(
+        panel.querySelectorAll<HTMLElement>(
+          `tr[data-sim-stat="${key}"] td.num`,
+        ),
+      ).map((c) => c.textContent?.trim());
+    expect(cellsFor("fouls")).toEqual(["11", "11"]);
+    expect(cellsFor("offsides")).toEqual(["1", "1"]);
+    expect(cellsFor("tackles")).toEqual(["9", "9"]);
   });
 
   it("degrades a metric absent from the producer contract to '—' (honest)", async () => {

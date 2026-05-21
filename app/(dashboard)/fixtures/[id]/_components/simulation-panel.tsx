@@ -149,6 +149,12 @@ const STAT_ROWS: SimStatRow[] = [
   { key: "corners", label: "Escanteios", totalOnly: false },
   { key: "sot", label: "Finalizações no alvo", totalOnly: true },
   { key: "cards", label: "Cartões", totalOnly: true },
+  // F12 — derivadas da série recent_matches (sem split de tempo: dados
+  // intra-jogo não existem por tempo). Omitidas em sim_stats quando a
+  // série não tem ≥2 valores; statValue() já degrada esses casos pra "—".
+  { key: "fouls", label: "Faltas", totalOnly: true },
+  { key: "offsides", label: "Impedimentos", totalOnly: true },
+  { key: "tackles", label: "Desarmes", totalOnly: true },
 ];
 
 function statValue(

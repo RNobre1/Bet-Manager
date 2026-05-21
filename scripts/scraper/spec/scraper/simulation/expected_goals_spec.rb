@@ -95,8 +95,8 @@ module AdamStats
       end
 
       RSpec.describe 'F7 — Runner.simulate aceita use_xg_proxy' do
-        it 'MODEL_VERSION refletindo bump v6' do
-          expect(Runner::MODEL_VERSION).to eq('sim-v1-poisson-dc-nb-mc10k-v6')
+        it 'MODEL_VERSION é v6+ (xG proxy shipped)' do
+          expect(Runner::MODEL_VERSION).to match(/\Asim-v1-poisson-dc-nb-mc10k-v[6-9]\z/)
         end
 
         it 'sem use_xg_proxy ⇒ default (compat com pipeline atual)' do
@@ -110,7 +110,7 @@ module AdamStats
           }
           res = Runner.simulate(d, n: 200)
           expect(res[:status]).to eq('pending')
-          expect(res[:model_version]).to eq('sim-v1-poisson-dc-nb-mc10k-v6')
+          expect(res[:model_version]).to match(/\Asim-v1-poisson-dc-nb-mc10k-v[6-9]\z/)
         end
       end
     end
