@@ -16,7 +16,7 @@ module AdamStats
       #   - no HT split ⇒ per_half_available: false
       #   - insufficient/garbage detail ⇒ { status: 'unsimulable' }, no raise.
       module Runner
-        MODEL_VERSION = 'sim-v1-poisson-dc-nb-mc10k-v5'.freeze
+        MODEL_VERSION = 'sim-v1-poisson-dc-nb-mc10k-v6'.freeze
         DEFAULT_N = 10_000
         # Baseline-day fallback threshold (POC: < 6 teams ⇒ noisy day slice).
         MIN_TEAMS_FOR_DAY_BASELINE = 6
@@ -47,7 +47,7 @@ module AdamStats
 
         module_function
 
-        def simulate(detail_json, n: DEFAULT_N, calibration: {})
+        def simulate(detail_json, n: DEFAULT_N, calibration: {}, use_xg_proxy: false)
           d = detail_json
           return unsimulable unless d.is_a?(Hash)
 
@@ -56,7 +56,7 @@ module AdamStats
 
           league = (fetch(d, 'league') || '').to_s
           league_avgs = league_baseline(league, calibration)
-          lambdas = Rates.lambdas(d, league_avgs)
+          lambdas = Rates.lambdas(d, league_avgs, use_xg_proxy: use_xg_proxy)
           return unsimulable if lambdas.nil?
 
           rho = rho_for(league, calibration)

@@ -1,3 +1,5 @@
+require_relative 'expected_goals'
+
 module AdamStats
   module Scraper
     module Simulation
@@ -18,7 +20,10 @@ module AdamStats
         # detail      — enriched detail_json (string or symbol keys tolerated).
         # league_avgs  — day-slice league baseline hash with avg_goals_for /
         #                avg_goals_ag / avg_goals_home / avg_goals_away.
-        def lambdas(detail, league_avgs)
+        # use_xg_proxy — F7: when true, replace avgGoalsFor (offensive side
+        #                only) with the xG-proxy mean of recent_matches.
+        #                Defaults to false ⇒ byte-identical legacy path.
+        def lambdas(detail, league_avgs, use_xg_proxy: false)
           avgs = dig(detail, 'avgs')
           return nil unless avgs.is_a?(Hash)
 
@@ -32,11 +37,23 @@ module AdamStats
           lg_away = num(league_avgs, 'avg_goals_away')
           return nil if [lg_for, lg_ag, lg_home, lg_away].any? { |v| v.nil? || v <= 0 }
 
-          h_for = shrunk(home, 'avgGoalsFor', lg_for)
-          h_ag  = shrunk(home, 'avgGoalsAg',  lg_ag)
-          a_for = shrunk(away, 'avgGoalsFor', lg_for)
-          a_ag  = shrunk(away, 'avgGoalsAg',  lg_ag)
-          return nil if [h_for, h_ag, a_for, a_ag].any?(&:nil?)
+          h_for_default = shrunk(home, 'avgGoalsFor', lg_for)
+          h_ag          = shrunk(home, 'avgGoalsAg',  lg_ag)
+          a_for_default = shrunk(away, 'avgGoalsFor', lg_for)
+          a_ag          = shrunk(away, 'avgGoalsAg',  lg_ag)
+          return nil if [h_for_default, h_ag, a_for_default, a_ag].any?(&:nil?)
+
+          h_for = h_for_default
+          a_for = a_for_default
+          if use_xg_proxy
+            rm = dig(detail, 'recent_matches') || {}
+            xg_h = ExpectedGoals.avg_xg_for_side(Array(dig(rm, 'home')), side: 'home')
+            xg_a = ExpectedGoals.avg_xg_for_side(Array(dig(rm, 'away')), side: 'away')
+            if xg_h && xg_a && xg_h.positive? && xg_a.positive?
+              h_for = xg_h
+              a_for = xg_a
+            end
+          end
 
           lambda_home = (h_for / lg_for) * (a_ag / lg_ag) * lg_home
           lambda_away = (a_for / lg_for) * (h_ag / lg_ag) * lg_away

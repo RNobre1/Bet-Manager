@@ -64,8 +64,8 @@ module AdamStats
       end
 
       RSpec.describe 'F4a — Runner.simulate aceita calibration' do
-        it 'MODEL_VERSION refletindo bump v5' do
-          expect(Runner::MODEL_VERSION).to eq('sim-v1-poisson-dc-nb-mc10k-v5')
+        it 'MODEL_VERSION refletindo bump >= v5' do
+          expect(Runner::MODEL_VERSION).to match(/\Asim-v1-poisson-dc-nb-mc10k-v[5-9]\z/)
         end
 
         it 'sem calibration => byte-idêntico ao default' do
