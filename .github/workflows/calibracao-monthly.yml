@@ -1,0 +1,43 @@
+name: calibracao-monthly
+
+# 08:00 UTC no dia 5 de cada mês — refit dos parâmetros de liga (MoM)
+# e da calibração isotônica. Manual trigger via workflow_dispatch.
+on:
+  schedule:
+    - cron: "0 8 5 * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: calibracao-monthly
+  cancel-in-progress: false
+
+jobs:
+  calibracao:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: install
+        run: pnpm install --frozen-lockfile
+
+      - name: Fit league parameters (MoM por liga)
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: pnpm exec tsx scripts/calibracao/fit-league-parameters.ts
+
+      - name: Fit isotonic calibration
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: pnpm exec tsx scripts/calibracao/fit-isotonic.ts
