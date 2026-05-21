@@ -18,6 +18,10 @@ module AdamStats
         # per-match minutes cap). Do not "dedupe" them — collapsing into one
         # would couple two independent tuning dimensions.
         FULL_MATCH_MINUTES = 90.0
+        # F10 — Peso do sinal de mercado (anytime_scorer odd) no blend com o
+        # peso histórico (goals/min × expected_minutes). Aplica APENAS a
+        # :goals. α=0.3 ⇒ 70% histórico / 30% mercado.
+        MARKET_WEIGHT_GOALS = 0.3
 
         module_function
 
@@ -70,7 +74,20 @@ module AdamStats
             else 0.0
             end
           rate = numerator / minutes
-          rate * expected_minutes(p)
+          w_hist = rate * expected_minutes(p)
+
+          # F10 — blend de peso histórico × sinal de mercado APENAS pra :goals.
+          # :cards e :sot mantêm cálculo puramente histórico (não há
+          # equivalente de odd "anytime card" / "anytime SOT" no detail_json).
+          return w_hist unless metric == :goals
+
+          odd = numf(get(p, 'anytime_scorer_odd'))
+          # NaN ⇒ degrade pra histórico (NaN <= 1.0 é false em Ruby).
+          return w_hist if odd.nan? || odd <= 1.0
+
+          p_market = 1.0 / odd
+          w_market = p_market * expected_minutes(p)
+          ((1 - MARKET_WEIGHT_GOALS) * w_hist) + (MARKET_WEIGHT_GOALS * w_market)
         end
         private_class_method :event_weight
 

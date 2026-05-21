@@ -15,7 +15,7 @@ module AdamStats
       #   - no HT split ⇒ per_half_available: false
       #   - insufficient/garbage detail ⇒ { status: 'unsimulable' }, no raise.
       module Runner
-        MODEL_VERSION = 'sim-v1-poisson-dc-nb-mc10k-v3'.freeze
+        MODEL_VERSION = 'sim-v1-poisson-dc-nb-mc10k-v4'.freeze
         DEFAULT_N = 10_000
         # Baseline-day fallback threshold (POC: < 6 teams ⇒ noisy day slice).
         MIN_TEAMS_FOR_DAY_BASELINE = 6
@@ -226,20 +226,64 @@ module AdamStats
           ps = fetch(d, 'player_stats')
           return { home: empty_side, away: empty_side } unless ps.is_a?(Hash)
 
+          odds_by_player = extract_anytime_scorer_odds(d)
           {
-            home: side_players(fetch(ps, 'home')),
-            away: side_players(fetch(ps, 'away'))
+            home: side_players(fetch(ps, 'home'), odds_by_player),
+            away: side_players(fetch(ps, 'away'), odds_by_player)
           }
         end
         private_class_method :build_players
 
-        def side_players(side)
+        # F10 — lê outcome_odds_by_player.ANYTIME_SCORER mantendo só odds
+        # numéricas > 1.0. Devolve { player_name => odd }.
+        def extract_anytime_scorer_odds(d)
+          pe = fetch(d, 'player_extra')
+          return {} unless pe.is_a?(Hash)
+
+          odds = fetch(pe, 'outcome_odds_by_player')
+          return {} unless odds.is_a?(Hash)
+
+          out = {}
+          odds.each do |name, markets|
+            next unless name.is_a?(String) && markets.is_a?(Hash)
+
+            raw = markets['ANYTIME_SCORER'] || markets[:ANYTIME_SCORER]
+            odd = numeric_or_nil(raw)
+            out[name] = odd if odd && odd > 1.0
+          end
+          out
+        end
+        private_class_method :extract_anytime_scorer_odds
+
+        def numeric_or_nil(v)
+          return nil if v.nil?
+
+          f = Float(v)
+          return nil if f.nan? || f.infinite?
+
+          f
+        rescue ArgumentError, TypeError
+          nil
+        end
+        private_class_method :numeric_or_nil
+
+        def side_players(side, odds_by_player = {})
           return empty_side unless side.is_a?(Hash)
 
           list = Array(fetch(side, 'top_players'))
           return empty_side if list.empty?
 
-          xi = PlayerAllocation.probable_xi(list)
+          # F10 — anexa anytime_scorer_odd ao hash do player quando temos
+          # sinal de mercado pelo nome. Não muta o hash original.
+          enriched = list.map do |p|
+            next p unless p.is_a?(Hash)
+
+            name = p['name'] || p[:name]
+            odd = odds_by_player[name]
+            odd ? p.merge('anytime_scorer_odd' => odd) : p
+          end
+
+          xi = PlayerAllocation.probable_xi(enriched)
           { xi: xi[:players], confidence: xi[:confidence] }
         end
         private_class_method :side_players

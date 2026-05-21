@@ -35,8 +35,10 @@ RSpec.describe AdamStats::Scraper::Simulation::Runner do
   end
 
   describe 'MODEL_VERSION bump' do
-    it 'is sim-v1-poisson-dc-nb-mc10k-v3 (forces re-sim of older v2 rows)' do
-      expect(runner::MODEL_VERSION).to eq('sim-v1-poisson-dc-nb-mc10k-v3')
+    it 'is at least sim-v1-poisson-dc-nb-mc10k-v3 (F6 referee coupling shipped)' do
+      # v3 ⇒ F6 (referee). v4 ⇒ F10 (anytime_scorer blend). Both downstream
+      # bumps preserve the F6 contract; this spec just guards the floor.
+      expect(runner::MODEL_VERSION).to match(/\Asim-v1-poisson-dc-nb-mc10k-v[3-9]\z/)
     end
   end
 
