@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
-import { render, within } from "@testing-library/react";
+import { render, within, fireEvent } from "@testing-library/react";
 import type { FixtureRow } from "@/lib/fixtures/types";
 import type { DetailJson } from "@/lib/fixtures/stats/detail-json-types";
 import { MOBILE_TABS } from "@/components/fixtures/stats/stats-layout";
 import { SimulationPanel } from "@/app/(dashboard)/fixtures/[id]/_components/simulation-panel";
+import { SimulationDisclosure } from "@/app/(dashboard)/fixtures/[id]/_components/simulation-disclosure";
 
 /**
  * Wave 2b / Task 3 — the stats page now also surfaces the pre-game
@@ -863,5 +864,62 @@ describe("SimulationPanel — chrome prop", () => {
     );
     expect(container.querySelector(".card.\\@container\\/card")).toBeNull();
     expect(container.textContent?.toLowerCase()).toContain("simulação indisponível");
+  });
+});
+
+describe("SimulationDisclosure", () => {
+  it("renderiza recolhido por default no desktop (só casca + toggle, sem body)", () => {
+    const { container } = render(
+      <SimulationDisclosure>
+        <p data-testid="sim-body">corpo</p>
+      </SimulationDisclosure>,
+    );
+
+    expect(container.querySelector(".card.\\@container\\/card")).not.toBeNull();
+    expect(container.querySelector("header h3.font-display")?.textContent).toContain(
+      "Simulação pré-jogo",
+    );
+    expect(container.querySelector("header")?.textContent?.toLowerCase()).toContain(
+      "monte carlo",
+    );
+
+    const toggle = container.querySelector(
+      'button[aria-expanded][aria-controls]',
+    ) as HTMLButtonElement | null;
+    expect(toggle, "toggle button deve existir").not.toBeNull();
+    expect(toggle?.getAttribute("aria-expanded")).toBe("false");
+    expect(toggle?.textContent?.toLowerCase()).toContain("ver");
+
+    expect(container.querySelector('[data-testid="sim-body"]')).toBeNull();
+  });
+
+  it("expande ao clicar no toggle (aria-expanded=true, body montado, label muda)", () => {
+    const { container } = render(
+      <SimulationDisclosure>
+        <p data-testid="sim-body">corpo</p>
+      </SimulationDisclosure>,
+    );
+
+    const toggle = container.querySelector(
+      'button[aria-expanded]',
+    ) as HTMLButtonElement;
+    fireEvent.click(toggle);
+
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(toggle.textContent?.toLowerCase()).toContain("ocultar");
+    expect(container.querySelector('[data-testid="sim-body"]')).not.toBeNull();
+  });
+
+  it("a região controlada referencia o id correto via aria-controls", () => {
+    const { container } = render(
+      <SimulationDisclosure>
+        <p>x</p>
+      </SimulationDisclosure>,
+    );
+    const toggle = container.querySelector(
+      "button[aria-controls]",
+    ) as HTMLButtonElement;
+    const id = toggle.getAttribute("aria-controls")!;
+    expect(id.length).toBeGreaterThan(0);
   });
 });
