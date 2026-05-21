@@ -165,15 +165,15 @@ describe("StatsLayout — mobile tabs", () => {
     expect(container.querySelector("section[data-panels]")).toBeNull();
   });
 
-  it("exposes 5 tab triggers (visão · streaks · jogos · players · odds)", () => {
+  it("exposes 6 tab triggers (visão · simulação · streaks · jogos · players · odds)", () => {
     installMatchMedia(true);
     render(<StatsLayout fixtureId={42} hero={hero()} panels={allPanels()} />);
 
     const triggers = screen.getAllByRole("tab");
     const labels = triggers.map((t) => t.textContent?.toLowerCase() ?? "");
-    expect(triggers).toHaveLength(5);
+    expect(triggers).toHaveLength(6);
     expect(labels).toEqual(
-      expect.arrayContaining(["visão", "streaks", "jogos", "players", "odds"]),
+      expect.arrayContaining(["visão", "simulação", "streaks", "jogos", "players", "odds"]),
     );
   });
 
